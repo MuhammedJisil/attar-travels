@@ -10,7 +10,9 @@ import {
   PlusCircle,
   PlaneTakeoff,
   Layers,
-  PhoneCall,
+  LogOut,
+  User,
+  Shield,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -19,6 +21,8 @@ interface NavbarProps {
   setActiveTab: (tab: "dashboard" | "bookings" | "customers" | "services" | "settings") => void;
   onOpenNewBooking: () => void;
   urgentAlertCount?: number;
+  currentUser?: { id: string; username: string; name?: string } | null;
+  onLogout?: () => void;
 }
 
 export default function Navbar({
@@ -27,33 +31,35 @@ export default function Navbar({
   setActiveTab,
   onOpenNewBooking,
   urgentAlertCount = 0,
+  currentUser,
+  onLogout,
 }: NavbarProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-2">
           {/* Brand Logo & Name */}
           <div
-            className="flex items-center gap-3 cursor-pointer group"
+            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group"
             onClick={() => setActiveTab("dashboard")}
           >
             <Logo logoUrl={settings.logoUrl} agencyName={settings.agencyName} size="md" />
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-bold text-slate-900 tracking-tight text-base sm:text-lg group-hover:text-sky-600 transition">
+                <h1 className="font-bold text-slate-900 tracking-tight text-sm sm:text-lg group-hover:text-sky-600 transition truncate max-w-[150px] sm:max-w-xs">
                   {settings.agencyName || "Travels Office"}
                 </h1>
-                <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-800 border border-sky-200">
+                <span className="hidden lg:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-800 border border-sky-200">
                   Desk Manager
                 </span>
               </div>
-              <p className="text-xs text-slate-500 hidden sm:block truncate max-w-xs">
+              <p className="text-[11px] text-slate-500 hidden sm:block truncate max-w-xs">
                 {settings.tagline || "Ticketing & Customer Due Date Alerts"}
               </p>
             </div>
           </div>
 
-          {/* Navigation Links */}
+          {/* Navigation Links (Desktop) */}
           <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
             <button
               onClick={() => setActiveTab("dashboard")}
@@ -121,16 +127,40 @@ export default function Navbar({
             </button>
           </nav>
 
-          {/* Action Buttons */}
+          {/* Action Buttons & User Menu */}
           <div className="flex items-center gap-2">
             <button
               onClick={onOpenNewBooking}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 shadow-sm hover:shadow transition active:scale-95"
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 rounded-lg bg-sky-600 text-white text-xs sm:text-sm font-semibold hover:bg-sky-700 shadow-sm hover:shadow transition active:scale-95"
             >
-              <PlusCircle size={18} />
-              <span className="hidden sm:inline">Add Booking / Customer</span>
+              <PlusCircle size={16} />
+              <span className="hidden sm:inline">Add Booking</span>
               <span className="sm:hidden">New</span>
             </button>
+
+            {/* User Profile Pill & Logout */}
+            {currentUser && (
+              <div className="flex items-center gap-1 pl-1 sm:pl-2 border-l border-slate-200">
+                <div
+                  onClick={() => setActiveTab("settings")}
+                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer transition"
+                  title="Signed in as admin. Click to manage ID & password."
+                >
+                  <User size={13} className="text-sky-600" />
+                  <span>{currentUser.username}</span>
+                </div>
+
+                {onLogout && (
+                  <button
+                    onClick={onLogout}
+                    className="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
+                    title="Sign Out"
+                  >
+                    <LogOut size={16} />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

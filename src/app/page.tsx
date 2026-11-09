@@ -11,8 +11,8 @@ import InvoiceModal from "@/components/InvoiceModal";
 import WhatsAppModal from "@/components/WhatsAppModal";
 import ServiceManagementModal from "@/components/ServiceManagementModal";
 import AgencySettingsView from "@/components/AgencySettingsView";
-import { Booking, Customer, ServiceType, AgencySettings } from "@/lib/types";
-import { initialAgencySettings } from "@/lib/data-store";
+import LoginScreen from "@/components/LoginScreen";
+import { Booking, Customer, ServiceType, AgencySettings, initialAgencySettings } from "@/lib/types";
 import { getDaysDifference } from "@/lib/date-utils";
 import {
   CalendarDays,
@@ -23,12 +23,16 @@ import {
   PlusCircle,
   RefreshCw,
   AlertCircle,
-  Sparkles,
+  Plane,
 } from "lucide-react";
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "bookings" | "customers" | "services" | "settings">("dashboard");
   const [activeFilter, setActiveFilter] = useState<string>("all");
+
+  // Authentication state
+  const [user, setUser] = useState<{ id: string; username: string; name?: string } | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -55,7 +59,29 @@ export default function HomePage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isCustomerDrawerOpen, setIsCustomerDrawerOpen] = useState(false);
 
-  // Fetch all core data
+  // Check current session
+  const checkSession = useCallback(async () => {
+    try {
+      setAuthLoading(true);
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.authenticated && data.user) {
+          setUser(data.user);
+          return true;
+        }
+      }
+      setUser(null);
+      return false;
+    } catch {
+      setUser(null);
+      return false;
+    } finally {
+      setAuthLoading(false);
+    }
+  }, []);
+
+  // Fetch all core travels data
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -92,8 +118,20 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    checkSession().then((isAuthed) => {
+      if (isAuthed) {
+        fetchData();
+      }
+    });
+  }, [checkSession, fetchData]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      setUser(null);
+    }
+  };
 
   // Urgent alerts count for header badge (Today departures + delays)
   const urgentCount = bookings.filter((b) => {
@@ -139,7 +177,6 @@ export default function HomePage() {
       const res = await fetch(`/api/bookings/${id}`, { method: "DELETE" });
       if (res.ok) {
         await fetchData();
-        // Update selected customer if drawer is open
         if (selectedCustomer) {
           const updatedCust = customers.find((c) => c.id === selectedCustomer.id);
           if (updatedCust) setSelectedCustomer(updatedCust);
@@ -184,6 +221,32 @@ export default function HomePage() {
     setIsWhatsAppModalOpen(true);
   };
 
+  // 1. Initial Auth Loading screen
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white p-4">
+        <div className="w-12 h-12 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center border border-sky-500/30 animate-bounce mb-3">
+          <Plane size={24} className="transform -rotate-45" />
+        </div>
+        <div className="text-sm font-semibold text-slate-300">Checking secure session...</div>
+      </div>
+    );
+  }
+
+  // 2. Unauthenticated Screen (Login)
+  if (!user) {
+    return (
+      <LoginScreen
+        settings={settings}
+        onLoginSuccess={(authedUser) => {
+          setUser(authedUser);
+          fetchData();
+        }}
+      />
+    );
+  }
+
+  // 3. Authenticated Dashboard
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col selection:bg-sky-500 selection:text-white">
       {/* Top Navbar */}
@@ -193,10 +256,12 @@ export default function HomePage() {
         setActiveTab={setActiveTab}
         onOpenNewBooking={() => handleOpenNewBooking()}
         urgentAlertCount={urgentCount}
+        currentUser={user}
+        onLogout={handleLogout}
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-5 sm:space-y-6">
         {/* Error notification */}
         {error && (
           <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl flex items-center justify-between text-xs sm:text-sm">
@@ -215,12 +280,12 @@ export default function HomePage() {
 
         {/* TAB 1: Dashboard & Due Alerts */}
         {activeTab === "dashboard" && (
-          <div className="space-y-6">
+          <div className="space-y-5 sm:space-y-6">
             {/* Header Title & Refresh */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <CalendarDays className="text-sky-600" size={24} />
+                <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <CalendarDays className="text-sky-600 shrink-0" size={24} />
                   <span>Due Date Alerts & Travel Radar</span>
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
@@ -240,10 +305,10 @@ export default function HomePage() {
 
                 <button
                   onClick={() => handleOpenNewBooking()}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs sm:text-sm shadow-sm transition active:scale-95"
+                  className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs sm:text-sm shadow-sm transition active:scale-95"
                 >
                   <PlusCircle size={16} />
-                  <span>Add Ticket / Customer</span>
+                  <span>Add Ticket</span>
                 </button>
               </div>
             </div>
@@ -255,7 +320,7 @@ export default function HomePage() {
               onSelectFilter={setActiveFilter}
             />
 
-            {/* Filtered Bookings Table */}
+            {/* Filtered Bookings Table & Mobile Cards */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-slate-900 text-sm sm:text-base">
@@ -293,11 +358,11 @@ export default function HomePage() {
 
         {/* TAB 2: All Tickets & Bookings */}
         {activeTab === "bookings" && (
-          <div className="space-y-6">
+          <div className="space-y-5 sm:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <PlaneTakeoff className="text-sky-600" size={24} />
+                <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <PlaneTakeoff className="text-sky-600 shrink-0" size={24} />
                   <span>All Tickets & Bookings</span>
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
@@ -328,11 +393,11 @@ export default function HomePage() {
 
         {/* TAB 3: Customers & Parties Directory */}
         {activeTab === "customers" && (
-          <div className="space-y-6">
+          <div className="space-y-5 sm:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <Users className="text-sky-600" size={24} />
+                <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <Users className="text-sky-600 shrink-0" size={24} />
                   <span>Customers & Parties</span>
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
@@ -353,11 +418,11 @@ export default function HomePage() {
 
         {/* TAB 4: Services Management */}
         {activeTab === "services" && (
-          <div className="space-y-6">
+          <div className="space-y-5 sm:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <Layers className="text-sky-600" size={24} />
+                <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <Layers className="text-sky-600 shrink-0" size={24} />
                   <span>Services Configuration</span>
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
@@ -413,12 +478,13 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* TAB 5: Agency Settings & Logo Branding */}
+        {/* TAB 5: Agency Settings & Security (Change ID & Password) */}
         {activeTab === "settings" && (
           <div className="space-y-6">
             <AgencySettingsView
               settings={settings}
               onSaved={(updated) => setSettings(updated)}
+              currentUser={user}
             />
           </div>
         )}

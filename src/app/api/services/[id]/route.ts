@@ -35,3 +35,4 @@ export async function DELETE(
     return NextResponse.json({ error: "Failed to delete service" }, { status: 500 });
   }
 }
+

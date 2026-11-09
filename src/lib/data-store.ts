@@ -1,5 +1,19 @@
 import prisma from "./prisma";
 import { Booking, Customer, ServiceType, AgencySettings } from "./types";
+import { hashPassword } from "./auth";
+
+// Default admin user credentials (username: admin, password: admin123)
+const defaultAdminPass = hashPassword("admin123");
+let memoryUsers = [
+  {
+    id: "usr-admin",
+    username: "admin",
+    password: defaultAdminPass.hash,
+    salt: defaultAdminPass.salt,
+    name: "Travel Desk Admin",
+    role: "admin",
+  },
+];
 
 // Seed / Initial dynamic service types
 export const initialServiceTypes: ServiceType[] = [
@@ -638,4 +652,78 @@ export async function updateAgencySettings(data: Partial<AgencySettings>): Promi
   }
   memorySettings = { ...memorySettings, ...data };
   return memorySettings;
+}
+
+// ---------------- USER AUTHENTICATION & CREDENTIALS ----------------
+export async function getAdminUser() {
+  try {
+    if (await isDbAvailable()) {
+      let user = await prisma.user.findFirst();
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            username: "admin",
+            password: defaultAdminPass.hash,
+            salt: defaultAdminPass.salt,
+            name: "Travel Desk Admin",
+            role: "admin",
+          },
+        });
+      }
+      return user;
+    }
+  } catch (e) {
+    console.warn("DB error fetching admin user, using memory store:", e);
+  }
+  return memoryUsers[0];
+}
+
+export async function findUserByUsername(username: string) {
+  try {
+    if (await isDbAvailable()) {
+      return await prisma.user.findUnique({
+        where: { username },
+      });
+    }
+  } catch (e) {
+    console.warn("DB error finding user:", e);
+  }
+  return memoryUsers.find((u) => u.username.toLowerCase() === username.toLowerCase()) || null;
+}
+
+export async function updateUserCredentials(
+  userId: string,
+  newUsername: string,
+  newPassword?: string
+) {
+  let updateData: { username: string; password?: string; salt?: string } = {
+    username: newUsername,
+  };
+
+  if (newPassword && newPassword.trim()) {
+    const hashed = hashPassword(newPassword.trim());
+    updateData.password = hashed.hash;
+    updateData.salt = hashed.salt;
+  }
+
+  try {
+    if (await isDbAvailable()) {
+      return await prisma.user.update({
+        where: { id: userId },
+        data: updateData,
+      });
+    }
+  } catch (e) {
+    console.warn("DB error updating user credentials, using memory:", e);
+  }
+
+  const idx = memoryUsers.findIndex((u) => u.id === userId);
+  if (idx !== -1) {
+    memoryUsers[idx] = {
+      ...memoryUsers[idx],
+      ...updateData,
+    };
+    return memoryUsers[idx];
+  }
+  return null;
 }
