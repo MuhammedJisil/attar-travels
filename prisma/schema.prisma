@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model ServiceType {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  code        String?   // e.g. FLIGHT, PASSPORT, VISA, HOTEL, TOUR
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
+}
+
+model Customer {
+  id        String    @id @default(cuid())
+  name      String    // Customer / Party Name
+  phone     String    // Mobile number for WhatsApp & calls
+  email     String?
+  address   String?
+  city      String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  bookings  Booking[]
+}
+
+model Booking {
+  id             String       @id @default(cuid())
+  bookingNo      String       @unique // e.g. TRV-1001
+
+  // Relation to Customer
+  customerId     String
+  customer       Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Relation to Service Type (Flight Ticket, Passport, etc.)
+  serviceTypeId  String
+  serviceType    ServiceType  @relation(fields: [serviceTypeId], references: [id])
+
+  // Flight Ticket specific fields
+  issueDate      DateTime?    // Ticket issue date
+  travelDate     DateTime?    // Travel / Departure date
+  returnDate     DateTime?    // Return date for round trips
+  sector         String?      // Sector / Route narration e.g. DXB - COK
+  flightNo       String?      // Flight Number e.g. EK 532
+  pnr            String?      // PNR (Passenger Name Record)
+  flightTime     String?      // e.g. 10:30 AM / 22:45
+  portal         String?      // Issued from portal e.g. Galileo, Amadeus, Akbar, MakeMyTrip, Indigo Direct
+  passengerCount Int          @default(1)
+  passengerNames String?      // Comma-separated or narrative passenger names
+
+  // Passport / Visa / General service fields
+  passportNo     String?
+  submissionDate DateTime?
+  expiryDate     DateTime?
+
+  // Status & Alerts
+  // Values: "Confirmed", "Flight Delayed", "Rescheduled / Postponed", "Cancelled", "Completed", "In Process"
+  status         String       @default("Confirmed")
+  alertNotes     String?      // Any specific delay/postponed narration
+
+  // Financials & Payment Tracking
+  totalAmount    Float        @default(0)
+  paidAmount     Float        @default(0)
+  balanceAmount  Float        @default(0)
+  dueDate        DateTime?    // Payment due date
+  paymentStatus  String       @default("Pending") // "Paid", "Partial", "Pending"
+
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model AgencySettings {
+  id              String   @id @default("default")
+  agencyName      String   @default("Al-Madina Travels & Tours")
+  tagline         String?  @default("Your Trusted Travel & Ticketing Partner")
+  phone           String?  @default("+91 98765 43210")
+  whatsapp        String?  @default("+91 98765 43210")
+  email           String?  @default("booking@almadinatravels.com")
+  address         String?  @default("Near Central Bus Stand, Main Road, Calicut, Kerala - 673001")
+  logoUrl         String?  // Can be a local path or external URL
+  taxNumber       String?  @default("GSTIN: 32AAAAA0000A1Z5")
+  bankDetails     String?  @default("Account: 123456789012 | IFSC: HDFC0001234 | UPI: travels@upi")
+  termsConditions String?  @default("1. Please report at airport 3 hours prior to international flight.\n2. Tickets are subject to airline cancellation/reissue policies.\n3. Verify passport validity (minimum 6 months required for international travel).")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
