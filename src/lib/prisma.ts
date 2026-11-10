@@ -4,14 +4,14 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Check all possible environment variable names Vercel or Neon might use
+// Check environment variables in priority order
 export const getDatabaseUrl = (): string | undefined => {
   return (
     process.env.DATABASE_URL ||
-    process.env.STORAGE_URL ||
     process.env.POSTGRES_PRISMA_URL ||
     process.env.POSTGRES_URL ||
-    process.env.DIRECT_URL
+    process.env.DIRECT_URL ||
+    process.env.STORAGE_URL
   );
 };
 

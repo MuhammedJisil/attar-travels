@@ -22,9 +22,10 @@ export async function POST(request: Request) {
     }
     const created = await createCustomer(body);
     return NextResponse.json(created, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Failed to create customer:", error);
-    return NextResponse.json({ error: "Failed to create customer" }, { status: 500 });
+    const msg = error instanceof Error ? error.message : "Failed to create customer";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
