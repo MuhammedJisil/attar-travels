@@ -1,5 +1,5 @@
-import prisma from "./prisma";
-import { Booking, Customer, ServiceType, AgencySettings } from "./types";
+import prisma, { getDatabaseUrl } from "./prisma";
+import { Booking, Customer, ServiceType, AgencySettings, initialAgencySettings } from "./types";
 import { hashPassword } from "./auth";
 
 // Default admin user credentials (username: admin, password: admin123)
@@ -25,19 +25,7 @@ export const initialServiceTypes: ServiceType[] = [
   { id: "srv-bus-train", name: "Bus / Train Ticket", code: "TRANSPORT", description: "Intercity bus & railway reservations", isActive: true },
 ];
 
-export const initialAgencySettings: AgencySettings = {
-  id: "default",
-  agencyName: "Al-Madina Travels & Tours",
-  tagline: "Your Trusted Travel & Ticketing Partner",
-  phone: "+91 98765 43210",
-  whatsapp: "+91 98765 43210",
-  email: "booking@almadinatravels.com",
-  address: "Shop No. 12, Ground Floor, Skyline Commercial Complex, Calicut, Kerala - 673001",
-  logoUrl: "",
-  taxNumber: "GSTIN: 32AAAAA0000A1Z5",
-  bankDetails: "A/C: 50200012345678 | HDFC Bank, Calicut Branch | IFSC: HDFC0001234 | UPI: almadinatravels@hdfcbank",
-  termsConditions: "1. Please report at airport 3 hours prior to international departure and 2 hours for domestic.\n2. Date change & cancellation charges are applicable as per airline fare rules.\n3. Verify passport validity (minimum 6 months from travel date required).",
-};
+export { initialAgencySettings };
 
 // Initial seed customers
 export const initialCustomers: Customer[] = [
@@ -57,22 +45,6 @@ export const initialCustomers: Customer[] = [
     city: "Kochi",
     notes: "Corporate traveler - IT consultancy",
   },
-  {
-    id: "cust-3",
-    name: "Faisal Rahman & Family",
-    phone: "+91 94472 11223",
-    email: "faisal.rahman@yahoo.com",
-    city: "Malappuram",
-    notes: "Family booking, requires wheelchair for mother",
-  },
-  {
-    id: "cust-4",
-    name: "Dr. Suresh Kumar",
-    phone: "+91 99460 33445",
-    email: "sureshkumar.dr@gmail.com",
-    city: "Kannur",
-    notes: "Medical conference travel to London",
-  },
 ];
 
 // Helper to calculate date offsets
@@ -91,7 +63,7 @@ export const initialBookings: Booking[] = [
     customerId: "cust-1",
     serviceTypeId: "srv-flight",
     issueDate: addDays(-5),
-    travelDate: addDays(0, 4), // Today (in 4 hours)
+    travelDate: addDays(0, 4),
     returnDate: addDays(15),
     sector: "CCJ (Calicut) - DXB (Dubai)",
     flightNo: "IX 343",
@@ -115,7 +87,7 @@ export const initialBookings: Booking[] = [
     customerId: "cust-2",
     serviceTypeId: "srv-flight",
     issueDate: addDays(-8),
-    travelDate: addDays(1), // Tomorrow
+    travelDate: addDays(1),
     sector: "COK (Cochin) - BLR (Bangalore)",
     flightNo: "6E 6231",
     pnr: "W4MN8Q",
@@ -124,104 +96,13 @@ export const initialBookings: Booking[] = [
     passengerCount: 1,
     passengerNames: "Ananya Sharma",
     status: "Flight Delayed",
-    alertNotes: "Flight delayed by 1 hour 45 mins due to weather. Revised departure: 09:15 AM.",
+    alertNotes: "Flight delayed by 1 hour 45 mins. Revised departure: 09:15 AM.",
     totalAmount: 5200,
     paidAmount: 5200,
     balanceAmount: 0,
     dueDate: addDays(-5),
     paymentStatus: "Paid",
     notes: "Informed customer regarding delay via WhatsApp.",
-  },
-  {
-    id: "bk-1003",
-    bookingNo: "TRV-2026-103",
-    customerId: "cust-3",
-    serviceTypeId: "srv-flight",
-    issueDate: addDays(-4),
-    travelDate: addDays(3), // In 3 days
-    returnDate: addDays(18),
-    sector: "CCJ (Calicut) - JED (Jeddah)",
-    flightNo: "SV 757",
-    pnr: "K38XZT",
-    flightTime: "14:40",
-    portal: "Saudia Direct / Akbar Travels",
-    passengerCount: 3,
-    passengerNames: "Faisal Rahman, Aysha Faisal, Mariyam Faisal",
-    status: "Confirmed",
-    alertNotes: "Umrah visa verified. 2 pieces 23kg each.",
-    totalAmount: 124000,
-    paidAmount: 90000,
-    balanceAmount: 34000,
-    dueDate: addDays(2),
-    paymentStatus: "Partial",
-    notes: "Balance Rs. 34,000 pending before departure date.",
-  },
-  {
-    id: "bk-1004",
-    bookingNo: "TRV-2026-104",
-    customerId: "cust-4",
-    serviceTypeId: "srv-flight",
-    issueDate: addDays(-10),
-    travelDate: addDays(6), // In 6 days
-    returnDate: addDays(16),
-    sector: "COK (Cochin) - DOH (Doha) - LHR (London Heathrow)",
-    flightNo: "QR 517 / QR 007",
-    pnr: "PQ92LL",
-    flightTime: "03:55 AM",
-    portal: "Qatar Airways Portal",
-    passengerCount: 1,
-    passengerNames: "Dr. Suresh Kumar",
-    status: "Confirmed",
-    alertNotes: "Transit at Doha: 2h 40m.",
-    totalAmount: 76500,
-    paidAmount: 76500,
-    balanceAmount: 0,
-    dueDate: addDays(-8),
-    paymentStatus: "Paid",
-    notes: "Vegetarian meal requested on both sectors.",
-  },
-  {
-    id: "bk-1005",
-    bookingNo: "TRV-2026-105",
-    customerId: "cust-1",
-    serviceTypeId: "srv-passport",
-    issueDate: addDays(-15),
-    travelDate: addDays(12),
-    passportNo: "Z5892341",
-    submissionDate: addDays(-12),
-    expiryDate: addDays(3650),
-    passengerCount: 1,
-    status: "In Process",
-    alertNotes: "Police verification completed. Dispatched via Speed Post.",
-    totalAmount: 3500,
-    paidAmount: 2000,
-    balanceAmount: 1500,
-    dueDate: addDays(5),
-    paymentStatus: "Partial",
-    notes: "Tatkal passport renewal for Mohammed Rashid.",
-  },
-  {
-    id: "bk-1006",
-    bookingNo: "TRV-2026-106",
-    customerId: "cust-2",
-    serviceTypeId: "srv-flight",
-    issueDate: addDays(-20),
-    travelDate: addDays(4),
-    sector: "BLR (Bangalore) - DEL (Delhi)",
-    flightNo: "UK 812",
-    pnr: "VISTA88",
-    flightTime: "18:20",
-    portal: "Vistara / Air India",
-    passengerCount: 1,
-    passengerNames: "Ananya Sharma",
-    status: "Rescheduled / Postponed",
-    alertNotes: "Flight time moved by airline from 16:00 to 18:20.",
-    totalAmount: 7800,
-    paidAmount: 7800,
-    balanceAmount: 0,
-    dueDate: addDays(-18),
-    paymentStatus: "Paid",
-    notes: "Client accepted revised time.",
   },
 ];
 
@@ -231,27 +112,21 @@ let memoryCustomers = [...initialCustomers];
 let memoryBookings = [...initialBookings];
 let memorySettings = { ...initialAgencySettings };
 
-// Helper to test if Prisma DB is reachable
-async function isDbAvailable(): Promise<boolean> {
-  if (!process.env.DATABASE_URL) return false;
-  try {
-    // Quick probe
-    await prisma.$queryRaw`SELECT 1`;
-    return true;
-  } catch {
-    return false;
-  }
+// Check if a database connection URL is configured in environment
+export function hasDatabase(): boolean {
+  return !!getDatabaseUrl();
 }
 
 // ---------------- SERVICE TYPES ----------------
 export async function getServiceTypes(): Promise<ServiceType[]> {
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       const records = await prisma.serviceType.findMany({
         orderBy: { name: "asc" },
       });
       if (records.length > 0) return records;
-      // Seed default if empty
+
+      // Seed defaults if empty
       for (const st of initialServiceTypes) {
         await prisma.serviceType.upsert({
           where: { name: st.name },
@@ -260,9 +135,9 @@ export async function getServiceTypes(): Promise<ServiceType[]> {
         });
       }
       return await prisma.serviceType.findMany({ orderBy: { name: "asc" } });
+    } catch (e) {
+      console.error("Prisma error in getServiceTypes:", e);
     }
-  } catch (e) {
-    console.warn("DB not accessible, using memory store for service types:", e);
   }
   return memoryServiceTypes;
 }
@@ -277,8 +152,8 @@ export async function createServiceType(data: Partial<ServiceType>): Promise<Ser
     createdAt: new Date(),
   };
 
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       return await prisma.serviceType.create({
         data: {
           name: newType.name,
@@ -287,9 +162,10 @@ export async function createServiceType(data: Partial<ServiceType>): Promise<Ser
           isActive: newType.isActive,
         },
       });
+    } catch (e) {
+      console.error("Prisma error in createServiceType:", e);
+      throw e;
     }
-  } catch (e) {
-    console.warn("DB write failed, falling back to memory:", e);
   }
 
   memoryServiceTypes.push(newType);
@@ -297,8 +173,8 @@ export async function createServiceType(data: Partial<ServiceType>): Promise<Ser
 }
 
 export async function updateServiceType(id: string, data: Partial<ServiceType>): Promise<ServiceType | null> {
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       return await prisma.serviceType.update({
         where: { id },
         data: {
@@ -308,9 +184,10 @@ export async function updateServiceType(id: string, data: Partial<ServiceType>):
           isActive: data.isActive,
         },
       });
+    } catch (e) {
+      console.error("Prisma error in updateServiceType:", e);
+      throw e;
     }
-  } catch (e) {
-    console.warn("DB update failed, falling back to memory:", e);
   }
 
   const idx = memoryServiceTypes.findIndex((s) => s.id === id);
@@ -322,13 +199,14 @@ export async function updateServiceType(id: string, data: Partial<ServiceType>):
 }
 
 export async function deleteServiceType(id: string): Promise<boolean> {
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       await prisma.serviceType.delete({ where: { id } });
       return true;
+    } catch (e) {
+      console.error("Prisma error in deleteServiceType:", e);
+      throw e;
     }
-  } catch (e) {
-    console.warn("DB delete failed, falling back to memory:", e);
   }
 
   const before = memoryServiceTypes.length;
@@ -338,8 +216,8 @@ export async function deleteServiceType(id: string): Promise<boolean> {
 
 // ---------------- CUSTOMERS ----------------
 export async function getCustomers(): Promise<Customer[]> {
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       const records = await prisma.customer.findMany({
         include: {
           bookings: {
@@ -349,13 +227,14 @@ export async function getCustomers(): Promise<Customer[]> {
         },
         orderBy: { name: "asc" },
       });
-      if (records.length > 0) return records as unknown as Customer[];
+      // Always return actual DB records (even if empty [])
+      return records as unknown as Customer[];
+    } catch (e) {
+      console.error("Prisma error in getCustomers:", e);
     }
-  } catch (e) {
-    console.warn("DB error fetching customers, using memory store:", e);
   }
 
-  // Populate memory relations
+  // Populate memory relations if no DB
   return memoryCustomers.map((cust) => ({
     ...cust,
     bookings: memoryBookings.filter((b) => b.customerId === cust.id).map((b) => ({
@@ -369,6 +248,30 @@ export async function getCustomers(): Promise<Customer[]> {
 }
 
 export async function createCustomer(data: Partial<Customer>): Promise<Customer> {
+  if (hasDatabase()) {
+    try {
+      const created = await prisma.customer.create({
+        data: {
+          name: data.name!.trim(),
+          phone: data.phone!.trim(),
+          email: data.email?.trim() || null,
+          city: data.city?.trim() || null,
+          address: data.address?.trim() || null,
+          notes: data.notes?.trim() || null,
+        },
+        include: {
+          bookings: {
+            include: { serviceType: true },
+          },
+        },
+      });
+      return created as unknown as Customer;
+    } catch (e) {
+      console.error("Prisma error in createCustomer:", e);
+      throw e;
+    }
+  }
+
   const newCust: Customer = {
     id: `cust-${Date.now()}`,
     name: data.name || "Customer",
@@ -378,24 +281,8 @@ export async function createCustomer(data: Partial<Customer>): Promise<Customer>
     address: data.address || "",
     notes: data.notes || "",
     createdAt: new Date(),
+    bookings: [],
   };
-
-  try {
-    if (await isDbAvailable()) {
-      return (await prisma.customer.create({
-        data: {
-          name: newCust.name,
-          phone: newCust.phone,
-          email: newCust.email,
-          city: newCust.city,
-          address: newCust.address,
-          notes: newCust.notes,
-        },
-      })) as unknown as Customer;
-    }
-  } catch (e) {
-    console.warn("DB write failed for customer, using memory:", e);
-  }
 
   memoryCustomers.push(newCust);
   return newCust;
@@ -403,15 +290,21 @@ export async function createCustomer(data: Partial<Customer>): Promise<Customer>
 
 export async function updateCustomer(id: string, data: Partial<Customer>): Promise<Customer | null> {
   const { bookings, _count, ...customerData } = data;
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       return (await prisma.customer.update({
         where: { id },
         data: customerData,
+        include: {
+          bookings: {
+            include: { serviceType: true },
+          },
+        },
       })) as unknown as Customer;
+    } catch (e) {
+      console.error("Prisma error in updateCustomer:", e);
+      throw e;
     }
-  } catch (e) {
-    console.warn("DB update failed for customer, using memory:", e);
   }
 
   const idx = memoryCustomers.findIndex((c) => c.id === id);
@@ -423,13 +316,14 @@ export async function updateCustomer(id: string, data: Partial<Customer>): Promi
 }
 
 export async function deleteCustomer(id: string): Promise<boolean> {
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       await prisma.customer.delete({ where: { id } });
       return true;
+    } catch (e) {
+      console.error("Prisma error in deleteCustomer:", e);
+      throw e;
     }
-  } catch (e) {
-    console.warn("DB delete failed for customer, using memory:", e);
   }
 
   memoryCustomers = memoryCustomers.filter((c) => c.id !== id);
@@ -439,8 +333,8 @@ export async function deleteCustomer(id: string): Promise<boolean> {
 
 // ---------------- BOOKINGS / TICKETS ----------------
 export async function getBookings(): Promise<Booking[]> {
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       const records = await prisma.booking.findMany({
         include: {
           customer: true,
@@ -448,10 +342,10 @@ export async function getBookings(): Promise<Booking[]> {
         },
         orderBy: { travelDate: "asc" },
       });
-      if (records.length > 0) return records as unknown as Booking[];
+      return records as unknown as Booking[];
+    } catch (e) {
+      console.error("Prisma error in getBookings:", e);
     }
-  } catch (e) {
-    console.warn("DB error fetching bookings, using memory store:", e);
   }
 
   return memoryBookings.map((b) => ({
@@ -468,6 +362,46 @@ export async function createBooking(data: Partial<Booking>): Promise<Booking> {
   const paymentStatus = balanceAmount === 0 ? "Paid" : paidAmount > 0 ? "Partial" : "Pending";
 
   const bookingNo = data.bookingNo || `TRV-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+
+  if (hasDatabase()) {
+    try {
+      return (await prisma.booking.create({
+        data: {
+          bookingNo,
+          customerId: data.customerId!,
+          serviceTypeId: data.serviceTypeId!,
+          issueDate: data.issueDate ? new Date(data.issueDate) : null,
+          travelDate: data.travelDate ? new Date(data.travelDate) : null,
+          returnDate: data.returnDate ? new Date(data.returnDate) : null,
+          sector: data.sector?.trim() || null,
+          flightNo: data.flightNo?.trim() || null,
+          pnr: data.pnr ? data.pnr.toUpperCase().trim() : null,
+          flightTime: data.flightTime?.trim() || null,
+          portal: data.portal?.trim() || null,
+          passengerCount: Number(data.passengerCount) || 1,
+          passengerNames: data.passengerNames?.trim() || null,
+          passportNo: data.passportNo?.trim() || null,
+          submissionDate: data.submissionDate ? new Date(data.submissionDate) : null,
+          expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
+          status: data.status || "Confirmed",
+          alertNotes: data.alertNotes?.trim() || null,
+          totalAmount,
+          paidAmount,
+          balanceAmount,
+          dueDate: data.dueDate ? new Date(data.dueDate) : null,
+          paymentStatus,
+          notes: data.notes?.trim() || null,
+        },
+        include: {
+          customer: true,
+          serviceType: true,
+        },
+      })) as unknown as Booking;
+    } catch (e) {
+      console.error("Prisma error in createBooking:", e);
+      throw e;
+    }
+  }
 
   const newBooking: Booking = {
     id: `bk-${Date.now()}`,
@@ -499,45 +433,6 @@ export async function createBooking(data: Partial<Booking>): Promise<Booking> {
     updatedAt: new Date().toISOString(),
   };
 
-  try {
-    if (await isDbAvailable()) {
-      return (await prisma.booking.create({
-        data: {
-          bookingNo: newBooking.bookingNo,
-          customerId: newBooking.customerId,
-          serviceTypeId: newBooking.serviceTypeId,
-          issueDate: newBooking.issueDate ? new Date(newBooking.issueDate) : null,
-          travelDate: newBooking.travelDate ? new Date(newBooking.travelDate) : null,
-          returnDate: newBooking.returnDate ? new Date(newBooking.returnDate) : null,
-          sector: newBooking.sector,
-          flightNo: newBooking.flightNo,
-          pnr: newBooking.pnr,
-          flightTime: newBooking.flightTime,
-          portal: newBooking.portal,
-          passengerCount: newBooking.passengerCount,
-          passengerNames: newBooking.passengerNames,
-          passportNo: newBooking.passportNo,
-          submissionDate: newBooking.submissionDate ? new Date(newBooking.submissionDate) : null,
-          expiryDate: newBooking.expiryDate ? new Date(newBooking.expiryDate) : null,
-          status: newBooking.status,
-          alertNotes: newBooking.alertNotes,
-          totalAmount: newBooking.totalAmount,
-          paidAmount: newBooking.paidAmount,
-          balanceAmount: newBooking.balanceAmount,
-          dueDate: newBooking.dueDate ? new Date(newBooking.dueDate) : null,
-          paymentStatus: newBooking.paymentStatus,
-          notes: newBooking.notes,
-        },
-        include: {
-          customer: true,
-          serviceType: true,
-        },
-      })) as unknown as Booking;
-    }
-  } catch (e) {
-    console.warn("DB write failed for booking, using memory store:", e);
-  }
-
   memoryBookings.unshift(newBooking);
   return {
     ...newBooking,
@@ -560,8 +455,8 @@ export async function updateBooking(id: string, data: Partial<Booking>): Promise
 
   const { customer, serviceType, id: _bid, createdAt: _cAt, updatedAt: _uAt, ...cleanData } = data;
 
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       return (await prisma.booking.update({
         where: { id },
         data: {
@@ -582,9 +477,10 @@ export async function updateBooking(id: string, data: Partial<Booking>): Promise
           serviceType: true,
         },
       })) as unknown as Booking;
+    } catch (e) {
+      console.error("Prisma error in updateBooking:", e);
+      throw e;
     }
-  } catch (e) {
-    console.warn("DB update failed for booking, using memory store:", e);
   }
 
   const idx = memoryBookings.findIndex((b) => b.id === id);
@@ -608,13 +504,14 @@ export async function updateBooking(id: string, data: Partial<Booking>): Promise
 }
 
 export async function deleteBooking(id: string): Promise<boolean> {
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       await prisma.booking.delete({ where: { id } });
       return true;
+    } catch (e) {
+      console.error("Prisma error in deleteBooking:", e);
+      throw e;
     }
-  } catch (e) {
-    console.warn("DB delete failed for booking, using memory store:", e);
   }
 
   const before = memoryBookings.length;
@@ -624,31 +521,32 @@ export async function deleteBooking(id: string): Promise<boolean> {
 
 // ---------------- AGENCY SETTINGS ----------------
 export async function getAgencySettings(): Promise<AgencySettings> {
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       const settings = await prisma.agencySettings.findFirst();
       if (settings) return settings;
       return await prisma.agencySettings.create({
         data: initialAgencySettings,
       });
+    } catch (e) {
+      console.error("Prisma error in getAgencySettings:", e);
     }
-  } catch (e) {
-    console.warn("DB error fetching agency settings, using memory:", e);
   }
   return memorySettings;
 }
 
 export async function updateAgencySettings(data: Partial<AgencySettings>): Promise<AgencySettings> {
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       return await prisma.agencySettings.upsert({
         where: { id: "default" },
         update: data,
         create: { ...initialAgencySettings, ...data },
       });
+    } catch (e) {
+      console.error("Prisma error in updateAgencySettings:", e);
+      throw e;
     }
-  } catch (e) {
-    console.warn("DB update settings failed, using memory:", e);
   }
   memorySettings = { ...memorySettings, ...data };
   return memorySettings;
@@ -656,8 +554,8 @@ export async function updateAgencySettings(data: Partial<AgencySettings>): Promi
 
 // ---------------- USER AUTHENTICATION & CREDENTIALS ----------------
 export async function getAdminUser() {
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       let user = await prisma.user.findFirst();
       if (!user) {
         user = await prisma.user.create({
@@ -671,22 +569,22 @@ export async function getAdminUser() {
         });
       }
       return user;
+    } catch (e) {
+      console.error("Prisma error in getAdminUser:", e);
     }
-  } catch (e) {
-    console.warn("DB error fetching admin user, using memory store:", e);
   }
   return memoryUsers[0];
 }
 
 export async function findUserByUsername(username: string) {
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       return await prisma.user.findUnique({
         where: { username },
       });
+    } catch (e) {
+      console.error("Prisma error in findUserByUsername:", e);
     }
-  } catch (e) {
-    console.warn("DB error finding user:", e);
   }
   return memoryUsers.find((u) => u.username.toLowerCase() === username.toLowerCase()) || null;
 }
@@ -706,15 +604,16 @@ export async function updateUserCredentials(
     updateData.salt = hashed.salt;
   }
 
-  try {
-    if (await isDbAvailable()) {
+  if (hasDatabase()) {
+    try {
       return await prisma.user.update({
         where: { id: userId },
         data: updateData,
       });
+    } catch (e) {
+      console.error("Prisma error in updateUserCredentials:", e);
+      throw e;
     }
-  } catch (e) {
-    console.warn("DB error updating user credentials, using memory:", e);
   }
 
   const idx = memoryUsers.findIndex((u) => u.id === userId);

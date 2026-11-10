@@ -11,6 +11,7 @@ import InvoiceModal from "@/components/InvoiceModal";
 import WhatsAppModal from "@/components/WhatsAppModal";
 import ServiceManagementModal from "@/components/ServiceManagementModal";
 import AgencySettingsView from "@/components/AgencySettingsView";
+import CustomerModal from "@/components/CustomerModal";
 import LoginScreen from "@/components/LoginScreen";
 import { Booking, Customer, ServiceType, AgencySettings, initialAgencySettings } from "@/lib/types";
 import { getDaysDifference } from "@/lib/date-utils";
@@ -54,6 +55,8 @@ export default function HomePage() {
   const [whatsAppBooking, setWhatsAppBooking] = useState<Booking | null>(null);
 
   const [isServicesModalOpen, setIsServicesModalOpen] = useState(false);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [dbStatus, setDbStatus] = useState<{ connected: boolean; message?: string } | null>(null);
 
   // Customer Drawer state
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -87,12 +90,18 @@ export default function HomePage() {
       setLoading(true);
       setError(null);
 
-      const [resBookings, resCustomers, resServices, resSettings] = await Promise.all([
+      const [resBookings, resCustomers, resServices, resSettings, resDb] = await Promise.all([
         fetch("/api/bookings"),
         fetch("/api/customers"),
         fetch("/api/services"),
         fetch("/api/settings"),
+        fetch("/api/db-status").catch(() => null),
       ]);
+
+      if (resDb && resDb.ok) {
+        const dbInfo = await resDb.json();
+        setDbStatus(dbInfo);
+      }
 
       if (resBookings.ok) {
         const data = await resBookings.json();
@@ -284,10 +293,18 @@ export default function HomePage() {
             {/* Header Title & Refresh */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <CalendarDays className="text-sky-600 shrink-0" size={24} />
-                  <span>Due Date Alerts & Travel Radar</span>
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                    <CalendarDays className="text-sky-600 shrink-0" size={24} />
+                    <span>Due Date Alerts & Travel Radar</span>
+                  </h2>
+                  {dbStatus?.connected && (
+                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Neon DB Connected
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
                   Monitor upcoming passenger flights, schedule changes, and due dates before departure
                 </p>
@@ -411,7 +428,7 @@ export default function HomePage() {
               onSelectCustomer={handleSelectCustomer}
               onAddBookingForCustomer={(custId) => handleOpenNewBooking(custId)}
               onDeleteCustomer={handleDeleteCustomer}
-              onOpenNewCustomer={() => handleOpenNewBooking()}
+              onOpenNewCustomer={() => setIsCustomerModalOpen(true)}
             />
           </div>
         )}
@@ -569,6 +586,13 @@ export default function HomePage() {
         onClose={() => setIsServicesModalOpen(false)}
         serviceTypes={serviceTypes}
         onRefresh={fetchData}
+      />
+
+      {/* 6. Add Customer Only Modal */}
+      <CustomerModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        onCustomerCreated={fetchData}
       />
     </div>
   );
