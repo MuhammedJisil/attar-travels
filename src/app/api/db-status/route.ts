@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma, { getDatabaseUrl } from "@/lib/prisma";
+import { ensureDatabaseTables } from "@/lib/data-store";
 
 export async function GET() {
   const dbUrl = getDatabaseUrl();
@@ -11,8 +12,20 @@ export async function GET() {
     });
   }
 
+  // Extract host safely without revealing password
+  let host = "Unknown";
   try {
-    // Run quick query
+    const urlObj = new URL(dbUrl);
+    host = urlObj.hostname;
+  } catch {
+    // fallback
+  }
+
+  try {
+    // Auto-verify and create tables if needed
+    await ensureDatabaseTables();
+
+    // Run count queries
     const [customerCount, bookingCount] = await Promise.all([
       prisma.customer.count(),
       prisma.booking.count(),
@@ -21,20 +34,24 @@ export async function GET() {
     return NextResponse.json({
       connected: true,
       configured: true,
-      provider: "Neon PostgreSQL",
+      host,
+      provider: host.includes("neon.tech") ? "Neon PostgreSQL" : host.includes("prisma.io") ? "Prisma Postgres" : "PostgreSQL",
       counts: {
         customers: customerCount,
         bookings: bookingCount,
       },
-      message: "Database is connected and active.",
+      message: "Database is connected, tables are active, and queries succeed.",
     });
   } catch (error: unknown) {
     console.error("Database connection check failed:", error);
     return NextResponse.json({
       connected: false,
       configured: true,
+      host,
       error: error instanceof Error ? error.message : "Database connection failed",
-      message: "Could not connect to database. If using Neon, compute might be waking up or credentials need verification.",
+      message: host.includes("prisma.io")
+        ? "Connected to Prisma Postgres which is unreachable. Please set DATABASE_URL to your Neon database in Vercel Settings."
+        : "Could not connect to database. If using Neon, compute might be waking up or credentials need verification in Vercel Settings.",
     }, { status: 500 });
   }
 }

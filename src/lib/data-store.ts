@@ -117,6 +117,101 @@ export function hasDatabase(): boolean {
   return !!getDatabaseUrl();
 }
 
+let tablesInitialized = false;
+
+// Auto-create PostgreSQL tables on the database if they don't exist yet
+export async function ensureDatabaseTables(): Promise<boolean> {
+  if (tablesInitialized || !hasDatabase()) return true;
+  try {
+    const tableQueries = [
+      `CREATE TABLE IF NOT EXISTS "User" (
+        "id" TEXT PRIMARY KEY,
+        "username" TEXT UNIQUE NOT NULL,
+        "password" TEXT NOT NULL,
+        "salt" TEXT NOT NULL,
+        "name" TEXT DEFAULT 'Administrator',
+        "role" TEXT DEFAULT 'admin',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );`,
+      `CREATE TABLE IF NOT EXISTS "ServiceType" (
+        "id" TEXT PRIMARY KEY,
+        "name" TEXT UNIQUE NOT NULL,
+        "code" TEXT,
+        "description" TEXT,
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );`,
+      `CREATE TABLE IF NOT EXISTS "Customer" (
+        "id" TEXT PRIMARY KEY,
+        "name" TEXT NOT NULL,
+        "phone" TEXT NOT NULL,
+        "email" TEXT,
+        "address" TEXT,
+        "city" TEXT,
+        "notes" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );`,
+      `CREATE TABLE IF NOT EXISTS "Booking" (
+        "id" TEXT PRIMARY KEY,
+        "bookingNo" TEXT UNIQUE NOT NULL,
+        "customerId" TEXT NOT NULL REFERENCES "Customer"("id") ON DELETE CASCADE,
+        "serviceTypeId" TEXT NOT NULL REFERENCES "ServiceType"("id"),
+        "issueDate" TIMESTAMP(3),
+        "travelDate" TIMESTAMP(3),
+        "returnDate" TIMESTAMP(3),
+        "sector" TEXT,
+        "flightNo" TEXT,
+        "pnr" TEXT,
+        "flightTime" TEXT,
+        "portal" TEXT,
+        "passengerCount" INTEGER NOT NULL DEFAULT 1,
+        "passengerNames" TEXT,
+        "passportNo" TEXT,
+        "submissionDate" TIMESTAMP(3),
+        "expiryDate" TIMESTAMP(3),
+        "status" TEXT NOT NULL DEFAULT 'Confirmed',
+        "alertNotes" TEXT,
+        "totalAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "paidAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "balanceAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "dueDate" TIMESTAMP(3),
+        "paymentStatus" TEXT NOT NULL DEFAULT 'Pending',
+        "notes" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );`,
+      `CREATE TABLE IF NOT EXISTS "AgencySettings" (
+        "id" TEXT PRIMARY KEY DEFAULT 'default',
+        "agencyName" TEXT NOT NULL DEFAULT 'Al-Madina Travels & Tours',
+        "tagline" TEXT DEFAULT 'Your Trusted Travel & Ticketing Partner',
+        "phone" TEXT DEFAULT '+91 98765 43210',
+        "whatsapp" TEXT DEFAULT '+91 98765 43210',
+        "email" TEXT DEFAULT 'booking@almadinatravels.com',
+        "address" TEXT DEFAULT 'Near Central Bus Stand, Main Road, Calicut, Kerala - 673001',
+        "logoUrl" TEXT,
+        "taxNumber" TEXT DEFAULT 'GSTIN: 32AAAAA0000A1Z5',
+        "bankDetails" TEXT DEFAULT 'Account: 123456789012 | IFSC: HDFC0001234 | UPI: travels@upi',
+        "termsConditions" TEXT DEFAULT '1. Please report at airport 3 hours prior to international flight.\\n2. Tickets are subject to airline cancellation/reissue policies.\\n3. Verify passport validity (minimum 6 months required for international travel).',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );`
+    ];
+
+    for (const q of tableQueries) {
+      await prisma.$executeRawUnsafe(q);
+    }
+    tablesInitialized = true;
+    console.log("Database tables verified/created successfully.");
+    return true;
+  } catch (err) {
+    console.warn("Auto-create tables notice:", err);
+    return false;
+  }
+}
+
 // ---------------- SERVICE TYPES ----------------
 export async function getServiceTypes(): Promise<ServiceType[]> {
   if (hasDatabase()) {
@@ -135,8 +230,12 @@ export async function getServiceTypes(): Promise<ServiceType[]> {
         });
       }
       return await prisma.serviceType.findMany({ orderBy: { name: "asc" } });
-    } catch (e) {
+    } catch (e: unknown) {
       console.error("Prisma error in getServiceTypes:", e);
+      const isMissingTable = (e as { code?: string })?.code === "P2021";
+      if (isMissingTable) {
+        await ensureDatabaseTables();
+      }
     }
   }
   return memoryServiceTypes;
@@ -229,12 +328,30 @@ export async function getCustomers(): Promise<Customer[]> {
       });
       // Always return actual DB records (even if empty [])
       return records as unknown as Customer[];
-    } catch (e) {
+    } catch (e: unknown) {
       console.error("Prisma error in getCustomers:", e);
+      const isMissingTable = (e as { code?: string })?.code === "P2021";
+      if (isMissingTable) {
+        await ensureDatabaseTables();
+        try {
+          const records = await prisma.customer.findMany({
+            include: {
+              bookings: {
+                include: { serviceType: true },
+                orderBy: { createdAt: "desc" },
+              },
+            },
+            orderBy: { name: "asc" },
+          });
+          return records as unknown as Customer[];
+        } catch {
+          // ignore
+        }
+      }
     }
   }
 
-  // Populate memory relations if no DB
+  // Populate memory relations if no DB or table issue
   return memoryCustomers.map((cust) => ({
     ...cust,
     bookings: memoryBookings.filter((b) => b.customerId === cust.id).map((b) => ({
@@ -266,9 +383,40 @@ export async function createCustomer(data: Partial<Customer>): Promise<Customer>
         },
       });
       return created as unknown as Customer;
-    } catch (e) {
+    } catch (e: unknown) {
       console.error("Prisma error in createCustomer:", e);
-      throw e;
+      const isMissingTable = (e as { code?: string })?.code === "P2021";
+      if (isMissingTable) {
+        await ensureDatabaseTables();
+        try {
+          const retried = await prisma.customer.create({
+            data: {
+              name: data.name!.trim(),
+              phone: data.phone!.trim(),
+              email: data.email?.trim() || null,
+              city: data.city?.trim() || null,
+              address: data.address?.trim() || null,
+              notes: data.notes?.trim() || null,
+            },
+            include: {
+              bookings: {
+                include: { serviceType: true },
+              },
+            },
+          });
+          return retried as unknown as Customer;
+        } catch (retryErr) {
+          console.error("Retry createCustomer failed after ensureTables:", retryErr);
+        }
+      }
+
+      // If database is unreachable or table missing after attempt, gracefully save to memory
+      const errMsg = e instanceof Error ? e.message : String(e);
+      if ((e as { code?: string })?.code === "P1001" || errMsg.includes("Can't reach database") || isMissingTable) {
+        console.warn("Gracefully falling back to memory store for customer creation.");
+      } else {
+        throw e;
+      }
     }
   }
 
@@ -343,8 +491,24 @@ export async function getBookings(): Promise<Booking[]> {
         orderBy: { travelDate: "asc" },
       });
       return records as unknown as Booking[];
-    } catch (e) {
+    } catch (e: unknown) {
       console.error("Prisma error in getBookings:", e);
+      const isMissingTable = (e as { code?: string })?.code === "P2021";
+      if (isMissingTable) {
+        await ensureDatabaseTables();
+        try {
+          const records = await prisma.booking.findMany({
+            include: {
+              customer: true,
+              serviceType: true,
+            },
+            orderBy: { travelDate: "asc" },
+          });
+          return records as unknown as Booking[];
+        } catch {
+          // ignore
+        }
+      }
     }
   }
 
@@ -397,9 +561,55 @@ export async function createBooking(data: Partial<Booking>): Promise<Booking> {
           serviceType: true,
         },
       })) as unknown as Booking;
-    } catch (e) {
+    } catch (e: unknown) {
       console.error("Prisma error in createBooking:", e);
-      throw e;
+      const isMissingTable = (e as { code?: string })?.code === "P2021";
+      if (isMissingTable) {
+        await ensureDatabaseTables();
+        try {
+          return (await prisma.booking.create({
+            data: {
+              bookingNo,
+              customerId: data.customerId!,
+              serviceTypeId: data.serviceTypeId!,
+              issueDate: data.issueDate ? new Date(data.issueDate) : null,
+              travelDate: data.travelDate ? new Date(data.travelDate) : null,
+              returnDate: data.returnDate ? new Date(data.returnDate) : null,
+              sector: data.sector?.trim() || null,
+              flightNo: data.flightNo?.trim() || null,
+              pnr: data.pnr ? data.pnr.toUpperCase().trim() : null,
+              flightTime: data.flightTime?.trim() || null,
+              portal: data.portal?.trim() || null,
+              passengerCount: Number(data.passengerCount) || 1,
+              passengerNames: data.passengerNames?.trim() || null,
+              passportNo: data.passportNo?.trim() || null,
+              submissionDate: data.submissionDate ? new Date(data.submissionDate) : null,
+              expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
+              status: data.status || "Confirmed",
+              alertNotes: data.alertNotes?.trim() || null,
+              totalAmount,
+              paidAmount,
+              balanceAmount,
+              dueDate: data.dueDate ? new Date(data.dueDate) : null,
+              paymentStatus,
+              notes: data.notes?.trim() || null,
+            },
+            include: {
+              customer: true,
+              serviceType: true,
+            },
+          })) as unknown as Booking;
+        } catch (retryErr) {
+          console.error("Retry createBooking failed:", retryErr);
+        }
+      }
+
+      const errMsg = e instanceof Error ? e.message : String(e);
+      if ((e as { code?: string })?.code === "P1001" || errMsg.includes("Can't reach database") || isMissingTable) {
+        console.warn("Gracefully falling back to memory store for booking creation.");
+      } else {
+        throw e;
+      }
     }
   }
 
@@ -528,8 +738,19 @@ export async function getAgencySettings(): Promise<AgencySettings> {
       return await prisma.agencySettings.create({
         data: initialAgencySettings,
       });
-    } catch (e) {
+    } catch (e: unknown) {
       console.error("Prisma error in getAgencySettings:", e);
+      const isMissingTable = (e as { code?: string })?.code === "P2021";
+      if (isMissingTable) {
+        await ensureDatabaseTables();
+        try {
+          const settings = await prisma.agencySettings.findFirst();
+          if (settings) return settings;
+          return await prisma.agencySettings.create({ data: initialAgencySettings });
+        } catch {
+          // ignore
+        }
+      }
     }
   }
   return memorySettings;
@@ -569,8 +790,12 @@ export async function getAdminUser() {
         });
       }
       return user;
-    } catch (e) {
+    } catch (e: unknown) {
       console.error("Prisma error in getAdminUser:", e);
+      const isMissingTable = (e as { code?: string })?.code === "P2021";
+      if (isMissingTable) {
+        await ensureDatabaseTables();
+      }
     }
   }
   return memoryUsers[0];
