@@ -72,3 +72,4 @@ export function exportBookingsToCSV(bookings: Booking[], filename = "travel_desk
   link.click();
   document.body.removeChild(link);
 }
+

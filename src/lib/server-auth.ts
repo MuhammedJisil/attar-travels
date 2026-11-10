@@ -12,3 +12,4 @@ export async function getSession(): Promise<SessionUser | null> {
     return null;
   }
 }
+
