@@ -115,6 +115,7 @@ export default function ServiceManagementModal({
     setDateLabel(tmpl.dateLabel);
     setHasReturnDate(tmpl.hasReturnDate);
     setHasPax(tmpl.hasPax);
+    setCustomFields(tmpl.customFields ? JSON.parse(JSON.stringify(tmpl.customFields)) : []);
   };
 
   const handleOpenCreate = () => {
@@ -425,198 +426,89 @@ export default function ServiceManagementModal({
               </div>
             </div>
 
-            {/* Step 2: Custom Form Field Labels */}
+            {/* Step 2: Service Fields (Unified Custom Fields Builder) */}
             <div className="p-4 rounded-xl bg-sky-50/60 border border-sky-200 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-sky-950 uppercase tracking-wider text-xs flex items-center gap-1.5">
-                  <Settings2 size={15} className="text-sky-600" />
-                  2. Customize Form Fields for this Service
-                </span>
-                <span className="text-[11px] text-sky-700 bg-sky-100 px-2 py-0.5 rounded-md font-medium">
-                  Dynamically shown in Booking form
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <label className="block text-slate-700 text-xs font-semibold mb-1">
-                    Route / Sector Field Label
-                  </label>
-                  <input
-                    type="text"
-                    value={routeLabel}
-                    onChange={(e) => setRouteLabel(e.target.value)}
-                    placeholder="e.g. Sector or Train Route (From - To)"
-                    className="w-full p-2 bg-white border border-sky-200 rounded-lg text-slate-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 text-xs font-semibold mb-1">
-                    Number / Identifier Field Label
-                  </label>
-                  <input
-                    type="text"
-                    value={numberLabel}
-                    onChange={(e) => setNumberLabel(e.target.value)}
-                    placeholder="e.g. Flight No or Train No / Name"
-                    className="w-full p-2 bg-white border border-sky-200 rounded-lg text-slate-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 text-xs font-semibold mb-1">
-                    PNR / Ref Number Field Label
-                  </label>
-                  <input
-                    type="text"
-                    value={pnrLabel}
-                    onChange={(e) => setPnrLabel(e.target.value)}
-                    placeholder="e.g. Airline PNR or IRCTC PNR"
-                    className="w-full p-2 bg-white border border-sky-200 rounded-lg text-slate-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 text-xs font-semibold mb-1">
-                    Date Field Label (Calendar)
-                  </label>
-                  <input
-                    type="text"
-                    value={dateLabel}
-                    onChange={(e) => setDateLabel(e.target.value)}
-                    placeholder="e.g. Travel Date, Journey Date"
-                    className="w-full p-2 bg-white border border-sky-200 rounded-lg text-slate-900"
-                  />
-                </div>
-              </div>
-
-              {/* Time Configuration */}
-              <div className="p-3 bg-white rounded-xl border border-sky-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
-                    <Clock size={14} className="text-sky-600" />
-                    Time Setter Field (Flight Time / Train Time)
-                  </label>
-                  <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={hasTime}
-                      onChange={(e) => setHasTime(e.target.checked)}
-                      className="rounded text-sky-600 focus:ring-sky-500"
-                    />
-                    <span className="text-xs font-semibold text-slate-700">Enable Time Setter</span>
-                  </label>
-                </div>
-
-                {hasTime && (
-                  <div>
-                    <label className="block text-slate-600 text-xs font-semibold mb-1">
-                      Time Field Label (Shown next to Time Picker)
-                    </label>
-                    <input
-                      type="text"
-                      value={timeLabel}
-                      onChange={(e) => setTimeLabel(e.target.value)}
-                      placeholder="e.g. Flight Departure Time, Train Time, Bus Time, Check-in Time"
-                      className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Extra toggles */}
-              <div className="flex flex-wrap gap-4 pt-1 text-xs">
-                <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={hasReturnDate}
-                    onChange={(e) => setHasReturnDate(e.target.checked)}
-                    className="rounded text-sky-600 focus:ring-sky-500"
-                  />
-                  <span className="text-slate-700 font-medium">Show Return / Check-out Date</span>
-                </label>
-
-                <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={hasPax}
-                    onChange={(e) => setHasPax(e.target.checked)}
-                    className="rounded text-sky-600 focus:ring-sky-500"
-                  />
-                  <span className="text-slate-700 font-medium">Show Passenger Count & Names</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Step 3: Add Custom Fields From Scratch (Requested feature) */}
-            <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="font-bold text-emerald-950 uppercase tracking-wider text-xs flex items-center gap-1.5">
-                    <Plus size={15} className="text-emerald-600" />
-                    3. Add Custom Fields From Scratch
+                  <span className="font-bold text-sky-950 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                    <Plus size={15} className="text-sky-600" />
+                    2. Service Form Fields ({customFields.length})
                   </span>
-                  <p className="text-[11px] text-emerald-700 mt-0.5">
-                    Add new fields (e.g. Train Time, Reporting Date, Seat No) and choose its input type
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Add any fields you need (Time Setter, Calendar Date, Text, Number, Dropdown)
                   </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleAddCustomField}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-xs transition"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold text-xs shadow-xs transition self-start sm:self-auto active:scale-95"
                 >
-                  <Plus size={13} />
+                  <Plus size={14} />
                   <span>+ Add Field</span>
                 </button>
               </div>
 
               {customFields.length === 0 ? (
-                <div className="p-3 bg-white/80 rounded-xl border border-dashed border-emerald-200 text-center text-xs text-slate-500">
-                  No additional custom fields added yet. Click <strong>"+ Add Field"</strong> above to add custom date, time, or text fields for this service.
+                <div className="p-6 bg-white rounded-xl border border-dashed border-sky-200 text-center space-y-2">
+                  <p className="text-xs text-slate-500">
+                    No custom fields added yet for this service.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleAddCustomField}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 rounded-lg text-xs font-bold transition"
+                  >
+                    <Plus size={13} />
+                    <span>Click here to add your first field</span>
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-2.5">
                   {customFields.map((field, idx) => (
                     <div
                       key={field.id}
-                      className="p-3 bg-white rounded-xl border border-emerald-200 space-y-2 shadow-xs"
+                      className="p-3.5 bg-white rounded-xl border border-sky-200 space-y-2.5 shadow-xs"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold text-emerald-900 uppercase">
-                          Field #{idx + 1}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-sky-100 text-sky-800 font-bold text-[10px] flex items-center justify-center">
+                            {idx + 1}
+                          </span>
+                          <span className="text-xs font-bold text-slate-800">
+                            {field.name || `Field #${idx + 1}`}
+                          </span>
+                        </div>
                         <button
                           type="button"
                           onClick={() => handleRemoveCustomField(field.id)}
-                          className="text-slate-400 hover:text-rose-600 p-1 rounded transition"
-                          title="Remove field"
+                          className="text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition"
+                          title="Delete field"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={15} />
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                         {/* Field Label */}
                         <div className="sm:col-span-2">
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                             Field Name / Label *
                           </label>
                           <input
                             type="text"
                             required
-                            placeholder="e.g. Train Time, Reporting Date, Room No, Gate No"
+                            placeholder="e.g. Flight Time, Travel Date, Train Route, PNR..."
                             value={field.name}
                             onChange={(e) => handleUpdateCustomField(field.id, { name: e.target.value })}
-                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium"
+                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium focus:ring-2 focus:ring-sky-500"
                           />
                         </div>
 
                         {/* Field Type Selector */}
                         <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
-                            Field Type *
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Field Input Type *
                           </label>
                           <select
                             value={field.type}
@@ -625,22 +517,22 @@ export default function ServiceManagementModal({
                                 type: e.target.value as CustomFieldDefinition["type"],
                               })
                             }
-                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-semibold focus:ring-2 focus:ring-emerald-500"
+                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-bold focus:ring-2 focus:ring-sky-500"
                           >
                             <option value="time">🕒 Time Setter (Clock)</option>
                             <option value="date">📅 Date Picker (Calendar)</option>
                             <option value="text">🔤 Text Input</option>
                             <option value="number">🔢 Number</option>
-                            <option value="select">📋 Dropdown Options</option>
+                            <option value="select">📋 Dropdown List</option>
                           </select>
                         </div>
                       </div>
 
-                      {/* Extra options for select / placeholder */}
+                      {/* Dropdown Options if select type */}
                       {field.type === "select" && (
                         <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
-                            Dropdown Choices (Comma-separated)
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Dropdown Choices (Separated by comma)
                           </label>
                           <input
                             type="text"
@@ -651,7 +543,7 @@ export default function ServiceManagementModal({
                                 options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
                               })
                             }
-                            className="w-full p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs"
+                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs"
                           />
                         </div>
                       )}
