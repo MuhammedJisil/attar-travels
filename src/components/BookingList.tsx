@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Booking, ServiceType } from "@/lib/types";
+import { Booking, ServiceType, AgencySettings, initialAgencySettings } from "@/lib/types";
 import { getDaysDifference, formatDate } from "@/lib/date-utils";
 import { exportBookingsToCSV } from "@/lib/export-csv";
 import TicketQuickViewModal from "./TicketQuickViewModal";
+import TicketReportPdfModal from "./TicketReportPdfModal";
 import {
   Search,
   MessageCircle,
@@ -16,6 +17,7 @@ import {
   Plane,
   Eye,
   FileSpreadsheet,
+  FileText,
   ExternalLink,
   ChevronLeft,
   ChevronRight,
@@ -26,6 +28,7 @@ import {
 interface BookingListProps {
   bookings: Booking[];
   serviceTypes: ServiceType[];
+  settings?: AgencySettings;
   onOpenInvoice: (booking: Booking) => void;
   onOpenWhatsApp: (booking: Booking) => void;
   onEditBooking: (booking: Booking) => void;
@@ -41,10 +44,14 @@ export default function BookingList({
   onEditBooking,
   onDeleteBooking,
   onSelectCustomer,
+  settings = initialAgencySettings,
 }: BookingListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedService, setSelectedService] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
+
+  // PDF Export Modal State
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -155,14 +162,24 @@ export default function BookingList({
             <option value="Cancelled">Cancelled</option>
           </select>
 
-          {/* Export to CSV Button */}
+          {/* Export to PDF Button (Primary, as requested: "instead of excel i need pdf") */}
+          <button
+            onClick={() => setIsPdfModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition shadow-xs"
+            title="Export & Print Filtered Ledger as PDF"
+          >
+            <FileText size={15} className="text-rose-600" />
+            <span>Export PDF</span>
+          </button>
+
+          {/* Export to CSV Button (Secondary) */}
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium transition"
             title="Export filtered records to Excel / CSV"
           >
-            <FileSpreadsheet size={15} className="text-emerald-600" />
-            <span className="hidden sm:inline">Excel</span>
+            <FileSpreadsheet size={14} className="text-emerald-600" />
+            <span className="hidden sm:inline">CSV</span>
           </button>
 
           {(searchTerm || selectedService !== "all" || selectedStatus !== "all") && (
@@ -583,6 +600,21 @@ export default function BookingList({
         onOpenWhatsApp={onOpenWhatsApp}
         onOpenInvoice={onOpenInvoice}
         onEditBooking={onEditBooking}
+      />
+
+      {/* PDF Export Report Modal */}
+      <TicketReportPdfModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        bookings={filteredBookings}
+        settings={settings}
+        filterLabel={
+          selectedService !== "all"
+            ? `Service: ${serviceTypes.find((s) => s.id === selectedService)?.name || selectedService}`
+            : selectedStatus !== "all"
+            ? `Status: ${selectedStatus}`
+            : "All Active Tickets"
+        }
       />
     </div>
   );

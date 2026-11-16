@@ -363,6 +363,7 @@ export default function HomePage() {
               <BookingList
                 bookings={filteredBookings}
                 serviceTypes={serviceTypes}
+                settings={settings}
                 onOpenInvoice={handleOpenInvoice}
                 onOpenWhatsApp={handleOpenWhatsApp}
                 onEditBooking={handleEditBooking}
@@ -399,6 +400,7 @@ export default function HomePage() {
             <BookingList
               bookings={bookings}
               serviceTypes={serviceTypes}
+              settings={settings}
               onOpenInvoice={handleOpenInvoice}
               onOpenWhatsApp={handleOpenWhatsApp}
               onEditBooking={handleEditBooking}

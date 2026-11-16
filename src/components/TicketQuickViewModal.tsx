@@ -3,9 +3,12 @@
 import React from "react";
 import { Booking } from "@/lib/types";
 import { getDaysDifference, formatDate } from "@/lib/date-utils";
+import { getServiceFieldConfig } from "@/lib/service-config";
 import {
   X,
   Plane,
+  Train,
+  Bus,
   Clock,
   Phone,
   User,
@@ -16,6 +19,7 @@ import {
   AlertTriangle,
   Building,
   Calendar,
+  FileText,
 } from "lucide-react";
 
 interface TicketQuickViewModalProps {
@@ -112,57 +116,69 @@ export default function TicketQuickViewModal({
             </div>
           </div>
 
-          {/* Flight Details Grid */}
-          <div className="p-3.5 rounded-xl border border-sky-100 bg-sky-50/40 space-y-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-sky-800 block">
-              Flight & Travel Information
-            </span>
+          {/* Service Details Grid */}
+          {(() => {
+            const config = getServiceFieldConfig(booking.serviceType);
+            return (
+              <div className="p-3.5 rounded-xl border border-sky-100 bg-sky-50/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-sky-800 block">
+                    {booking.serviceType?.name || config.title}
+                  </span>
+                  <span className="text-[10px] font-mono font-bold text-sky-700 bg-white px-2 py-0.5 rounded border border-sky-200">
+                    {booking.serviceType?.code || "SRV"}
+                  </span>
+                </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Sector / Route</span>
-                <span className="font-bold text-slate-900 text-sm">{booking.sector || "N/A"}</span>
-              </div>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.routeLabel}</span>
+                    <span className="font-bold text-slate-900 text-sm">{booking.sector || "N/A"}</span>
+                  </div>
 
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Flight No</span>
-                <span className="font-bold text-sky-700 text-sm">{booking.flightNo || "N/A"}</span>
-              </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.numberLabel}</span>
+                    <span className="font-bold text-sky-700 text-sm">{booking.flightNo || "N/A"}</span>
+                  </div>
 
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Airline PNR</span>
-                <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 inline-block">
-                  {booking.pnr || "N/A"}
-                </span>
-              </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.pnrLabel}</span>
+                    <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 inline-block">
+                      {booking.pnr || "N/A"}
+                    </span>
+                  </div>
 
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Departure Time</span>
-                <span className="font-bold text-slate-800">{booking.flightTime || "As per ticket"}</span>
-              </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.timeLabel}</span>
+                    <span className="font-bold text-slate-800">
+                      {booking.flightTime ? `🕒 ${booking.flightTime}` : "As per ticket"}
+                    </span>
+                  </div>
 
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Travel Date</span>
-                <span className="font-bold text-slate-900">
-                  {booking.travelDate ? formatDate(booking.travelDate) : "N/A"}
-                </span>
-              </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.dateLabel}</span>
+                    <span className="font-bold text-slate-900">
+                      {booking.travelDate ? formatDate(booking.travelDate) : "N/A"}
+                    </span>
+                  </div>
 
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Issued Portal</span>
-                <span className="font-medium text-slate-800">{booking.portal || "Desk"}</span>
-              </div>
-            </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Issued Portal</span>
+                    <span className="font-medium text-slate-800">{booking.portal || "Desk"}</span>
+                  </div>
+                </div>
 
-            {booking.passengerNames && (
-              <div className="pt-2 border-t border-sky-100">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
-                  Passenger Names ({booking.passengerCount} Pax)
-                </span>
-                <span className="font-medium text-slate-800">{booking.passengerNames}</span>
+                {booking.passengerNames && (
+                  <div className="pt-2 border-t border-sky-100">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                      Passenger Names ({booking.passengerCount} Pax)
+                    </span>
+                    <span className="font-medium text-slate-800">{booking.passengerNames}</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            );
+          })()}
 
           {/* Financials Box */}
           <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 grid grid-cols-3 gap-2 text-center text-xs">

@@ -2,7 +2,30 @@
 
 import React, { useState } from "react";
 import { ServiceType } from "@/lib/types";
-import { X, Plus, Edit2, Trash2, Check, AlertCircle, Layers } from "lucide-react";
+import {
+  X,
+  Plus,
+  Edit2,
+  Trash2,
+  Check,
+  AlertCircle,
+  Layers,
+  Plane,
+  Train,
+  Bus,
+  FileText,
+  Building,
+  Compass,
+  Clock,
+  Calendar,
+  Settings2,
+} from "lucide-react";
+import {
+  DEFAULT_TEMPLATES,
+  ServiceTemplateType,
+  getServiceFieldConfig,
+  ServiceFieldDefinition,
+} from "@/lib/service-config";
 
 interface ServiceManagementModalProps {
   isOpen: boolean;
@@ -17,37 +40,142 @@ export default function ServiceManagementModal({
   serviceTypes,
   onRefresh,
 }: ServiceManagementModalProps) {
+  // Mode: "list" | "create" | "edit"
+  const [viewMode, setViewMode] = useState<"list" | "create" | "edit">("list");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editDesc, setEditDesc] = useState("");
 
-  const [newName, setNewName] = useState("");
-  const [newDesc, setNewDesc] = useState("");
+  // Form fields
+  const [serviceName, setServiceName] = useState("");
+  const [serviceCode, setServiceCode] = useState("");
+  const [serviceTemplate, setServiceTemplate] = useState<ServiceTemplateType>("flight");
+
+  // Custom Form Field configuration
+  const [title, setTitle] = useState("");
+  const [routeLabel, setRouteLabel] = useState("");
+  const [numberLabel, setNumberLabel] = useState("");
+  const [pnrLabel, setPnrLabel] = useState("");
+  const [timeLabel, setTimeLabel] = useState("");
+  const [hasTime, setHasTime] = useState(true);
+  const [dateLabel, setDateLabel] = useState("Travel / Departure Date");
+  const [hasReturnDate, setHasReturnDate] = useState(true);
+  const [hasPax, setHasPax] = useState(true);
+  const [customDesc, setCustomDesc] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleStartEdit = (service: ServiceType) => {
-    setEditingId(service.id);
-    setEditName(service.name);
-    setEditDesc(service.description || "");
+  const resetForm = () => {
+    setServiceName("");
+    setServiceCode("");
+    setServiceTemplate("flight");
+    applyTemplate("flight");
+    setCustomDesc("");
+    setEditingId(null);
+    setError(null);
   };
 
-  const handleSaveEdit = async (id: string) => {
-    if (!editName.trim()) return;
+  const applyTemplate = (templateKey: ServiceTemplateType) => {
+    const tmpl = DEFAULT_TEMPLATES[templateKey];
+    setServiceTemplate(templateKey);
+    setTitle(tmpl.title);
+    setRouteLabel(tmpl.routeLabel);
+    setNumberLabel(tmpl.numberLabel);
+    setPnrLabel(tmpl.pnrLabel);
+    setTimeLabel(tmpl.timeLabel);
+    setHasTime(tmpl.hasTime);
+    setDateLabel(tmpl.dateLabel);
+    setHasReturnDate(tmpl.hasReturnDate);
+    setHasPax(tmpl.hasPax);
+  };
+
+  const handleOpenCreate = () => {
+    resetForm();
+    setViewMode("create");
+  };
+
+  const handleStartEdit = (service: ServiceType) => {
+    const config = getServiceFieldConfig(service);
+    setEditingId(service.id);
+    setServiceName(service.name);
+    setServiceCode(service.code || "");
+    setServiceTemplate(config.template);
+    setTitle(config.title);
+    setRouteLabel(config.routeLabel);
+    setNumberLabel(config.numberLabel);
+    setPnrLabel(config.pnrLabel);
+    setTimeLabel(config.timeLabel);
+    setHasTime(config.hasTime);
+    setDateLabel(config.dateLabel);
+    setHasReturnDate(config.hasReturnDate);
+    setHasPax(config.hasPax);
+
+    // Extract human description if present
+    if (service.description && !service.description.startsWith("{")) {
+      setCustomDesc(service.description);
+    } else {
+      setCustomDesc("");
+    }
+
+    setViewMode("edit");
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!serviceName.trim()) return;
+
     setLoading(true);
+    setError(null);
+
+    const configPayload: Partial<ServiceFieldDefinition> = {
+      template: serviceTemplate,
+      title: title || `${serviceName.trim()} Details`,
+      routeLabel: routeLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].routeLabel,
+      numberLabel: numberLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].numberLabel,
+      pnrLabel: pnrLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].pnrLabel,
+      timeLabel: timeLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].timeLabel,
+      hasTime,
+      dateLabel: dateLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].dateLabel,
+      hasReturnDate,
+      hasPax,
+    };
+
+    const finalDescription = JSON.stringify(configPayload);
+
     try {
-      const res = await fetch(`/api/services/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editName.trim(), description: editDesc.trim() }),
-      });
-      if (!res.ok) throw new Error("Failed to update service");
-      setEditingId(null);
+      if (viewMode === "edit" && editingId) {
+        const res = await fetch(`/api/services/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: serviceName.trim(),
+            code: serviceCode.trim().toUpperCase() || serviceName.substring(0, 4).toUpperCase(),
+            description: finalDescription,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to update service");
+      } else {
+        const res = await fetch("/api/services", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: serviceName.trim(),
+            code: serviceCode.trim().toUpperCase() || serviceName.substring(0, 4).toUpperCase(),
+            description: finalDescription,
+          }),
+        });
+        if (!res.ok) {
+          const d = await res.json();
+          throw new Error(d.error || "Failed to create service");
+        }
+      }
+
+      resetForm();
+      setViewMode("list");
       onRefresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error updating service");
+      setError(err instanceof Error ? err.message : "Error saving service");
     } finally {
       setLoading(false);
     }
@@ -57,9 +185,7 @@ export default function ServiceManagementModal({
     if (!confirm(`Are you sure you want to remove "${name}" from the services list?`)) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/services/${id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/services/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete service");
       onRefresh();
     } catch (err: unknown) {
@@ -69,178 +195,357 @@ export default function ServiceManagementModal({
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName.trim()) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/services", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName.trim(), description: newDesc.trim() }),
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || "Failed to add service");
-      }
-      setNewName("");
-      setNewDesc("");
-      onRefresh();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error creating service");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
-        {/* Modal Header */}
-        <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-sky-50 to-white">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
+            <div className="p-2 bg-sky-600 text-white rounded-xl shadow-sm">
               <Layers size={18} />
             </div>
             <div>
-              <h3 className="font-bold text-base leading-tight">Manage Services Dropdown</h3>
-              <p className="text-xs text-slate-400">Add, rename or remove services offered by your office</p>
+              <h3 className="font-black text-slate-900 text-base">
+                {viewMode === "list"
+                  ? "Manage Services & Custom Form Fields"
+                  : viewMode === "create"
+                  ? "Create New Service with Custom Fields"
+                  : "Edit Service & Form Fields"}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {viewMode === "list"
+                  ? "Customize field labels, calendar, and time setter for each service"
+                  : "Choose a template and configure labels (Flight Time, Train Time, PNR, Route...)"}
+              </p>
             </div>
           </div>
           <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+            onClick={() => {
+              if (viewMode !== "list") setViewMode("list");
+              else onClose();
+            }}
+            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
-          {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-2">
-              <AlertCircle size={16} />
-              <span>{error}</span>
+        {error && (
+          <div className="mx-6 mt-4 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-2 text-xs">
+            <AlertCircle size={15} className="shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* VIEW 1: Service List */}
+        {viewMode === "list" && (
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs sm:text-sm">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-700 uppercase tracking-wider text-xs">
+                Active Services ({serviceTypes.length})
+              </span>
+              <button
+                onClick={handleOpenCreate}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-semibold text-xs shadow-sm transition active:scale-95"
+              >
+                <Plus size={14} />
+                <span>+ Add New Service</span>
+              </button>
             </div>
-          )}
 
-          {/* Add New Service Form */}
-          <form onSubmit={handleCreate} className="p-3.5 bg-sky-50/60 border border-sky-100 rounded-xl space-y-2">
-            <span className="font-bold text-sky-950 uppercase tracking-wider text-[11px] block">
-              + Add New Service to Dropdown
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <input
-                type="text"
-                required
-                placeholder="Service Name (e.g. Umrah Package)"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                className="p-2 bg-white border border-slate-300 rounded-lg text-slate-900"
-              />
-              <input
-                type="text"
-                placeholder="Short Description (Optional)"
-                value={newDesc}
-                onChange={(e) => setNewDesc(e.target.value)}
-                className="p-2 bg-white border border-slate-300 rounded-lg text-slate-900"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading || !newName.trim()}
-              className="w-full py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold text-xs transition disabled:opacity-50"
-            >
-              Add Service
-            </button>
-          </form>
-
-          {/* Existing Services List */}
-          <div>
-            <span className="font-bold text-slate-500 uppercase tracking-wider text-[11px] block mb-2">
-              Existing Services ({serviceTypes.length})
-            </span>
-            <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
-              {serviceTypes.map((service) => (
-                <div key={service.id} className="p-3 flex items-center justify-between gap-2 hover:bg-slate-50">
-                  {editingId === service.id ? (
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        className="p-1.5 border border-sky-400 rounded-md text-xs font-semibold text-slate-900"
-                      />
-                      <input
-                        type="text"
-                        value={editDesc}
-                        onChange={(e) => setEditDesc(e.target.value)}
-                        placeholder="Description"
-                        className="p-1.5 border border-slate-300 rounded-md text-xs text-slate-700"
-                      />
+            <div className="space-y-2.5">
+              {serviceTypes.map((st) => {
+                const cfg = getServiceFieldConfig(st);
+                return (
+                  <div
+                    key={st.id}
+                    className="p-4 bg-slate-50 hover:bg-white rounded-xl border border-slate-200 hover:border-sky-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-sky-100 text-sky-700 mt-0.5">
+                        {cfg.template === "flight" ? (
+                          <Plane size={16} />
+                        ) : cfg.template === "train" ? (
+                          <Train size={16} />
+                        ) : cfg.template === "bus" ? (
+                          <Bus size={16} />
+                        ) : cfg.template === "hotel" ? (
+                          <Building size={16} />
+                        ) : cfg.template === "passport" || cfg.template === "visa" ? (
+                          <FileText size={16} />
+                        ) : (
+                          <Compass size={16} />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900 text-sm">{st.name}</span>
+                          <span className="text-[10px] font-mono font-bold bg-white border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded">
+                            {st.code || "SRV"}
+                          </span>
+                          <span className="text-[10px] uppercase font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">
+                            {cfg.template}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 mt-1 text-slate-500 text-xs">
+                          <span>Route: <strong className="text-slate-700">{cfg.routeLabel}</strong></span>
+                          <span>•</span>
+                          <span>Time: <strong className="text-slate-700">{cfg.hasTime ? cfg.timeLabel : "Disabled"}</strong></span>
+                          <span>•</span>
+                          <span>Ref: <strong className="text-slate-700">{cfg.pnrLabel}</strong></span>
+                        </div>
+                      </div>
                     </div>
-                  ) : (
-                    <div>
-                      <div className="font-bold text-slate-900">{service.name}</div>
-                      {service.description && (
-                        <div className="text-slate-500 text-xs">{service.description}</div>
-                      )}
-                    </div>
-                  )}
 
-                  <div className="flex items-center gap-1 shrink-0">
-                    {editingId === service.id ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => handleSaveEdit(service.id)}
-                          className="p-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                          title="Save"
-                        >
-                          <Check size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditingId(null)}
-                          className="p-1.5 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300"
-                          title="Cancel"
-                        >
-                          <X size={14} />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => handleStartEdit(service)}
-                          className="p-1.5 text-slate-500 hover:text-sky-600 hover:bg-slate-100 rounded-lg"
-                          title="Edit Service"
-                        >
-                          <Edit2 size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(service.id, service.name)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
-                          title="Delete Service"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </>
-                    )}
+                    <div className="flex items-center gap-2 self-end sm:self-center">
+                      <button
+                        onClick={() => handleStartEdit(st)}
+                        className="p-2 text-slate-600 hover:text-sky-700 hover:bg-sky-50 rounded-lg transition"
+                        title="Configure form fields"
+                      >
+                        <Settings2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(st.id, st.name)}
+                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                        title="Delete service"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Modal Footer */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex justify-end">
+        {/* VIEW 2: Create / Edit Service Form */}
+        {viewMode !== "list" && (
+          <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-5 text-xs sm:text-sm">
+            {/* Step 1: Basic Info */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+              <span className="font-bold text-slate-800 uppercase tracking-wider text-xs">
+                1. Service Identity
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 text-xs font-semibold mb-1">
+                    Service Name * (e.g. Flight Ticket, Train Ticket, Tatkal Passport)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Train Ticket"
+                    value={serviceName}
+                    onChange={(e) => setServiceName(e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-medium focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 text-xs font-semibold mb-1">
+                    Service Short Code (e.g. TRAIN, FLIGHT, BUS)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. TRAIN"
+                    value={serviceCode}
+                    onChange={(e) => setServiceCode(e.target.value.toUpperCase())}
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+              </div>
+
+              {/* Template Picker */}
+              <div>
+                <label className="block text-slate-700 text-xs font-semibold mb-1.5">
+                  Choose Base Template
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {(
+                    [
+                      { key: "flight", label: "Flight Ticket", icon: Plane },
+                      { key: "train", label: "Train Ticket", icon: Train },
+                      { key: "bus", label: "Bus Ticket", icon: Bus },
+                      { key: "passport", label: "Passport", icon: FileText },
+                      { key: "visa", label: "Visa Processing", icon: FileText },
+                      { key: "hotel", label: "Hotel / Stay", icon: Building },
+                      { key: "tour", label: "Tour Package", icon: Compass },
+                      { key: "custom", label: "Custom Service", icon: Settings2 },
+                    ] as const
+                  ).map((t) => {
+                    const Icon = t.icon;
+                    const isSelected = serviceTemplate === t.key;
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => applyTemplate(t.key)}
+                        className={`p-2.5 rounded-xl border text-left flex items-center gap-2 transition ${
+                          isSelected
+                            ? "bg-sky-600 text-white border-sky-600 shadow-sm font-bold"
+                            : "bg-white text-slate-700 border-slate-200 hover:border-sky-300"
+                        }`}
+                      >
+                        <Icon size={14} className={isSelected ? "text-white" : "text-sky-600"} />
+                        <span className="text-xs">{t.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2: Custom Form Field Labels */}
+            <div className="p-4 rounded-xl bg-sky-50/60 border border-sky-200 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-sky-950 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                  <Settings2 size={15} className="text-sky-600" />
+                  2. Customize Form Fields for this Service
+                </span>
+                <span className="text-[11px] text-sky-700 bg-sky-100 px-2 py-0.5 rounded-md font-medium">
+                  Dynamically shown in Booking form
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 text-xs font-semibold mb-1">
+                    Route / Sector Field Label
+                  </label>
+                  <input
+                    type="text"
+                    value={routeLabel}
+                    onChange={(e) => setRouteLabel(e.target.value)}
+                    placeholder="e.g. Sector or Train Route (From - To)"
+                    className="w-full p-2 bg-white border border-sky-200 rounded-lg text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 text-xs font-semibold mb-1">
+                    Number / Identifier Field Label
+                  </label>
+                  <input
+                    type="text"
+                    value={numberLabel}
+                    onChange={(e) => setNumberLabel(e.target.value)}
+                    placeholder="e.g. Flight No or Train No / Name"
+                    className="w-full p-2 bg-white border border-sky-200 rounded-lg text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 text-xs font-semibold mb-1">
+                    PNR / Ref Number Field Label
+                  </label>
+                  <input
+                    type="text"
+                    value={pnrLabel}
+                    onChange={(e) => setPnrLabel(e.target.value)}
+                    placeholder="e.g. Airline PNR or IRCTC PNR"
+                    className="w-full p-2 bg-white border border-sky-200 rounded-lg text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 text-xs font-semibold mb-1">
+                    Date Field Label (Calendar)
+                  </label>
+                  <input
+                    type="text"
+                    value={dateLabel}
+                    onChange={(e) => setDateLabel(e.target.value)}
+                    placeholder="e.g. Travel Date, Journey Date"
+                    className="w-full p-2 bg-white border border-sky-200 rounded-lg text-slate-900"
+                  />
+                </div>
+              </div>
+
+              {/* Time Configuration */}
+              <div className="p-3 bg-white rounded-xl border border-sky-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                    <Clock size={14} className="text-sky-600" />
+                    Time Setter Field (Flight Time / Train Time)
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hasTime}
+                      onChange={(e) => setHasTime(e.target.checked)}
+                      className="rounded text-sky-600 focus:ring-sky-500"
+                    />
+                    <span className="text-xs font-semibold text-slate-700">Enable Time Setter</span>
+                  </label>
+                </div>
+
+                {hasTime && (
+                  <div>
+                    <label className="block text-slate-600 text-xs font-semibold mb-1">
+                      Time Field Label (Shown next to Time Picker)
+                    </label>
+                    <input
+                      type="text"
+                      value={timeLabel}
+                      onChange={(e) => setTimeLabel(e.target.value)}
+                      placeholder="e.g. Flight Departure Time, Train Time, Bus Time, Check-in Time"
+                      className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Extra toggles */}
+              <div className="flex flex-wrap gap-4 pt-1 text-xs">
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasReturnDate}
+                    onChange={(e) => setHasReturnDate(e.target.checked)}
+                    className="rounded text-sky-600 focus:ring-sky-500"
+                  />
+                  <span className="text-slate-700 font-medium">Show Return / Check-out Date</span>
+                </label>
+
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasPax}
+                    onChange={(e) => setHasPax(e.target.checked)}
+                    className="rounded text-sky-600 focus:ring-sky-500"
+                  />
+                  <span className="text-slate-700 font-medium">Show Passenger Count & Names</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Form Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className="px-4 py-2 text-slate-600 hover:text-slate-800 font-semibold text-xs rounded-xl"
+              >
+                Back to List
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-sm transition active:scale-95 disabled:opacity-50"
+              >
+                {loading ? "Saving Service..." : viewMode === "edit" ? "Update Service" : "Create Service"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Footer */}
+        <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <span>All custom service configurations are saved directly to your Neon database.</span>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl font-semibold text-xs"
+            className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 font-semibold"
           >
             Done
           </button>
@@ -249,4 +554,3 @@ export default function ServiceManagementModal({
     </div>
   );
 }
-

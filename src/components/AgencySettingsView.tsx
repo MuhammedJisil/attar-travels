@@ -20,6 +20,12 @@ import {
   KeyRound,
   Lock,
   User,
+  Database,
+  Upload,
+  Download,
+  FileJson,
+  Archive,
+  RefreshCw,
 } from "lucide-react";
 
 interface AgencySettingsViewProps {
@@ -46,6 +52,107 @@ export default function AgencySettingsView({
   const [credSaving, setCredSaving] = useState(false);
   const [credSuccess, setCredSuccess] = useState(false);
   const [credError, setCredError] = useState<string | null>(null);
+
+  // Backup & Restore state
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupSuccess, setBackupSuccess] = useState<string | null>(null);
+  const [backupError, setBackupError] = useState<string | null>(null);
+
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [restorePayload, setRestorePayload] = useState<any | null>(null);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [restoreSuccess, setRestoreSuccess] = useState<string | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+
+  const handleDownloadBackup = async () => {
+    setBackupLoading(true);
+    setBackupError(null);
+    setBackupSuccess(null);
+    try {
+      const res = await fetch("/api/backup");
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to download backup");
+      }
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const dateStr = new Date().toISOString().substring(0, 10);
+      a.href = url;
+      a.download = `attar_travels_backup_${dateStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setBackupSuccess(`Backup file created! (${data.metadata?.totalCustomers || 0} customers, ${data.metadata?.totalBookings || 0} bookings)`);
+      setTimeout(() => setBackupSuccess(null), 5000);
+    } catch (err: unknown) {
+      setBackupError(err instanceof Error ? err.message : "Backup failed");
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleSelectRestoreFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRestoreFile(file);
+    setRestoreError(null);
+    setRestoreSuccess(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const parsed = JSON.parse(content);
+        if (!parsed.data || (!parsed.data.customers && !parsed.data.bookings)) {
+          throw new Error("Invalid backup format. Expected an Attar Travels backup JSON.");
+        }
+        setRestorePayload(parsed);
+      } catch (err: unknown) {
+        setRestoreError(err instanceof Error ? err.message : "Failed to parse backup JSON file");
+        setRestorePayload(null);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleExecuteRestore = async () => {
+    if (!restorePayload) return;
+    if (!confirm("Are you sure you want to restore data from this backup? Existing records will be synced and updated in your database.")) {
+      return;
+    }
+
+    setRestoreLoading(true);
+    setRestoreError(null);
+    setRestoreSuccess(null);
+
+    try {
+      const res = await fetch("/api/backup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(restorePayload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to restore backup");
+      }
+
+      const resData = await res.json();
+      setRestoreSuccess(`Restore completed! Restored ${resData.restored?.customers || 0} customers, ${resData.restored?.bookings || 0} bookings, ${resData.restored?.services || 0} services. Refreshing...`);
+      setRestoreFile(null);
+      setRestorePayload(null);
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (err: unknown) {
+      setRestoreError(err instanceof Error ? err.message : "Restore failed");
+    } finally {
+      setRestoreLoading(false);
+    }
+  };
 
   const handleChange = (field: keyof AgencySettings, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -491,6 +598,133 @@ export default function AgencySettingsView({
           </button>
         </div>
       </form>
+
+      {/* ========================================================================= */}
+      {/* SECTION 5: DATABASE BACKUP & RESTORE (Requested feature)                  */}
+      {/* ========================================================================= */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wider flex items-center gap-2">
+            <Database size={18} className="text-emerald-600" />
+            Database Backup & Restore (Full System JSON Dump)
+          </h3>
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold flex items-center gap-1">
+            <Archive size={13} /> Complete Data Protection
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-500">
+          Export your entire travels database (all customers, bookings, service types, and office settings) into a single JSON file, or restore previously saved data to your Neon database anytime.
+        </p>
+
+        {backupSuccess && (
+          <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-2 text-xs">
+            <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+            <span>{backupSuccess}</span>
+          </div>
+        )}
+
+        {backupError && (
+          <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-2 text-xs">
+            <AlertCircle size={16} className="shrink-0" />
+            <span>{backupError}</span>
+          </div>
+        )}
+
+        {restoreSuccess && (
+          <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-2 text-xs">
+            <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+            <span>{restoreSuccess}</span>
+          </div>
+        )}
+
+        {restoreError && (
+          <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-2 text-xs">
+            <AlertCircle size={16} className="shrink-0" />
+            <span>{restoreError}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          {/* Card 1: Download Backup */}
+          <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 font-bold text-slate-800 text-sm mb-1">
+                <Download size={16} className="text-sky-600" />
+                <span>1. Download Full System Backup</span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Instantly generates a timestamped <code className="text-slate-700 font-mono">.json</code> file with all your bookings, customer records, and settings.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleDownloadBackup}
+              disabled={backupLoading}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition active:scale-95 disabled:opacity-50"
+            >
+              {backupLoading ? <RefreshCw size={15} className="animate-spin" /> : <Download size={15} />}
+              <span>{backupLoading ? "Generating Backup..." : "Download Backup (.json)"}</span>
+            </button>
+          </div>
+
+          {/* Card 2: Restore from Backup */}
+          <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 font-bold text-slate-800 text-sm mb-1">
+                <Upload size={16} className="text-emerald-600" />
+                <span>2. Restore Data from Backup File</span>
+              </div>
+              <p className="text-xs text-slate-500 mb-2">
+                Upload a valid <code className="text-slate-700 font-mono">.json</code> backup to restore your records into Neon database.
+              </p>
+
+              <label className="block p-3 border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-xl bg-white text-center cursor-pointer transition">
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleSelectRestoreFile}
+                  className="hidden"
+                />
+                <span className="text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5">
+                  <FileJson size={16} className="text-emerald-600" />
+                  {restoreFile ? restoreFile.name : "Click to select .json backup file"}
+                </span>
+              </label>
+
+              {restorePayload && (
+                <div className="mt-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200 text-[11px] text-emerald-800 flex items-center justify-between">
+                  <span>
+                    ✓ Valid Backup: {restorePayload.data?.customers?.length || 0} Customers,{" "}
+                    {restorePayload.data?.bookings?.length || 0} Bookings
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRestoreFile(null);
+                      setRestorePayload(null);
+                    }}
+                    className="text-rose-600 font-bold hover:underline"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleExecuteRestore}
+              disabled={!restorePayload || restoreLoading}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {restoreLoading ? <RefreshCw size={15} className="animate-spin" /> : <Upload size={15} />}
+              <span>{restoreLoading ? "Restoring Records..." : "Restore into Database"}</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
