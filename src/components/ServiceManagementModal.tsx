@@ -25,6 +25,7 @@ import {
   ServiceTemplateType,
   getServiceFieldConfig,
   ServiceFieldDefinition,
+  CustomFieldDefinition,
 } from "@/lib/service-config";
 
 interface ServiceManagementModalProps {
@@ -60,6 +61,7 @@ export default function ServiceManagementModal({
   const [hasReturnDate, setHasReturnDate] = useState(true);
   const [hasPax, setHasPax] = useState(true);
   const [customDesc, setCustomDesc] = useState("");
+  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,8 +74,33 @@ export default function ServiceManagementModal({
     setServiceTemplate("flight");
     applyTemplate("flight");
     setCustomDesc("");
+    setCustomFields([]);
     setEditingId(null);
     setError(null);
+  };
+
+  const handleAddCustomField = () => {
+    const newId = `fld_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    setCustomFields((prev) => [
+      ...prev,
+      {
+        id: newId,
+        name: "",
+        type: "text",
+        required: false,
+        placeholder: "",
+      },
+    ]);
+  };
+
+  const handleUpdateCustomField = (id: string, updates: Partial<CustomFieldDefinition>) => {
+    setCustomFields((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, ...updates } : f))
+    );
+  };
+
+  const handleRemoveCustomField = (id: string) => {
+    setCustomFields((prev) => prev.filter((f) => f.id !== id));
   };
 
   const applyTemplate = (templateKey: ServiceTemplateType) => {
@@ -110,6 +137,7 @@ export default function ServiceManagementModal({
     setDateLabel(config.dateLabel);
     setHasReturnDate(config.hasReturnDate);
     setHasPax(config.hasPax);
+    setCustomFields(config.customFields || []);
 
     // Extract human description if present
     if (service.description && !service.description.startsWith("{")) {
@@ -139,6 +167,7 @@ export default function ServiceManagementModal({
       dateLabel: dateLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].dateLabel,
       hasReturnDate,
       hasPax,
+      customFields: customFields.filter((f) => f.name.trim() !== ""),
     };
 
     const finalDescription = JSON.stringify(configPayload);
@@ -518,6 +547,118 @@ export default function ServiceManagementModal({
                   <span className="text-slate-700 font-medium">Show Passenger Count & Names</span>
                 </label>
               </div>
+            </div>
+
+            {/* Step 3: Add Custom Fields From Scratch (Requested feature) */}
+            <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-emerald-950 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                    <Plus size={15} className="text-emerald-600" />
+                    3. Add Custom Fields From Scratch
+                  </span>
+                  <p className="text-[11px] text-emerald-700 mt-0.5">
+                    Add new fields (e.g. Train Time, Reporting Date, Seat No) and choose its input type
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddCustomField}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-xs transition"
+                >
+                  <Plus size={13} />
+                  <span>+ Add Field</span>
+                </button>
+              </div>
+
+              {customFields.length === 0 ? (
+                <div className="p-3 bg-white/80 rounded-xl border border-dashed border-emerald-200 text-center text-xs text-slate-500">
+                  No additional custom fields added yet. Click <strong>"+ Add Field"</strong> above to add custom date, time, or text fields for this service.
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {customFields.map((field, idx) => (
+                    <div
+                      key={field.id}
+                      className="p-3 bg-white rounded-xl border border-emerald-200 space-y-2 shadow-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-emerald-900 uppercase">
+                          Field #{idx + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCustomField(field.id)}
+                          className="text-slate-400 hover:text-rose-600 p-1 rounded transition"
+                          title="Remove field"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {/* Field Label */}
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
+                            Field Name / Label *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Train Time, Reporting Date, Room No, Gate No"
+                            value={field.name}
+                            onChange={(e) => handleUpdateCustomField(field.id, { name: e.target.value })}
+                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium"
+                          />
+                        </div>
+
+                        {/* Field Type Selector */}
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
+                            Field Type *
+                          </label>
+                          <select
+                            value={field.type}
+                            onChange={(e) =>
+                              handleUpdateCustomField(field.id, {
+                                type: e.target.value as CustomFieldDefinition["type"],
+                              })
+                            }
+                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-semibold focus:ring-2 focus:ring-emerald-500"
+                          >
+                            <option value="time">🕒 Time Setter (Clock)</option>
+                            <option value="date">📅 Date Picker (Calendar)</option>
+                            <option value="text">🔤 Text Input</option>
+                            <option value="number">🔢 Number</option>
+                            <option value="select">📋 Dropdown Options</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Extra options for select / placeholder */}
+                      {field.type === "select" && (
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
+                            Dropdown Choices (Comma-separated)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Sleeper, 3A, 2A, 1A or Economy, Business"
+                            value={field.options?.join(", ") || ""}
+                            onChange={(e) =>
+                              handleUpdateCustomField(field.id, {
+                                options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                              })
+                            }
+                            className="w-full p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Form Action Buttons */}

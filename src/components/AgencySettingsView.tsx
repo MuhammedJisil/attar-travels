@@ -64,6 +64,24 @@ export default function AgencySettingsView({
   const [restoreSuccess, setRestoreSuccess] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
 
+  // Live Database Info state
+  const [dbInfo, setDbInfo] = useState<{
+    host?: string;
+    database?: string;
+    envSource?: string;
+    provider?: string;
+    counts?: { customers: number; bookings: number };
+  } | null>(null);
+
+  React.useEffect(() => {
+    fetch("/api/db-status")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && d.connected) setDbInfo(d);
+      })
+      .catch(() => {});
+  }, []);
+
   const handleDownloadBackup = async () => {
     setBackupLoading(true);
     setBackupError(null);
@@ -642,6 +660,24 @@ export default function AgencySettingsView({
           <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-2 text-xs">
             <AlertCircle size={16} className="shrink-0" />
             <span>{restoreError}</span>
+          </div>
+        )}
+
+        {/* Live Database Status Pill */}
+        {dbInfo && (
+          <div className="p-4 bg-sky-50/80 border border-sky-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="space-y-0.5">
+              <span className="font-bold text-sky-950 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Connected Database: {dbInfo.provider} ({dbInfo.counts?.customers || 0} Customers, {dbInfo.counts?.bookings || 0} Bookings)
+              </span>
+              <p className="text-slate-600 font-mono text-[11px]">
+                Host: <strong className="text-slate-900">{dbInfo.host}</strong> | DB: <strong className="text-slate-900">{dbInfo.database}</strong>
+              </p>
+            </div>
+            <span className="text-[10px] font-mono font-bold bg-white px-2 py-1 rounded border border-sky-200 text-sky-800 self-start sm:self-center">
+              Source: {dbInfo.envSource}
+            </span>
           </div>
         )}
 

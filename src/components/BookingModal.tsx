@@ -24,6 +24,9 @@ import {
   getServiceFieldConfig,
   formatTime12h,
   formatTime24h,
+  extractCustomFieldValues,
+  getCleanNotes,
+  serializeCustomFieldValues,
 } from "@/lib/service-config";
 
 interface BookingModalProps {
@@ -86,6 +89,7 @@ export default function BookingModal({
   const [paidAmount, setPaidAmount] = useState<number | string>(0);
   const [dueDate, setDueDate] = useState<string>("");
   const [notes, setNotes] = useState("");
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +119,8 @@ export default function BookingModal({
       setTotalAmount(booking.totalAmount);
       setPaidAmount(booking.paidAmount);
       setDueDate(booking.dueDate ? booking.dueDate.substring(0, 10) : "");
-      setNotes(booking.notes || "");
+      setNotes(getCleanNotes(booking.notes));
+      setCustomFieldValues(extractCustomFieldValues(booking.notes));
     } else {
       // Create mode
       const defaultService = serviceTypes.find((s) => s.code === "FLIGHT") || serviceTypes[0];
@@ -140,6 +145,8 @@ export default function BookingModal({
       setPassportNo("");
       setSubmissionDate("");
       setExpiryDate("");
+      setNotes("");
+      setCustomFieldValues({});
       setStatus("Confirmed");
       setAlertNotes("");
       setTotalAmount(0);
@@ -233,7 +240,7 @@ export default function BookingModal({
         paidAmount: numPaid,
         balanceAmount: calculatedBalance,
         dueDate: dueDate || null,
-        notes: notes.trim() || null,
+        notes: serializeCustomFieldValues(notes, customFieldValues) || null,
       };
 
       const url = booking ? `/api/bookings/${booking.id}` : "/api/bookings";
@@ -705,6 +712,127 @@ export default function BookingModal({
                         onChange={(e) => setPassengerNames(e.target.value)}
                         className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900"
                       />
+                    </div>
+                  </div>
+                )}
+
+                {/* Custom User-Added Fields from Scratch */}
+                {config.customFields && config.customFields.length > 0 && (
+                  <div className="p-3.5 bg-emerald-50/60 rounded-xl border border-emerald-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <Check size={14} className="text-emerald-600" />
+                        Custom Service Fields ({config.customFields.length})
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {config.customFields.map((fld) => {
+                        const val = customFieldValues[fld.name] || "";
+
+                        if (fld.type === "time") {
+                          return (
+                            <div key={fld.id} className="p-2.5 bg-white border border-emerald-200 rounded-xl space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <label className="text-slate-700 text-xs font-bold flex items-center gap-1">
+                                  <Clock size={13} className="text-emerald-600" />
+                                  {fld.name}
+                                </label>
+                                {val && (
+                                  <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                    🕒 {val}
+                                  </span>
+                                )}
+                              </div>
+                              <input
+                                type="time"
+                                value={formatTime24h(val)}
+                                onChange={(e) => {
+                                  const t24 = e.target.value;
+                                  const formatted = t24 ? formatTime12h(t24) : "";
+                                  setCustomFieldValues((prev) => ({ ...prev, [fld.name]: formatted }));
+                                  if (!flightTime) setFlightTime(formatted);
+                                }}
+                                className="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-bold text-xs cursor-pointer focus:ring-2 focus:ring-emerald-500"
+                              />
+                            </div>
+                          );
+                        }
+
+                        if (fld.type === "date") {
+                          return (
+                            <div key={fld.id} className="p-2.5 bg-white border border-emerald-200 rounded-xl space-y-1.5">
+                              <label className="text-slate-700 text-xs font-bold flex items-center gap-1">
+                                <Calendar size={13} className="text-emerald-600" />
+                                {fld.name}
+                              </label>
+                              <input
+                                type="date"
+                                value={val}
+                                onChange={(e) =>
+                                  setCustomFieldValues((prev) => ({ ...prev, [fld.name]: e.target.value }))
+                                }
+                                className="w-full p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-semibold focus:ring-2 focus:ring-emerald-500"
+                              />
+                            </div>
+                          );
+                        }
+
+                        if (fld.type === "select") {
+                          return (
+                            <div key={fld.id} className="p-2.5 bg-white border border-emerald-200 rounded-xl space-y-1">
+                              <label className="text-slate-700 text-xs font-bold">{fld.name}</label>
+                              <select
+                                value={val}
+                                onChange={(e) =>
+                                  setCustomFieldValues((prev) => ({ ...prev, [fld.name]: e.target.value }))
+                                }
+                                className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium"
+                              >
+                                <option value="">-- Select {fld.name} --</option>
+                                {(fld.options || []).map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        }
+
+                        if (fld.type === "number") {
+                          return (
+                            <div key={fld.id} className="p-2.5 bg-white border border-emerald-200 rounded-xl space-y-1">
+                              <label className="text-slate-700 text-xs font-bold">{fld.name}</label>
+                              <input
+                                type="number"
+                                placeholder={fld.placeholder || `Enter ${fld.name}`}
+                                value={val}
+                                onChange={(e) =>
+                                  setCustomFieldValues((prev) => ({ ...prev, [fld.name]: e.target.value }))
+                                }
+                                className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium"
+                              />
+                            </div>
+                          );
+                        }
+
+                        // Default text input
+                        return (
+                          <div key={fld.id} className="p-2.5 bg-white border border-emerald-200 rounded-xl space-y-1">
+                            <label className="text-slate-700 text-xs font-bold">{fld.name}</label>
+                            <input
+                              type="text"
+                              placeholder={fld.placeholder || `Enter ${fld.name}`}
+                              value={val}
+                              onChange={(e) =>
+                                setCustomFieldValues((prev) => ({ ...prev, [fld.name]: e.target.value }))
+                              }
+                              className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium"
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

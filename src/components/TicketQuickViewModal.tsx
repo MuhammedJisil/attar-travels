@@ -3,7 +3,7 @@
 import React from "react";
 import { Booking } from "@/lib/types";
 import { getDaysDifference, formatDate } from "@/lib/date-utils";
-import { getServiceFieldConfig } from "@/lib/service-config";
+import { getServiceFieldConfig, extractCustomFieldValues } from "@/lib/service-config";
 import {
   X,
   Plane,
@@ -176,6 +176,27 @@ export default function TicketQuickViewModal({
                     <span className="font-medium text-slate-800">{booking.passengerNames}</span>
                   </div>
                 )}
+
+                {(() => {
+                  const custom = extractCustomFieldValues(booking.notes);
+                  const keys = Object.keys(custom);
+                  if (keys.length === 0) return null;
+                  return (
+                    <div className="pt-2 border-t border-sky-100 space-y-1">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                        Custom Fields
+                      </span>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {keys.map((k) => (
+                          <div key={k} className="p-1.5 bg-white rounded border border-sky-100">
+                            <span className="text-slate-400 text-[10px] block font-semibold">{k}</span>
+                            <span className="font-bold text-slate-900">{custom[k]}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })()}

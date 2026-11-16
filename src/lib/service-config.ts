@@ -10,6 +10,15 @@ export type ServiceTemplateType =
   | "tour"
   | "custom";
 
+export interface CustomFieldDefinition {
+  id: string;
+  name: string; // e.g. "Reporting Time", "Coach No", "Room Category"
+  type: "text" | "number" | "date" | "time" | "select";
+  required?: boolean;
+  placeholder?: string;
+  options?: string[]; // for type === 'select'
+}
+
 export interface ServiceFieldDefinition {
   template: ServiceTemplateType;
   title: string;
@@ -28,6 +37,7 @@ export interface ServiceFieldDefinition {
   hasSubmissionDates: boolean;
   portalLabel: string;
   notesPlaceholder: string;
+  customFields?: CustomFieldDefinition[];
 }
 
 export const DEFAULT_TEMPLATES: Record<ServiceTemplateType, ServiceFieldDefinition> = {
@@ -297,4 +307,55 @@ export function formatTime24h(timeStr?: string | null): string {
   }
 
   return "";
+}
+
+const CUSTOM_FIELDS_MARKER = "\n\n__CUSTOM_FIELDS__\n";
+
+/**
+ * Extract custom field key-values from booking notes
+ */
+export function extractCustomFieldValues(notes?: string | null): Record<string, string> {
+  if (!notes) return {};
+  const markerIdx = notes.indexOf(CUSTOM_FIELDS_MARKER);
+  if (markerIdx === -1) return {};
+
+  try {
+    const jsonStr = notes.substring(markerIdx + CUSTOM_FIELDS_MARKER.length);
+    return JSON.parse(jsonStr) || {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Extract clean human readable notes without the custom fields JSON string
+ */
+export function getCleanNotes(notes?: string | null): string {
+  if (!notes) return "";
+  const markerIdx = notes.indexOf(CUSTOM_FIELDS_MARKER);
+  if (markerIdx === -1) return notes;
+  return notes.substring(0, markerIdx).trim();
+}
+
+/**
+ * Serialize clean notes and custom fields dictionary into notes string
+ */
+export function serializeCustomFieldValues(
+  cleanNotes: string,
+  customFields: Record<string, string>
+): string {
+  const trimmed = cleanNotes.trim();
+  const keys = Object.keys(customFields).filter((k) => customFields[k] !== undefined && customFields[k] !== "");
+  if (keys.length === 0) return trimmed;
+
+  const filtered: Record<string, string> = {};
+  for (const k of keys) {
+    filtered[k] = customFields[k];
+  }
+
+  const jsonStr = JSON.stringify(filtered);
+  if (!trimmed) {
+    return `${CUSTOM_FIELDS_MARKER.trim()}\n${jsonStr}`;
+  }
+  return `${trimmed}${CUSTOM_FIELDS_MARKER}${jsonStr}`;
 }

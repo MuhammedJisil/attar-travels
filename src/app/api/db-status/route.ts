@@ -12,14 +12,28 @@ export async function GET() {
     });
   }
 
-  // Extract host safely without revealing password
+  // Extract host and database safely without revealing password
   let host = "Unknown";
+  let database = "Unknown";
   try {
     const urlObj = new URL(dbUrl);
     host = urlObj.hostname;
+    database = urlObj.pathname ? urlObj.pathname.replace(/^\//, "") : "Unknown";
   } catch {
     // fallback
   }
+
+  const envSource = process.env.DATABASE_URL
+    ? "DATABASE_URL"
+    : process.env.POSTGRES_PRISMA_URL
+    ? "POSTGRES_PRISMA_URL"
+    : process.env.POSTGRES_URL
+    ? "POSTGRES_URL"
+    : process.env.DIRECT_URL
+    ? "DIRECT_URL"
+    : process.env.STORAGE_URL
+    ? "STORAGE_URL"
+    : "default";
 
   try {
     // Auto-verify and create tables if needed
@@ -35,12 +49,18 @@ export async function GET() {
       connected: true,
       configured: true,
       host,
-      provider: host.includes("neon.tech") ? "Neon PostgreSQL" : host.includes("prisma.io") ? "Prisma Postgres" : "PostgreSQL",
+      database,
+      envSource,
+      provider: host.includes("neon.tech")
+        ? "Neon PostgreSQL"
+        : host.includes("prisma.io")
+        ? "Prisma Postgres"
+        : "PostgreSQL",
       counts: {
         customers: customerCount,
         bookings: bookingCount,
       },
-      message: "Database is connected, tables are active, and queries succeed.",
+      message: `Database connected to ${host} (db: ${database}). Found ${customerCount} customers and ${bookingCount} bookings.`,
     });
   } catch (error: unknown) {
     console.error("Database connection check failed:", error);
