@@ -272,20 +272,22 @@ export default function HomePage() {
   // 3. Authenticated Dashboard
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col selection:bg-sky-500 selection:text-white">
-      {/* Top Navbar */}
-      <Navbar
-        settings={settings}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onOpenNewBooking={() => handleOpenNewBooking()}
-        urgentAlertCount={urgentCount}
-        currentUser={user}
-        onLogout={handleLogout}
-      />
+      {/* App main content hidden during invoice / report printing */}
+      <div id="main-app-content" className="no-print flex-1 flex flex-col">
+        {/* Top Navbar */}
+        <Navbar
+          settings={settings}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onOpenNewBooking={() => handleOpenNewBooking()}
+          urgentAlertCount={urgentCount}
+          currentUser={user}
+          onLogout={handleLogout}
+        />
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-5 sm:space-y-6">
-        {/* Error notification */}
+        {/* Main Container */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-5 sm:space-y-6">
+          {/* Error notification */}
         {error && (
           <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl flex items-center justify-between text-xs sm:text-sm">
             <div className="flex items-center gap-2">
@@ -543,6 +545,7 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+      </div>
 
       {/* MODALS */}
       {/* 1. Add / Edit Booking & Customer Modal */}

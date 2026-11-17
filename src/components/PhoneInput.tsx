@@ -64,7 +64,7 @@ export default function PhoneInput({
         <select
           value={selectedCode}
           onChange={handleCodeChange}
-          className="appearance-none pl-7 pr-6 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-sky-500 cursor-pointer"
+          className="appearance-none pl-3 pr-7 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-sky-500 cursor-pointer"
           title="Select Country Dial Code"
         >
           {COUNTRY_CODES.map((c) => (
@@ -73,9 +73,6 @@ export default function PhoneInput({
             </option>
           ))}
         </select>
-        <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm pointer-events-none">
-          {currentCountry?.flag || "🌐"}
-        </div>
         <ChevronDown
           size={13}
           className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"

@@ -93,8 +93,8 @@ export default function InvoiceModal({
   const invoiceDate = booking.issueDate ? formatDate(booking.issueDate) : formatDate(new Date().toISOString());
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-2 sm:p-6 flex justify-center items-start">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl my-auto sm:my-6 overflow-hidden flex flex-col">
+    <div className="invoice-modal-overlay fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-2 sm:p-6 flex justify-center items-start">
+      <div className="invoice-modal-card bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl my-auto sm:my-6 overflow-hidden flex flex-col">
         {/* Modal Top Control Bar (Hidden during Print) */}
         <div className="no-print bg-slate-800 text-white px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export default function InvoiceModal({
         </div>
 
         {/* Printable Invoice Sheet */}
-        <div ref={printAreaRef} className="p-8 sm:p-10 text-slate-800 bg-white leading-relaxed">
+        <div id="printable-invoice-sheet" ref={printAreaRef} className="p-8 sm:p-10 text-slate-800 bg-white leading-relaxed">
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-slate-200">
             <div className="flex items-start gap-3.5">
