@@ -375,6 +375,23 @@ export default function BookingList({
                         <div className="text-[10px] font-mono text-slate-400 mt-0.5">
                           {b.bookingNo}
                         </div>
+                        {b.passportNo && (
+                          <div className="text-[10px] font-mono text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 mt-1 flex items-center gap-1">
+                            <span>🛂</span>
+                            <span>{b.passportNo}</span>
+                          </div>
+                        )}
+                        {b.expiryDate && (() => {
+                          const exp = getDaysDifference(b.expiryDate);
+                          if (exp.days <= 180) {
+                            return (
+                              <div className={`text-[10px] font-bold mt-0.5 ${exp.days <= 30 ? "text-rose-600" : "text-amber-600"}`}>
+                                ⚠️ Exp: {formatDate(b.expiryDate)} ({exp.days < 0 ? "Expired" : `${exp.days}d left`})
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </td>
 
                       {/* 4. Sector / Flight No */}

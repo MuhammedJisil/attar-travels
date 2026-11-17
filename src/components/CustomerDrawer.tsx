@@ -32,6 +32,7 @@ interface CustomerDrawerProps {
   onDeleteBooking: (bookingId: string) => void;
   onOpenInvoice: (booking: Booking) => void;
   onOpenWhatsApp: (booking: Booking) => void;
+  onEditCustomer?: (customer: Customer) => void;
 }
 
 export default function CustomerDrawer({
@@ -44,6 +45,7 @@ export default function CustomerDrawer({
   onDeleteBooking,
   onOpenInvoice,
   onOpenWhatsApp,
+  onEditCustomer,
 }: CustomerDrawerProps) {
   if (!isOpen || !customer) return null;
 
@@ -84,12 +86,25 @@ export default function CustomerDrawer({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            {onEditCustomer && (
+              <button
+                onClick={() => onEditCustomer(customer)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-sky-300 text-xs font-semibold border border-slate-700 transition"
+                title="Edit Customer Profile"
+              >
+                <Edit2 size={13} />
+                <span>Edit Profile</span>
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Financial Ledger Summary Cards */}

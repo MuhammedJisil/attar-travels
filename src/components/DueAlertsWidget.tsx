@@ -11,6 +11,8 @@ import {
   CreditCard,
   CheckCircle2,
   Filter,
+  FileText,
+  ShieldAlert,
 } from "lucide-react";
 
 interface DueAlertsWidgetProps {
@@ -31,6 +33,7 @@ export default function DueAlertsWidget({
   let next7DaysCount = 0;
   let delayedCount = 0;
   let paymentPendingCount = 0;
+  let passportAlertCount = 0;
 
   bookings.forEach((b) => {
     const diff = getDaysDifference(b.travelDate);
@@ -46,12 +49,29 @@ export default function DueAlertsWidget({
     if (b.balanceAmount > 0) {
       paymentPendingCount++;
     }
+
+    // Passport Alerts calculation:
+    const isPassport =
+      b.serviceType?.code === "PASSPORT" ||
+      (b.serviceType?.name || "").toLowerCase().includes("passport") ||
+      Boolean(b.passportNo);
+
+    if (isPassport) {
+      const expDiff = b.expiryDate ? getDaysDifference(b.expiryDate) : null;
+      // Alert if passport expires within 6 months (180 days) or already expired
+      const isExpiringSoon = expDiff ? expDiff.days <= 180 : false;
+      // Alert if submitted and still In Process / pending collection
+      const isSubmissionPending = Boolean(b.submissionDate && b.status !== "Completed");
+      if (isExpiringSoon || isSubmissionPending) {
+        passportAlertCount++;
+      }
+    }
   });
 
   return (
     <div className="space-y-3">
       {/* Overview Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
         {/* Today Alert Card */}
         <button
           type="button"
@@ -164,6 +184,27 @@ export default function DueAlertsWidget({
           <div className="text-2xl font-black text-emerald-800 mt-1">{paymentPendingCount}</div>
           <div className="text-[11px] text-emerald-700 font-medium truncate">Payment Follow-up</div>
         </button>
+
+        {/* Passport Alerts Card */}
+        <button
+          type="button"
+          onClick={() => onSelectFilter(activeFilter === "passports" ? "all" : "passports")}
+          className={`p-3.5 rounded-2xl border text-left transition-all ${
+            activeFilter === "passports"
+              ? "bg-indigo-50 border-indigo-300 ring-2 ring-indigo-400 shadow-sm"
+              : "bg-white border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/30"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 flex items-center gap-1">
+              {passportAlertCount > 0 && <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>}
+              Passport Alerts
+            </span>
+            <FileText size={16} className="text-indigo-500" />
+          </div>
+          <div className="text-2xl font-black text-indigo-800 mt-1">{passportAlertCount}</div>
+          <div className="text-[11px] text-indigo-700 font-medium truncate">Expiry & Renewal</div>
+        </button>
       </div>
 
       {/* Filter Quick Pills */}
@@ -248,6 +289,17 @@ export default function DueAlertsWidget({
           }`}
         >
           💳 Payment Dues ({paymentPendingCount})
+        </button>
+
+        <button
+          onClick={() => onSelectFilter("passports")}
+          className={`px-3 py-1 rounded-full font-medium transition shrink-0 ${
+            activeFilter === "passports"
+              ? "bg-indigo-600 text-white font-bold shadow-sm"
+              : "bg-white border border-slate-200 text-indigo-800 hover:bg-indigo-50"
+          }`}
+        >
+          🛂 Passport Alerts ({passportAlertCount})
         </button>
       </div>
     </div>

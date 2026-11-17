@@ -15,6 +15,7 @@ import CustomerModal from "@/components/CustomerModal";
 import LoginScreen from "@/components/LoginScreen";
 import { Booking, Customer, ServiceType, AgencySettings, initialAgencySettings } from "@/lib/types";
 import { getDaysDifference } from "@/lib/date-utils";
+import { getServiceDisplayDescription } from "@/lib/service-config";
 import {
   CalendarDays,
   PlaneTakeoff,
@@ -56,6 +57,7 @@ export default function HomePage() {
 
   const [isServicesModalOpen, setIsServicesModalOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; message?: string } | null>(null);
 
   // Customer Drawer state
@@ -163,6 +165,18 @@ export default function HomePage() {
     }
     if (activeFilter === "pending_balance") {
       return b.balanceAmount > 0;
+    }
+    if (activeFilter === "passports") {
+      const isPassport =
+        b.serviceType?.code === "PASSPORT" ||
+        (b.serviceType?.name || "").toLowerCase().includes("passport") ||
+        Boolean(b.passportNo);
+
+      if (!isPassport) return false;
+      const expDiff = b.expiryDate ? getDaysDifference(b.expiryDate) : null;
+      const isExpiringSoon = expDiff ? expDiff.days <= 180 : false;
+      const isSubmissionPending = Boolean(b.submissionDate && b.status !== "Completed");
+      return isExpiringSoon || isSubmissionPending || Boolean(b.expiryDate) || Boolean(b.submissionDate);
     }
     return true;
   });
@@ -353,6 +367,8 @@ export default function HomePage() {
                     ? "⚠️ Delayed & Rescheduled Flights"
                     : activeFilter === "pending_balance"
                     ? "💳 Bookings with Pending Dues"
+                    : activeFilter === "passports"
+                    ? "🛂 Passport Alerts (Expiry < 6 Mos & Submissions)"
                     : "All Travel Tickets & Bookings"}
                 </h3>
                 <span className="text-xs text-slate-500 font-medium">
@@ -430,7 +446,14 @@ export default function HomePage() {
               onSelectCustomer={handleSelectCustomer}
               onAddBookingForCustomer={(custId) => handleOpenNewBooking(custId)}
               onDeleteCustomer={handleDeleteCustomer}
-              onOpenNewCustomer={() => setIsCustomerModalOpen(true)}
+              onOpenNewCustomer={() => {
+                setEditingCustomer(null);
+                setIsCustomerModalOpen(true);
+              }}
+              onEditCustomer={(cust) => {
+                setEditingCustomer(cust);
+                setIsCustomerModalOpen(true);
+              }}
             />
           </div>
         )}
@@ -474,8 +497,8 @@ export default function HomePage() {
                           {service.code || "SRV"}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {service.description || "Active service category"}
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                        {getServiceDisplayDescription(service)}
                       </p>
                     </div>
 
@@ -558,6 +581,11 @@ export default function HomePage() {
         onDeleteBooking={handleDeleteBooking}
         onOpenInvoice={(b) => handleOpenInvoice(b)}
         onOpenWhatsApp={(b) => handleOpenWhatsApp(b)}
+        onEditCustomer={(cust) => {
+          setIsCustomerDrawerOpen(false);
+          setEditingCustomer(cust);
+          setIsCustomerModalOpen(true);
+        }}
       />
 
       {/* 3. Printable Invoice & Voucher Modal */}
@@ -590,11 +618,15 @@ export default function HomePage() {
         onRefresh={fetchData}
       />
 
-      {/* 6. Add Customer Only Modal */}
+      {/* 6. Add / Edit Customer Modal */}
       <CustomerModal
         isOpen={isCustomerModalOpen}
-        onClose={() => setIsCustomerModalOpen(false)}
-        onCustomerCreated={fetchData}
+        customer={editingCustomer}
+        onClose={() => {
+          setIsCustomerModalOpen(false);
+          setEditingCustomer(null);
+        }}
+        onCustomerSaved={fetchData}
       />
     </div>
   );

@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // Hashed password
+  salt      String   // Salt for scrypt
+  name      String?  @default("Administrator")
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ServiceType {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  code        String?   // e.g. FLIGHT, PASSPORT, VISA, HOTEL, TOUR
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
+}
+
+model Customer {
+  id        String    @id @default(cuid())
+  name      String    // Customer / Party Name
+  phone     String    // Mobile number for WhatsApp & calls
+  email     String?
+  address   String?
+  city      String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  bookings  Booking[]
+}
+
+model Booking {
+  id             String       @id @default(cuid())
+  bookingNo      String       @unique // e.g. TRV-1001
+
+  // Relation to Customer
+  customerId     String
+  customer       Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Relation to Service Type
+  serviceTypeId  String
+  serviceType    ServiceType  @relation(fields: [serviceTypeId], references: [id])
+
+  // Flight Ticket specific fields
+  issueDate      DateTime?    // Date of issue / booking creation
+  travelDate     DateTime?    // Travel / Departure date
+  returnDate     DateTime?    // Return date for round trips
+  sector         String?      // Sector / Route narration e.g. DXB - COK
+  flightNo       String?      // Flight Number e.g. EK 532
+  pnr            String?      // PNR (Passenger Name Record)
+  flightTime     String?      // e.g. 10:30 AM / 22:45
+  portal         String?      // Issued from portal e.g. Galileo, Amadeus, Akbar, MakeMyTrip, Indigo Direct
+  passengerCount Int          @default(1)
+  passengerNames String?      // Comma-separated or narrative passenger names
+
+  // Passport / Visa / General service fields
+  passportNo     String?
+  submissionDate DateTime?
+  expiryDate     DateTime?
+
+  // Status & Alerts
+  // Values: "Confirmed", "Flight Delayed", "Rescheduled / Postponed", "Cancelled", "Completed", "In Process"
+  status         String       @default("Confirmed")
+  alertNotes     String?      // Any specific delay/postponed narration
+
+  // Financials & Payment Tracking
+  totalAmount    Float        @default(0)
+  paidAmount     Float        @default(0)
+  balanceAmount  Float        @default(0)
+  dueDate        DateTime?    // Payment due date
+  paymentStatus  String       @default("Pending") // "Paid", "Partial", "Pending"
+
+  // General Notes & Remarks
+  notes          String?
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model AgencySettings {
+  id           String   @id @default("default-agency-settings")
+  agencyName   String   @default("Attar Travels & Tourism")
+  tagline      String?  @default("Your Trusted Flight & Travel Partner")
+  phone        String?  @default("+91 98471 23456")
+  email        String?  @default("booking@attartravels.com")
+  address      String?  @default("Calicut International Airport Road, Kerala, India")
+  taxNumber    String?  @default("GSTIN: 32AABCA1234Z1Z5")
+  logoUrl      String?
+  whatsappTemplate String?
+  currency     String   @default("INR")
+  updatedAt    DateTime @updatedAt
+}

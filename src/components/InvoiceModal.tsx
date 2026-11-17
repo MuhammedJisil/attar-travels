@@ -7,6 +7,7 @@ import { formatDate, formatDateTime } from "@/lib/date-utils";
 import { generateWhatsAppUrl, createInvoiceShareMessage } from "@/lib/whatsapp";
 import {
   Printer,
+  Download,
   X,
   MessageCircle,
   FileCheck,
@@ -37,6 +38,51 @@ export default function InvoiceModal({
     window.print();
   };
 
+  const handleDownloadTextVoucher = () => {
+    const lines = [
+      "===========================================================",
+      `            ${settings.agencyName.toUpperCase()}`,
+      `     ${settings.tagline || "Travel & Ticketing Services"}`,
+      "===========================================================",
+      `INVOICE / VOUCHER NO: ${booking.bookingNo}`,
+      `DATE: ${booking.issueDate ? formatDate(booking.issueDate) : formatDate(new Date().toISOString())}`,
+      `STATUS: ${booking.status.toUpperCase()}`,
+      "-----------------------------------------------------------",
+      "CUSTOMER / PASSENGER DETAILS:",
+      `Name: ${booking.customer?.name || "N/A"}`,
+      `Mobile: ${booking.customer?.phone || "N/A"}`,
+      booking.customer?.city ? `City: ${booking.customer.city}` : "",
+      "-----------------------------------------------------------",
+      "SERVICE & JOURNEY DETAILS:",
+      `Service: ${booking.serviceType?.name || "Travel Service"}`,
+      booking.sector ? `Sector / Route: ${booking.sector}` : "",
+      booking.flightNo ? `Flight / Train No: ${booking.flightNo}` : "",
+      booking.pnr ? `PNR / Reference: ${booking.pnr}` : "",
+      booking.travelDate ? `Travel Date: ${formatDate(booking.travelDate)}` : "",
+      booking.flightTime ? `Departure Time: ${booking.flightTime}` : "",
+      booking.passengerNames ? `Passengers: ${booking.passengerNames}` : "",
+      booking.portal ? `Issued Through: ${booking.portal}` : "",
+      "-----------------------------------------------------------",
+      "PAYMENT & BILLING SUMMARY:",
+      `Total Amount: Rs. ${booking.totalAmount.toLocaleString()}`,
+      `Paid Amount:  Rs. ${booking.paidAmount.toLocaleString()}`,
+      `Balance Due:  Rs. ${booking.balanceAmount.toLocaleString()}`,
+      `Payment Status: ${booking.paymentStatus.toUpperCase()}`,
+      "===========================================================",
+      `Agency Contact: ${settings.phone || ""} | ${settings.email || ""}`,
+      `${settings.address || ""}`,
+      "===========================================================",
+    ].filter(Boolean).join("\n");
+
+    const blob = new Blob([lines], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Invoice-${booking.bookingNo}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleWhatsAppShare = () => {
     if (!booking.customer?.phone) return;
     const msg = createInvoiceShareMessage(booking, settings);
@@ -47,20 +93,20 @@ export default function InvoiceModal({
   const invoiceDate = booking.issueDate ? formatDate(booking.issueDate) : formatDate(new Date().toISOString());
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl my-8 overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-2 sm:p-6 flex justify-center items-start">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl my-auto sm:my-6 overflow-hidden flex flex-col">
         {/* Modal Top Control Bar (Hidden during Print) */}
-        <div className="no-print bg-slate-800 text-white px-6 py-3.5 flex items-center justify-between">
+        <div className="no-print bg-slate-800 text-white px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <FileCheck size={20} className="text-sky-400" />
-            <span className="font-semibold text-sm">Travel Invoice & Booking Voucher</span>
+            <span className="font-semibold text-sm">Travel Invoice & Voucher</span>
             <span className="text-xs text-slate-300">({booking.bookingNo})</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleWhatsAppShare}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold text-white transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold text-white transition active:scale-95"
               title="Share invoice summary on WhatsApp"
             >
               <MessageCircle size={15} />
@@ -68,11 +114,21 @@ export default function InvoiceModal({
             </button>
 
             <button
+              onClick={handleDownloadTextVoucher}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-slate-200 transition active:scale-95"
+              title="Download text voucher"
+            >
+              <Download size={14} />
+              <span className="hidden sm:inline">Text Voucher</span>
+            </button>
+
+            <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-xs font-semibold text-white transition"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-xs font-semibold text-white shadow-sm transition active:scale-95"
+              title="Print or Save as PDF"
             >
               <Printer size={15} />
-              <span>Print / PDF</span>
+              <span>Download PDF / Print</span>
             </button>
 
             <button

@@ -24,6 +24,7 @@ import {
   DEFAULT_TEMPLATES,
   ServiceTemplateType,
   getServiceFieldConfig,
+  getServiceDisplayDescription,
   ServiceFieldDefinition,
   CustomFieldDefinition,
 } from "@/lib/service-config";
@@ -141,8 +142,17 @@ export default function ServiceManagementModal({
     setCustomFields(config.customFields || []);
 
     // Extract human description if present
-    if (service.description && !service.description.startsWith("{")) {
-      setCustomDesc(service.description);
+    if (service.description) {
+      if (service.description.startsWith("{")) {
+        try {
+          const parsed = JSON.parse(service.description);
+          setCustomDesc(parsed.userDescription || "");
+        } catch {
+          setCustomDesc("");
+        }
+      } else {
+        setCustomDesc(service.description);
+      }
     } else {
       setCustomDesc("");
     }
@@ -168,6 +178,7 @@ export default function ServiceManagementModal({
       dateLabel: dateLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].dateLabel,
       hasReturnDate,
       hasPax,
+      userDescription: customDesc.trim() || undefined,
       customFields: customFields.filter((f) => f.name.trim() !== ""),
     };
 
@@ -318,11 +329,15 @@ export default function ServiceManagementModal({
                           </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 mt-1 text-slate-500 text-xs">
-                          <span>Route: <strong className="text-slate-700">{cfg.routeLabel}</strong></span>
-                          <span>•</span>
-                          <span>Time: <strong className="text-slate-700">{cfg.hasTime ? cfg.timeLabel : "Disabled"}</strong></span>
-                          <span>•</span>
-                          <span>Ref: <strong className="text-slate-700">{cfg.pnrLabel}</strong></span>
+                          <span>{getServiceDisplayDescription(st)}</span>
+                          {cfg.customFields && cfg.customFields.length > 0 && (
+                            <>
+                              <span>•</span>
+                              <span className="font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                                {cfg.customFields.length} Form Fields
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -384,6 +399,19 @@ export default function ServiceManagementModal({
                     className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 text-xs font-semibold mb-1">
+                  Service Description (Human Friendly)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Domestic & International airline tickets, Tatkal bookings, Visa assistance..."
+                  value={customDesc}
+                  onChange={(e) => setCustomDesc(e.target.value)}
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-sky-500"
+                />
               </div>
 
               {/* Template Picker */}

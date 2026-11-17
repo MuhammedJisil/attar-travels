@@ -37,6 +37,7 @@ export interface ServiceFieldDefinition {
   hasSubmissionDates: boolean;
   portalLabel: string;
   notesPlaceholder: string;
+  userDescription?: string;
   customFields?: CustomFieldDefinition[];
 }
 
@@ -306,6 +307,29 @@ export function getServiceFieldConfig(service?: ServiceType | null): ServiceFiel
 }
 
 /**
+ * Standard 24h train & flight time presets (aviation/railway notation, e.g. 22:00)
+ */
+export const TRAIN_FLIGHT_TIME_PRESETS = [
+  "06:00",
+  "09:30",
+  "12:15",
+  "15:45",
+  "18:30",
+  "20:15",
+  "22:00",
+  "23:45",
+];
+
+/**
+ * Format any time string strictly to 24-hour Train / Flight time format (e.g. "22:00" or "08:30")
+ */
+export function formatFlightTrainTime(timeStr?: string | null): string {
+  if (!timeStr) return "";
+  const t24 = formatTime24h(timeStr);
+  return t24 || timeStr.trim();
+}
+
+/**
  * Quick 12-hour AM/PM formatter from standard 24h time string (e.g. "14:30" -> "02:30 PM")
  */
 export function formatTime12h(timeStr?: string | null): string {
@@ -366,18 +390,40 @@ export function formatTime24h(timeStr?: string | null): string {
   return "";
 }
 
-const CUSTOM_FIELDS_MARKER = "\n\n__CUSTOM_FIELDS__\n";
+/**
+ * Get human-readable description for a service, ensuring raw JSON is NEVER shown on cards.
+ */
+export function getServiceDisplayDescription(service?: { name: string; description?: string | null } | null): string {
+  if (!service || !service.description) return "Active service category";
+  const desc = service.description.trim();
+  if (!desc.startsWith("{")) {
+    return desc;
+  }
+  try {
+    const parsed = JSON.parse(desc);
+    if (parsed.userDescription && typeof parsed.userDescription === "string" && parsed.userDescription.trim()) {
+      return parsed.userDescription.trim();
+    }
+    const count = parsed.customFields?.length || 0;
+    const title = parsed.title || service.name;
+    return `${title} (${count} field${count === 1 ? "" : "s"})`;
+  } catch {
+    return "Configured service";
+  }
+}
+
+const CUSTOM_MARKER = "__CUSTOM_FIELDS__";
 
 /**
  * Extract custom field key-values from booking notes
  */
 export function extractCustomFieldValues(notes?: string | null): Record<string, string> {
   if (!notes) return {};
-  const markerIdx = notes.indexOf(CUSTOM_FIELDS_MARKER);
+  const markerIdx = notes.indexOf(CUSTOM_MARKER);
   if (markerIdx === -1) return {};
 
   try {
-    const jsonStr = notes.substring(markerIdx + CUSTOM_FIELDS_MARKER.length);
+    const jsonStr = notes.substring(markerIdx + CUSTOM_MARKER.length).trim();
     return JSON.parse(jsonStr) || {};
   } catch {
     return {};
@@ -389,8 +435,8 @@ export function extractCustomFieldValues(notes?: string | null): Record<string, 
  */
 export function getCleanNotes(notes?: string | null): string {
   if (!notes) return "";
-  const markerIdx = notes.indexOf(CUSTOM_FIELDS_MARKER);
-  if (markerIdx === -1) return notes;
+  const markerIdx = notes.indexOf(CUSTOM_MARKER);
+  if (markerIdx === -1) return notes.trim();
   return notes.substring(0, markerIdx).trim();
 }
 
@@ -402,17 +448,19 @@ export function serializeCustomFieldValues(
   customFields: Record<string, string>
 ): string {
   const trimmed = cleanNotes.trim();
-  const keys = Object.keys(customFields).filter((k) => customFields[k] !== undefined && customFields[k] !== "");
+  const keys = Object.keys(customFields).filter(
+    (k) => customFields[k] !== undefined && customFields[k] !== null && String(customFields[k]).trim() !== ""
+  );
   if (keys.length === 0) return trimmed;
 
   const filtered: Record<string, string> = {};
   for (const k of keys) {
-    filtered[k] = customFields[k];
+    filtered[k] = String(customFields[k]).trim();
   }
 
   const jsonStr = JSON.stringify(filtered);
   if (!trimmed) {
-    return `${CUSTOM_FIELDS_MARKER.trim()}\n${jsonStr}`;
+    return `${CUSTOM_MARKER}\n${jsonStr}`;
   }
-  return `${trimmed}${CUSTOM_FIELDS_MARKER}${jsonStr}`;
+  return `${trimmed}\n\n${CUSTOM_MARKER}\n${jsonStr}`;
 }

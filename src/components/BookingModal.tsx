@@ -22,12 +22,15 @@ import {
 } from "lucide-react";
 import {
   getServiceFieldConfig,
+  formatFlightTrainTime,
   formatTime12h,
   formatTime24h,
+  TRAIN_FLIGHT_TIME_PRESETS,
   extractCustomFieldValues,
   getCleanNotes,
   serializeCustomFieldValues,
 } from "@/lib/service-config";
+import PhoneInput from "./PhoneInput";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -218,22 +221,65 @@ export default function BookingModal({
         throw new Error("Please select a service type.");
       }
 
+      let resolvedSector = sector.trim();
+      let resolvedFlightNo = flightNo.trim();
+      let resolvedPnr = pnr.trim() ? pnr.trim().toUpperCase() : "";
+      let resolvedTravelDate = travelDate;
+      let resolvedFlightTime = flightTime.trim() ? formatFlightTrainTime(flightTime) : "";
+      let resolvedPassportNo = passportNo.trim();
+      let resolvedSubmissionDate = submissionDate;
+      let resolvedExpiryDate = expiryDate;
+
+      // Automatically map any filled custom fields to core fields:
+      for (const [key, rawVal] of Object.entries(customFieldValues)) {
+        const val = String(rawVal).trim();
+        if (!val) continue;
+        const low = key.toLowerCase();
+        if (!resolvedPassportNo && (low.includes("passport number") || low.includes("passport no"))) {
+          resolvedPassportNo = val;
+        } else if (!resolvedSubmissionDate && (low.includes("submission date") || low.includes("applied date"))) {
+          resolvedSubmissionDate = val;
+        } else if (!resolvedExpiryDate && (low.includes("expiry date") || low.includes("validity date"))) {
+          resolvedExpiryDate = val;
+        } else if (!resolvedFlightTime && (low.includes("time") || low.includes("reporting") || low.includes("departure time"))) {
+          resolvedFlightTime = formatFlightTrainTime(val);
+        } else if (!resolvedTravelDate && (low.includes("date") && !low.includes("expiry") && !low.includes("submission") && !low.includes("return"))) {
+          resolvedTravelDate = val;
+        } else if (!resolvedPnr && (low.includes("pnr") || low.includes("arn") || low.includes("reference") || low.includes("file number") || low.includes("confirmation"))) {
+          resolvedPnr = val.toUpperCase();
+        } else if (!resolvedFlightNo && (low.includes("flight no") || low.includes("train no") || low.includes("bus no") || low.includes("package code"))) {
+          resolvedFlightNo = val;
+        } else if (!resolvedSector && (low.includes("sector") || low.includes("route") || low.includes("destination") || low.includes("hotel") || low.includes("package") || low.includes("country"))) {
+          resolvedSector = val;
+        }
+      }
+
+      if (!resolvedSector) {
+        resolvedSector = activeService?.name || "Travel Service";
+      }
+      if (!resolvedPnr) {
+        resolvedPnr = `TRV-${Date.now().toString().slice(-6)}`;
+      }
+      if (!resolvedTravelDate) {
+        resolvedTravelDate = issueDate || new Date().toISOString().substring(0, 10);
+      }
+
       const payload = {
         customerId: finalCustomerId,
         serviceTypeId: selectedServiceId,
         issueDate: issueDate || null,
-        travelDate: travelDate || null,
+        travelDate: resolvedTravelDate || null,
         returnDate: returnDate || null,
-        sector: sector.trim() || null,
-        flightNo: flightNo.trim() || null,
-        pnr: pnr.trim() ? pnr.trim().toUpperCase() : null,
-        flightTime: flightTime.trim() || null,
+        sector: resolvedSector || null,
+        flightNo: resolvedFlightNo || null,
+        pnr: resolvedPnr || null,
+        flightTime: resolvedFlightTime || null,
         portal: portal.trim() || null,
         passengerCount: Number(passengerCount) || 1,
         passengerNames: passengerNames.trim() || null,
-        passportNo: passportNo.trim() || null,
-        submissionDate: submissionDate || null,
-        expiryDate: expiryDate || null,
+        passportNo: resolvedPassportNo || null,
+        submissionDate: resolvedSubmissionDate || null,
+        expiryDate: resolvedExpiryDate || null,
         status,
         alertNotes: alertNotes.trim() || null,
         totalAmount: numTotal,
@@ -396,13 +442,11 @@ export default function BookingModal({
 
                 <div>
                   <label className="block text-slate-500 text-xs mb-1">Mobile No (for WhatsApp Alerts) *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. +91 98470 12345"
+                  <PhoneInput
                     value={newCustomerPhone}
-                    onChange={(e) => setNewCustomerPhone(e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-sky-500"
+                    onChange={setNewCustomerPhone}
+                    required
+                    placeholder="e.g. 98470 12345"
                   />
                 </div>
 
@@ -431,9 +475,10 @@ export default function BookingModal({
             )}
           </div>
 
-          {/* SECTION 3: Dynamic Service Fields (Supports Flight, Train, Bus, Hotel, Passport, Visa, Custom) */}
+          {/* SECTION 3: Dynamic Service Fields */}
           {(() => {
             const config = getServiceFieldConfig(activeService);
+            const hasCustomFields = Boolean(config.customFields && config.customFields.length > 0);
 
             return (
               <div className="space-y-4 border border-sky-100 rounded-xl p-4 bg-sky-50/30">
@@ -457,322 +502,127 @@ export default function BookingModal({
                   </span>
                 </div>
 
-                {/* Dates & Calendar Shortcuts */}
-                <div className="p-3 bg-white rounded-xl border border-sky-100 space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-1.5">
-                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                      <Calendar size={14} className="text-sky-600" />
-                      {config.dateLabel} *
-                    </span>
-                    {/* Quick Calendar Presets */}
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-slate-400 mr-1">Quick Pick:</span>
-                      {[
-                        { label: "Today", days: 0 },
-                        { label: "Tomorrow", days: 1 },
-                        { label: "+3 Days", days: 3 },
-                        { label: "+7 Days", days: 7 },
-                      ].map((p) => (
-                        <button
-                          key={p.label}
-                          type="button"
-                          onClick={() => {
-                            const d = new Date();
-                            d.setDate(d.getDate() + p.days);
-                            setTravelDate(d.toISOString().substring(0, 10));
-                          }}
-                          className="px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-sky-100 hover:text-sky-800 text-slate-600 rounded transition"
-                        >
-                          {p.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-slate-500 text-[11px] mb-1">Issue / Booking Date</label>
-                      <input
-                        type="date"
-                        value={issueDate}
-                        onChange={(e) => setIssueDate(e.target.value)}
-                        className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-rose-600 font-bold text-[11px] mb-1">
-                        {config.dateLabel} *
-                      </label>
-                      <input
-                        type="date"
-                        required
-                        value={travelDate}
-                        onChange={(e) => setTravelDate(e.target.value)}
-                        className="w-full p-2 bg-white border border-rose-300 rounded-lg text-slate-900 font-semibold focus:ring-2 focus:ring-rose-500 text-xs"
-                      />
-                    </div>
-
-                    {config.hasReturnDate ? (
-                      <div>
-                        <label className="block text-slate-500 text-[11px] mb-1">Return / End Date (Optional)</label>
+                {hasCustomFields ? (
+                  /* RENDER CONFIGURED FIELDS AS NORMAL FORM FIELDS */
+                  <div className="space-y-4">
+                    {/* Common Issue & Booking Date */}
+                    <div className="p-3 bg-white rounded-xl border border-slate-200">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                          <Calendar size={13} className="text-sky-600" />
+                          Booking / Issue Date
+                        </label>
                         <input
                           type="date"
-                          value={returnDate}
-                          onChange={(e) => setReturnDate(e.target.value)}
-                          className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs"
+                          value={issueDate}
+                          onChange={(e) => setIssueDate(e.target.value)}
+                          className="p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium"
                         />
                       </div>
-                    ) : (
-                      <div>
-                        <label className="block text-slate-500 text-[11px] mb-1">Issued From Portal</label>
-                        <input
-                          type="text"
-                          placeholder={config.portalLabel}
-                          value={portal}
-                          onChange={(e) => setPortal(e.target.value)}
-                          className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Route & Number Identification */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="sm:col-span-2">
-                    <label className="block text-slate-600 text-xs font-semibold mb-1">
-                      {config.routeLabel} *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder={config.routePlaceholder}
-                      value={sector}
-                      onChange={(e) => setSector(e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-medium"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-600 text-xs font-semibold mb-1">
-                      {config.numberLabel}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={config.numberPlaceholder}
-                      value={flightNo}
-                      onChange={(e) => setFlightNo(e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-semibold"
-                    />
-                  </div>
-                </div>
-
-                {/* PNR & TIME SETTER */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-slate-600 text-xs font-semibold mb-1">
-                      {config.pnrLabel} *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder={config.pnrPlaceholder}
-                      value={pnr}
-                      onChange={(e) => setPnr(e.target.value.toUpperCase())}
-                      className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono font-bold tracking-wider"
-                    />
-                  </div>
-
-                  {/* TIME PICKER / SETTER (Flight Time / Train Time / Bus Time) */}
-                  {config.hasTime && (
-                    <div className="sm:col-span-2 p-2.5 bg-white border border-sky-200 rounded-xl space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-slate-700 text-xs font-bold flex items-center gap-1">
-                          <Clock size={13} className="text-sky-600" />
-                          {config.timeLabel}
-                        </label>
-                        {flightTime && (
-                          <span className="text-xs font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
-                            🕒 {flightTime}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* Native HTML5 Time Setter */}
-                        <input
-                          type="time"
-                          value={formatTime24h(flightTime)}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (!val) setFlightTime("");
-                            else setFlightTime(formatTime12h(val));
-                          }}
-                          className="px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-bold text-xs focus:ring-2 focus:ring-sky-500 cursor-pointer"
-                        />
-
-                        {/* Quick One-Click Time Presets */}
-                        <div className="flex flex-wrap items-center gap-1 text-[10px]">
-                          {[
-                            { label: "06:00 AM", val: "06:00 AM" },
-                            { label: "09:30 AM", val: "09:30 AM" },
-                            { label: "02:00 PM", val: "02:00 PM" },
-                            { label: "06:30 PM", val: "06:30 PM" },
-                            { label: "09:45 PM", val: "09:45 PM" },
-                          ].map((tp) => (
-                            <button
-                              key={tp.label}
-                              type="button"
-                              onClick={() => setFlightTime(tp.val)}
-                              className={`px-1.5 py-1 rounded border transition font-medium ${
-                                flightTime === tp.val
-                                  ? "bg-sky-600 text-white border-sky-600 font-bold"
-                                  : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-sky-50"
-                              }`}
-                            >
-                              {tp.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {!config.hasTime && config.hasReturnDate && (
-                    <div>
-                      <label className="block text-slate-600 text-xs font-semibold mb-1">
-                        {config.portalLabel}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={config.portalLabel}
-                        value={portal}
-                        onChange={(e) => setPortal(e.target.value)}
-                        className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Passport & Visa specific extra fields if configured */}
-                {(config.hasPassportField || config.hasSubmissionDates) && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <div>
-                      <label className="block text-slate-600 text-xs font-semibold mb-1">Passport / Doc Number</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Z5892341"
-                        value={passportNo}
-                        onChange={(e) => setPassportNo(e.target.value)}
-                        className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-600 text-xs font-semibold mb-1">Submission Date</label>
-                      <input
-                        type="date"
-                        value={submissionDate}
-                        onChange={(e) => setSubmissionDate(e.target.value)}
-                        className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-600 text-xs font-semibold mb-1">Expiry / Validity Date</label>
-                      <input
-                        type="date"
-                        value={expiryDate}
-                        onChange={(e) => setExpiryDate(e.target.value)}
-                        className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Passenger count and names */}
-                {config.hasPax && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-slate-600 text-xs font-semibold mb-1">No. of Passengers (Pax)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={passengerCount}
-                        onChange={(e) => setPassengerCount(parseInt(e.target.value) || 1)}
-                        className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-medium"
-                      />
                     </div>
 
-                    <div className="sm:col-span-2">
-                      <label className="block text-slate-600 text-xs font-semibold mb-1">Passenger Names</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Mohammed Rashid, Aysha Rashid"
-                        value={passengerNames}
-                        onChange={(e) => setPassengerNames(e.target.value)}
-                        className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Custom User-Added Fields from Scratch */}
-                {config.customFields && config.customFields.length > 0 && (
-                  <div className="p-3.5 bg-emerald-50/60 rounded-xl border border-emerald-200 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
-                        <Check size={14} className="text-emerald-600" />
-                        Custom Service Fields ({config.customFields.length})
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {config.customFields.map((fld) => {
+                    {/* Clean Form Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {config.customFields!.map((fld) => {
                         const val = customFieldValues[fld.name] || "";
 
                         if (fld.type === "time") {
                           return (
-                            <div key={fld.id} className="p-2.5 bg-white border border-emerald-200 rounded-xl space-y-1.5">
+                            <div key={fld.id} className="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
                               <div className="flex items-center justify-between">
                                 <label className="text-slate-700 text-xs font-bold flex items-center gap-1">
-                                  <Clock size={13} className="text-emerald-600" />
+                                  <Clock size={13} className="text-sky-600" />
                                   {fld.name}
+                                  {fld.required && <span className="text-rose-500">*</span>}
                                 </label>
                                 {val && (
-                                  <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                                    🕒 {val}
+                                  <span className="text-[11px] font-mono font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+                                    🕒 {val} hrs
                                   </span>
                                 )}
                               </div>
-                              <input
-                                type="time"
-                                value={formatTime24h(val)}
-                                onChange={(e) => {
-                                  const t24 = e.target.value;
-                                  const formatted = t24 ? formatTime12h(t24) : "";
-                                  setCustomFieldValues((prev) => ({ ...prev, [fld.name]: formatted }));
-                                  if (!flightTime) setFlightTime(formatted);
-                                }}
-                                className="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-bold text-xs cursor-pointer focus:ring-2 focus:ring-emerald-500"
-                              />
+
+                              <div className="space-y-2">
+                                <input
+                                  type="time"
+                                  value={formatTime24h(val)}
+                                  onChange={(e) => {
+                                    const t24 = e.target.value;
+                                    setCustomFieldValues((prev) => ({ ...prev, [fld.name]: t24 }));
+                                    if (!flightTime) setFlightTime(t24);
+                                  }}
+                                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono font-bold text-xs cursor-pointer focus:ring-2 focus:ring-sky-500"
+                                />
+
+                                {/* 24-hour Train & Flight Time Presets (e.g. 22:00) */}
+                                <div className="flex flex-wrap items-center gap-1 text-[10px]">
+                                  <span className="text-slate-400 text-[10px] mr-0.5">24h Presets:</span>
+                                  {TRAIN_FLIGHT_TIME_PRESETS.map((t) => (
+                                    <button
+                                      key={t}
+                                      type="button"
+                                      onClick={() => {
+                                        setCustomFieldValues((prev) => ({ ...prev, [fld.name]: t }));
+                                        if (!flightTime) setFlightTime(t);
+                                      }}
+                                      className={`px-1.5 py-0.5 rounded border transition font-mono ${
+                                        val === t
+                                          ? "bg-sky-600 text-white border-sky-600 font-bold"
+                                          : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-sky-50"
+                                      }`}
+                                    >
+                                      {t}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                             </div>
                           );
                         }
 
                         if (fld.type === "date") {
                           return (
-                            <div key={fld.id} className="p-2.5 bg-white border border-emerald-200 rounded-xl space-y-1.5">
-                              <label className="text-slate-700 text-xs font-bold flex items-center gap-1">
-                                <Calendar size={13} className="text-emerald-600" />
-                                {fld.name}
-                              </label>
+                            <div key={fld.id} className="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
+                              <div className="flex items-center justify-between">
+                                <label className="text-slate-700 text-xs font-bold flex items-center gap-1">
+                                  <Calendar size={13} className="text-sky-600" />
+                                  {fld.name}
+                                  {fld.required && <span className="text-rose-500">*</span>}
+                                </label>
+                                <div className="flex items-center gap-1 text-[10px]">
+                                  {[
+                                    { label: "Today", days: 0 },
+                                    { label: "Tomorrow", days: 1 },
+                                    { label: "+3d", days: 3 },
+                                    { label: "+7d", days: 7 },
+                                  ].map((p) => (
+                                    <button
+                                      key={p.label}
+                                      type="button"
+                                      onClick={() => {
+                                        const d = new Date();
+                                        d.setDate(d.getDate() + p.days);
+                                        const dateStr = d.toISOString().substring(0, 10);
+                                        setCustomFieldValues((prev) => ({ ...prev, [fld.name]: dateStr }));
+                                        if (!travelDate) setTravelDate(dateStr);
+                                      }}
+                                      className="px-1 py-0.5 rounded bg-slate-100 hover:bg-sky-100 text-slate-600 font-medium"
+                                    >
+                                      {p.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                               <input
                                 type="date"
+                                required={fld.required}
                                 value={val}
-                                onChange={(e) =>
-                                  setCustomFieldValues((prev) => ({ ...prev, [fld.name]: e.target.value }))
-                                }
-                                className="w-full p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-semibold focus:ring-2 focus:ring-emerald-500"
+                                onChange={(e) => {
+                                  const dateVal = e.target.value;
+                                  setCustomFieldValues((prev) => ({ ...prev, [fld.name]: dateVal }));
+                                  if (!travelDate) setTravelDate(dateVal);
+                                }}
+                                className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-semibold focus:ring-2 focus:ring-sky-500"
                               />
                             </div>
                           );
@@ -780,14 +630,18 @@ export default function BookingModal({
 
                         if (fld.type === "select") {
                           return (
-                            <div key={fld.id} className="p-2.5 bg-white border border-emerald-200 rounded-xl space-y-1">
-                              <label className="text-slate-700 text-xs font-bold">{fld.name}</label>
+                            <div key={fld.id} className="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5">
+                              <label className="text-slate-700 text-xs font-bold">
+                                {fld.name}
+                                {fld.required && <span className="text-rose-500"> *</span>}
+                              </label>
                               <select
+                                required={fld.required}
                                 value={val}
                                 onChange={(e) =>
                                   setCustomFieldValues((prev) => ({ ...prev, [fld.name]: e.target.value }))
                                 }
-                                className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium"
+                                className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium focus:ring-2 focus:ring-sky-500"
                               >
                                 <option value="">-- Select {fld.name} --</option>
                                 {(fld.options || []).map((opt) => (
@@ -802,38 +656,334 @@ export default function BookingModal({
 
                         if (fld.type === "number") {
                           return (
-                            <div key={fld.id} className="p-2.5 bg-white border border-emerald-200 rounded-xl space-y-1">
-                              <label className="text-slate-700 text-xs font-bold">{fld.name}</label>
+                            <div key={fld.id} className="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5">
+                              <label className="text-slate-700 text-xs font-bold">
+                                {fld.name}
+                                {fld.required && <span className="text-rose-500"> *</span>}
+                              </label>
                               <input
                                 type="number"
+                                required={fld.required}
                                 placeholder={fld.placeholder || `Enter ${fld.name}`}
                                 value={val}
                                 onChange={(e) =>
                                   setCustomFieldValues((prev) => ({ ...prev, [fld.name]: e.target.value }))
                                 }
-                                className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium"
+                                className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium focus:ring-2 focus:ring-sky-500"
                               />
                             </div>
                           );
                         }
 
-                        // Default text input
+                        // Default Text Field
                         return (
-                          <div key={fld.id} className="p-2.5 bg-white border border-emerald-200 rounded-xl space-y-1">
-                            <label className="text-slate-700 text-xs font-bold">{fld.name}</label>
+                          <div key={fld.id} className="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5">
+                            <label className="text-slate-700 text-xs font-bold">
+                              {fld.name}
+                              {fld.required && <span className="text-rose-500"> *</span>}
+                            </label>
                             <input
                               type="text"
+                              required={fld.required}
                               placeholder={fld.placeholder || `Enter ${fld.name}`}
                               value={val}
-                              onChange={(e) =>
-                                setCustomFieldValues((prev) => ({ ...prev, [fld.name]: e.target.value }))
-                              }
-                              className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium"
+                              onChange={(e) => {
+                                const textVal = e.target.value;
+                                setCustomFieldValues((prev) => ({ ...prev, [fld.name]: textVal }));
+                                const low = fld.name.toLowerCase();
+                                if (!pnr && (low.includes("pnr") || low.includes("arn") || low.includes("reference"))) {
+                                  setPnr(textVal.toUpperCase());
+                                }
+                                if (!sector && (low.includes("sector") || low.includes("route") || low.includes("destination"))) {
+                                  setSector(textVal);
+                                }
+                              }}
+                              className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium focus:ring-2 focus:ring-sky-500"
                             />
                           </div>
                         );
                       })}
                     </div>
+
+                    {/* Passenger count and names if enabled */}
+                    {config.hasPax && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-white rounded-xl border border-slate-200">
+                        <div>
+                          <label className="block text-slate-600 text-xs font-semibold mb-1">No. of Passengers (Pax)</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={passengerCount}
+                            onChange={(e) => setPassengerCount(parseInt(e.target.value) || 1)}
+                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-slate-600 text-xs font-semibold mb-1">Passenger Names</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Mohammed Rashid, Aysha Rashid"
+                            value={passengerNames}
+                            onChange={(e) => setPassengerNames(e.target.value)}
+                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* LEGACY FALLBACK FOR SERVICES WITHOUT EXPLICIT CUSTOM FIELDS */
+                  <div className="space-y-4">
+                    {/* Dates & Calendar Shortcuts */}
+                    <div className="p-3 bg-white rounded-xl border border-sky-100 space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-1.5">
+                        <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                          <Calendar size={14} className="text-sky-600" />
+                          {config.dateLabel} *
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-slate-400 mr-1">Quick Pick:</span>
+                          {[
+                            { label: "Today", days: 0 },
+                            { label: "Tomorrow", days: 1 },
+                            { label: "+3 Days", days: 3 },
+                            { label: "+7 Days", days: 7 },
+                          ].map((p) => (
+                            <button
+                              key={p.label}
+                              type="button"
+                              onClick={() => {
+                                const d = new Date();
+                                d.setDate(d.getDate() + p.days);
+                                setTravelDate(d.toISOString().substring(0, 10));
+                              }}
+                              className="px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-sky-100 hover:text-sky-800 text-slate-600 rounded transition"
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-slate-500 text-[11px] mb-1">Issue / Booking Date</label>
+                          <input
+                            type="date"
+                            value={issueDate}
+                            onChange={(e) => setIssueDate(e.target.value)}
+                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-rose-600 font-bold text-[11px] mb-1">
+                            {config.dateLabel} *
+                          </label>
+                          <input
+                            type="date"
+                            required
+                            value={travelDate}
+                            onChange={(e) => setTravelDate(e.target.value)}
+                            className="w-full p-2 bg-white border border-rose-300 rounded-lg text-slate-900 font-semibold focus:ring-2 focus:ring-rose-500 text-xs"
+                          />
+                        </div>
+
+                        {config.hasReturnDate ? (
+                          <div>
+                            <label className="block text-slate-500 text-[11px] mb-1">Return / End Date (Optional)</label>
+                            <input
+                              type="date"
+                              value={returnDate}
+                              onChange={(e) => setReturnDate(e.target.value)}
+                              className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs"
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            <label className="block text-slate-500 text-[11px] mb-1">Issued From Portal</label>
+                            <input
+                              type="text"
+                              placeholder={config.portalLabel}
+                              value={portal}
+                              onChange={(e) => setPortal(e.target.value)}
+                              className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Route & Number Identification */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="sm:col-span-2">
+                        <label className="block text-slate-600 text-xs font-semibold mb-1">
+                          {config.routeLabel} *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder={config.routePlaceholder}
+                          value={sector}
+                          onChange={(e) => setSector(e.target.value)}
+                          className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-600 text-xs font-semibold mb-1">
+                          {config.numberLabel}
+                        </label>
+                        <input
+                          type="text"
+                          placeholder={config.numberPlaceholder}
+                          value={flightNo}
+                          onChange={(e) => setFlightNo(e.target.value)}
+                          className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    {/* PNR & TIME SETTER */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-slate-600 text-xs font-semibold mb-1">
+                          {config.pnrLabel} *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder={config.pnrPlaceholder}
+                          value={pnr}
+                          onChange={(e) => setPnr(e.target.value.toUpperCase())}
+                          className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono font-bold tracking-wider"
+                        />
+                      </div>
+
+                      {/* TIME PICKER (Flight Time / Train Time in 24h format) */}
+                      {config.hasTime && (
+                        <div className="sm:col-span-2 p-2.5 bg-white border border-sky-200 rounded-xl space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-slate-700 text-xs font-bold flex items-center gap-1">
+                              <Clock size={13} className="text-sky-600" />
+                              {config.timeLabel}
+                            </label>
+                            {flightTime && (
+                              <span className="text-xs font-mono font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+                                🕒 {flightTime} hrs
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <input
+                              type="time"
+                              value={formatTime24h(flightTime)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFlightTime(val ? formatFlightTrainTime(val) : "");
+                              }}
+                              className="px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono font-bold text-xs focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                            />
+
+                            {/* 24-hour Presets */}
+                            <div className="flex flex-wrap items-center gap-1 text-[10px]">
+                              {TRAIN_FLIGHT_TIME_PRESETS.map((t) => (
+                                <button
+                                  key={t}
+                                  type="button"
+                                  onClick={() => setFlightTime(t)}
+                                  className={`px-1.5 py-1 rounded border transition font-mono ${
+                                    flightTime === t
+                                      ? "bg-sky-600 text-white border-sky-600 font-bold"
+                                      : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-sky-50"
+                                  }`}
+                                >
+                                  {t}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {!config.hasTime && config.hasReturnDate && (
+                        <div>
+                          <label className="block text-slate-600 text-xs font-semibold mb-1">
+                            {config.portalLabel}
+                          </label>
+                          <input
+                            type="text"
+                            placeholder={config.portalLabel}
+                            value={portal}
+                            onChange={(e) => setPortal(e.target.value)}
+                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Passport & Visa specific extra fields */}
+                    {(config.hasPassportField || config.hasSubmissionDates) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <div>
+                          <label className="block text-slate-600 text-xs font-semibold mb-1">Passport / Doc Number</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Z5892341"
+                            value={passportNo}
+                            onChange={(e) => setPassportNo(e.target.value)}
+                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-600 text-xs font-semibold mb-1">Submission Date</label>
+                          <input
+                            type="date"
+                            value={submissionDate}
+                            onChange={(e) => setSubmissionDate(e.target.value)}
+                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-600 text-xs font-semibold mb-1">Expiry / Validity Date</label>
+                          <input
+                            type="date"
+                            value={expiryDate}
+                            onChange={(e) => setExpiryDate(e.target.value)}
+                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Passenger count and names */}
+                    {config.hasPax && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-slate-600 text-xs font-semibold mb-1">No. of Passengers (Pax)</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={passengerCount}
+                            onChange={(e) => setPassengerCount(parseInt(e.target.value) || 1)}
+                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-medium"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-slate-600 text-xs font-semibold mb-1">Passenger Names</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Mohammed Rashid, Aysha Rashid"
+                            value={passengerNames}
+                            onChange={(e) => setPassengerNames(e.target.value)}
+                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

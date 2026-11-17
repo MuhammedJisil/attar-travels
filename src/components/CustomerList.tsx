@@ -22,6 +22,7 @@ interface CustomerListProps {
   onAddBookingForCustomer: (customerId: string) => void;
   onDeleteCustomer: (customerId: string) => void;
   onOpenNewCustomer: () => void;
+  onEditCustomer?: (customer: Customer) => void;
 }
 
 export default function CustomerList({
@@ -30,6 +31,7 @@ export default function CustomerList({
   onAddBookingForCustomer,
   onDeleteCustomer,
   onOpenNewCustomer,
+  onEditCustomer,
 }: CustomerListProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -166,6 +168,16 @@ export default function CustomerList({
                   </button>
 
                   <div className="flex items-center gap-1">
+                    {onEditCustomer && (
+                      <button
+                        onClick={() => onEditCustomer(cust)}
+                        className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition"
+                        title="Edit Customer Details"
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                    )}
+
                     <button
                       onClick={() => onAddBookingForCustomer(cust.id)}
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 text-xs font-semibold transition"
@@ -177,10 +189,10 @@ export default function CustomerList({
 
                     <button
                       onClick={() => onDeleteCustomer(cust.id)}
-                      className="p-1 text-slate-400 hover:text-rose-600 rounded transition"
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
                       title="Delete Customer"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
