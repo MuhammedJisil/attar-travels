@@ -70,27 +70,27 @@ export default function DueAlertsWidget({
 
   return (
     <div className="space-y-3">
-      {/* Overview Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+      {/* Overview Stat Cards (Clean 5-Card Layout) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* Today Alert Card */}
         <button
           type="button"
           onClick={() => onSelectFilter(activeFilter === "today" ? "all" : "today")}
           className={`p-3.5 rounded-2xl border text-left transition-all ${
             activeFilter === "today"
-              ? "bg-rose-50 border-rose-300 ring-2 ring-rose-400 shadow-sm"
-              : "bg-white border-slate-200 hover:border-rose-200 hover:bg-rose-50/30"
+              ? "bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 ring-2 ring-rose-400 shadow-sm"
+              : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-rose-200 hover:bg-rose-50/30 dark:hover:bg-slate-800/60"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-rose-600 flex items-center gap-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
               Today
             </span>
             <Plane size={16} className="text-rose-500" />
           </div>
-          <div className="text-2xl font-black text-rose-700 mt-1">{todayCount}</div>
-          <div className="text-[11px] text-rose-600 font-medium truncate">Departing Today</div>
+          <div className="text-2xl font-black text-rose-700 dark:text-rose-300 mt-1">{todayCount}</div>
+          <div className="text-[11px] text-rose-600 dark:text-rose-400 font-medium truncate">Departing Today</div>
         </button>
 
         {/* Tomorrow Card */}
@@ -99,16 +99,16 @@ export default function DueAlertsWidget({
           onClick={() => onSelectFilter(activeFilter === "tomorrow" ? "all" : "tomorrow")}
           className={`p-3.5 rounded-2xl border text-left transition-all ${
             activeFilter === "tomorrow"
-              ? "bg-amber-50 border-amber-300 ring-2 ring-amber-400 shadow-sm"
-              : "bg-white border-slate-200 hover:border-amber-200 hover:bg-amber-50/30"
+              ? "bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 ring-2 ring-amber-400 shadow-sm"
+              : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-amber-200 hover:bg-amber-50/30 dark:hover:bg-slate-800/60"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-700">Tomorrow</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Tomorrow</span>
             <Clock size={16} className="text-amber-500" />
           </div>
-          <div className="text-2xl font-black text-amber-800 mt-1">{tomorrowCount}</div>
-          <div className="text-[11px] text-amber-700 font-medium truncate">1 Day Left</div>
+          <div className="text-2xl font-black text-amber-800 dark:text-amber-300 mt-1">{tomorrowCount}</div>
+          <div className="text-[11px] text-amber-700 dark:text-amber-400 font-medium truncate">1 Day Left</div>
         </button>
 
         {/* 3 Days Card */}
@@ -117,54 +117,16 @@ export default function DueAlertsWidget({
           onClick={() => onSelectFilter(activeFilter === "3days" ? "all" : "3days")}
           className={`p-3.5 rounded-2xl border text-left transition-all ${
             activeFilter === "3days"
-              ? "bg-orange-50 border-orange-300 ring-2 ring-orange-400 shadow-sm"
-              : "bg-white border-slate-200 hover:border-orange-200 hover:bg-orange-50/30"
+              ? "bg-orange-50 dark:bg-orange-950/40 border-orange-300 dark:border-orange-800 ring-2 ring-orange-400 shadow-sm"
+              : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-orange-200 hover:bg-orange-50/30 dark:hover:bg-slate-800/60"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-orange-700">Next 3 Days</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-orange-700 dark:text-orange-400">Next 3 Days</span>
             <Calendar size={16} className="text-orange-500" />
           </div>
-          <div className="text-2xl font-black text-orange-800 mt-1">{next3DaysCount}</div>
-          <div className="text-[11px] text-orange-700 font-medium truncate">Urgent Follow-ups</div>
-        </button>
-
-        {/* 7 Days Card */}
-        <button
-          type="button"
-          onClick={() => onSelectFilter(activeFilter === "7days" ? "all" : "7days")}
-          className={`p-3.5 rounded-2xl border text-left transition-all ${
-            activeFilter === "7days"
-              ? "bg-sky-50 border-sky-300 ring-2 ring-sky-400 shadow-sm"
-              : "bg-white border-slate-200 hover:border-sky-200 hover:bg-sky-50/30"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-sky-700">Next 7 Days</span>
-            <Calendar size={16} className="text-sky-500" />
-          </div>
-          <div className="text-2xl font-black text-sky-800 mt-1">{next7DaysCount}</div>
-          <div className="text-[11px] text-sky-700 font-medium truncate">Upcoming Week</div>
-        </button>
-
-        {/* Flight Delay / Rescheduled Card */}
-        <button
-          type="button"
-          onClick={() => onSelectFilter(activeFilter === "delayed" ? "all" : "delayed")}
-          className={`p-3.5 rounded-2xl border text-left transition-all ${
-            activeFilter === "delayed"
-              ? "bg-purple-50 border-purple-300 ring-2 ring-purple-400 shadow-sm"
-              : "bg-white border-slate-200 hover:border-purple-200 hover:bg-purple-50/30"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-purple-700 flex items-center gap-1">
-              <AlertTriangle size={13} className="text-purple-600" />
-              Delayed
-            </span>
-          </div>
-          <div className="text-2xl font-black text-purple-900 mt-1">{delayedCount}</div>
-          <div className="text-[11px] text-purple-700 font-medium truncate">Schedule Changes</div>
+          <div className="text-2xl font-black text-orange-800 dark:text-orange-300 mt-1">{next3DaysCount}</div>
+          <div className="text-[11px] text-orange-700 dark:text-orange-400 font-medium truncate">Urgent Follow-ups</div>
         </button>
 
         {/* Balance Pending Card */}
@@ -173,16 +135,16 @@ export default function DueAlertsWidget({
           onClick={() => onSelectFilter(activeFilter === "pending_balance" ? "all" : "pending_balance")}
           className={`p-3.5 rounded-2xl border text-left transition-all ${
             activeFilter === "pending_balance"
-              ? "bg-emerald-50 border-emerald-300 ring-2 ring-emerald-400 shadow-sm"
-              : "bg-white border-slate-200 hover:border-emerald-200 hover:bg-emerald-50/30"
+              ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 ring-2 ring-emerald-400 shadow-sm"
+              : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-emerald-200 hover:bg-emerald-50/30 dark:hover:bg-slate-800/60"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Dues Pending</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Dues Pending</span>
             <CreditCard size={16} className="text-emerald-500" />
           </div>
-          <div className="text-2xl font-black text-emerald-800 mt-1">{paymentPendingCount}</div>
-          <div className="text-[11px] text-emerald-700 font-medium truncate">Payment Follow-up</div>
+          <div className="text-2xl font-black text-emerald-800 dark:text-emerald-300 mt-1">{paymentPendingCount}</div>
+          <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium truncate">Payment Follow-up</div>
         </button>
 
         {/* Passport Alerts Card */}
@@ -191,19 +153,19 @@ export default function DueAlertsWidget({
           onClick={() => onSelectFilter(activeFilter === "passports" ? "all" : "passports")}
           className={`p-3.5 rounded-2xl border text-left transition-all ${
             activeFilter === "passports"
-              ? "bg-indigo-50 border-indigo-300 ring-2 ring-indigo-400 shadow-sm"
-              : "bg-white border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/30"
+              ? "bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-800 ring-2 ring-indigo-400 shadow-sm"
+              : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-indigo-200 hover:bg-indigo-50/30 dark:hover:bg-slate-800/60"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 flex items-center gap-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
               {passportAlertCount > 0 && <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>}
               Passport Alerts
             </span>
             <FileText size={16} className="text-indigo-500" />
           </div>
-          <div className="text-2xl font-black text-indigo-800 mt-1">{passportAlertCount}</div>
-          <div className="text-[11px] text-indigo-700 font-medium truncate">Expiry & Renewal</div>
+          <div className="text-2xl font-black text-indigo-800 dark:text-indigo-300 mt-1">{passportAlertCount}</div>
+          <div className="text-[11px] text-indigo-700 dark:text-indigo-400 font-medium truncate">Expiry & Renewal</div>
         </button>
       </div>
 

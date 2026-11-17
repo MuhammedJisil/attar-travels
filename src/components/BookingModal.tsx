@@ -124,7 +124,52 @@ export default function BookingModal({
       setPaidAmount(booking.paidAmount);
       setDueDate(booking.dueDate ? booking.dueDate.substring(0, 10) : "");
       setNotes(getCleanNotes(booking.notes));
-      setCustomFieldValues(extractCustomFieldValues(booking.notes));
+
+      // Customer info prefilling
+      if (booking.customer) {
+        setNewCustomerName(booking.customer.name || "");
+        setNewCustomerPhone(booking.customer.phone || "");
+        setNewCustomerEmail(booking.customer.email || "");
+        setNewCustomerCity(booking.customer.city || "");
+      }
+
+      // Populate custom fields intelligently from both notes and core fields
+      const extracted = extractCustomFieldValues(booking.notes);
+      const mergedCustom: Record<string, string> = { ...extracted };
+
+      const currentService = serviceTypes.find((s) => s.id === booking.serviceTypeId) || booking.serviceType;
+      const svcConfig = getServiceFieldConfig(currentService);
+
+      if (svcConfig.customFields && svcConfig.customFields.length > 0) {
+        for (const f of svcConfig.customFields) {
+          if (mergedCustom[f.name] !== undefined && mergedCustom[f.name] !== "") continue;
+          const low = f.name.toLowerCase();
+
+          if ((low.includes("flight no") || low.includes("train no") || low.includes("bus no") || low.includes("number")) && booking.flightNo) {
+            mergedCustom[f.name] = booking.flightNo;
+          } else if ((low.includes("pnr") || low.includes("arn") || low.includes("reference") || low.includes("ref")) && booking.pnr) {
+            mergedCustom[f.name] = booking.pnr;
+          } else if (low.includes("passport") && booking.passportNo) {
+            mergedCustom[f.name] = booking.passportNo;
+          } else if ((low.includes("time") || low.includes("departure time") || low.includes("reporting")) && booking.flightTime) {
+            mergedCustom[f.name] = booking.flightTime;
+          } else if (low.includes("expiry") && booking.expiryDate) {
+            mergedCustom[f.name] = booking.expiryDate.substring(0, 10);
+          } else if (low.includes("submission") && booking.submissionDate) {
+            mergedCustom[f.name] = booking.submissionDate.substring(0, 10);
+          } else if ((low.includes("return") || low.includes("check-out")) && booking.returnDate) {
+            mergedCustom[f.name] = booking.returnDate.substring(0, 10);
+          } else if ((low.includes("date") || low.includes("travel") || low.includes("journey")) && booking.travelDate) {
+            mergedCustom[f.name] = booking.travelDate.substring(0, 10);
+          } else if ((low.includes("route") || low.includes("sector") || low.includes("destination") || low.includes("hotel") || low.includes("station")) && booking.sector) {
+            mergedCustom[f.name] = booking.sector;
+          } else if ((low.includes("portal") || low.includes("supplier") || low.includes("booked")) && booking.portal) {
+            mergedCustom[f.name] = booking.portal;
+          }
+        }
+      }
+
+      setCustomFieldValues(mergedCustom);
     } else {
       // Create mode
       const defaultService = serviceTypes.find((s) => s.code === "FLIGHT") || serviceTypes[0];
@@ -423,6 +468,11 @@ export default function BookingModal({
                   className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100"
                 >
                   <option value="">-- Choose Customer / Party --</option>
+                  {booking?.customer && !customers.some((c) => c.id === booking.customerId) && (
+                    <option value={booking.customerId}>
+                      {booking.customer.name} — ({booking.customer.phone}) {booking.customer.city ? `• ${booking.customer.city}` : ""}
+                    </option>
+                  )}
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name} — ({c.phone}) {c.city ? `• ${c.city}` : ""}

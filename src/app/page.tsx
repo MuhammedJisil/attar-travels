@@ -72,6 +72,34 @@ export default function HomePage() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; message?: string } | null>(null);
 
+  // Theme state (Light / Dark mode toggle)
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("travels_theme");
+    if (saved === "dark") {
+      setIsDarkMode(true);
+      document.documentElement.classList.add("dark");
+    } else {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove("dark");
+    }
+  }, []);
+
+  const handleToggleTheme = () => {
+    setIsDarkMode((prev) => {
+      const next = !prev;
+      if (next) {
+        document.documentElement.classList.add("dark");
+        localStorage.setItem("travels_theme", "dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        localStorage.setItem("travels_theme", "light");
+      }
+      return next;
+    });
+  };
+
   // Customer Drawer state
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isCustomerDrawerOpen, setIsCustomerDrawerOpen] = useState(false);
@@ -283,7 +311,7 @@ export default function HomePage() {
 
   // 3. Authenticated Dashboard
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col selection:bg-sky-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col selection:bg-sky-500 selection:text-white transition-colors duration-200">
       {/* App main content hidden during invoice / report printing */}
       <div id="main-app-content" className="no-print flex-1 flex flex-col">
         {/* Top Navbar */}
@@ -295,10 +323,12 @@ export default function HomePage() {
           urgentAlertCount={urgentCount}
           currentUser={user}
           onLogout={handleLogout}
+          isDarkMode={isDarkMode}
+          onToggleTheme={handleToggleTheme}
         />
 
-        {/* Main Container */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-5 sm:space-y-6">
+        {/* Main Container with generous header breathing room */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-10 space-y-6">
           {/* Error notification */}
         {error && (
           <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl flex items-center justify-between text-xs sm:text-sm">
