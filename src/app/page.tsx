@@ -8,6 +8,7 @@ import CustomerList from "@/components/CustomerList";
 import CustomerDrawer from "@/components/CustomerDrawer";
 import BookingModal from "@/components/BookingModal";
 import InvoiceModal from "@/components/InvoiceModal";
+import TicketReportPdfModal from "@/components/TicketReportPdfModal";
 import WhatsAppModal from "@/components/WhatsAppModal";
 import ServiceManagementModal from "@/components/ServiceManagementModal";
 import AgencySettingsView from "@/components/AgencySettingsView";
@@ -54,6 +55,17 @@ export default function HomePage() {
 
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
   const [whatsAppBooking, setWhatsAppBooking] = useState<Booking | null>(null);
+
+  // PDF Ledger Report Modal state (mounted at root level for seamless print/export)
+  const [isReportPdfOpen, setIsReportPdfOpen] = useState(false);
+  const [reportPdfBookings, setReportPdfBookings] = useState<Booking[]>([]);
+  const [reportPdfLabel, setReportPdfLabel] = useState<string>("All Active Tickets");
+
+  const handleOpenReportPdf = (items: Booking[], label?: string) => {
+    setReportPdfBookings(items);
+    if (label) setReportPdfLabel(label);
+    setIsReportPdfOpen(true);
+  };
 
   const [isServicesModalOpen, setIsServicesModalOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -309,18 +321,10 @@ export default function HomePage() {
             {/* Header Title & Refresh */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                    <CalendarDays className="text-sky-600 shrink-0" size={24} />
-                    <span>Due Date Alerts & Travel Radar</span>
-                  </h2>
-                  {dbStatus?.connected && (
-                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      Neon DB Connected
-                    </span>
-                  )}
-                </div>
+                <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <CalendarDays className="text-sky-600 shrink-0" size={24} />
+                  <span>Due Date Alerts & Travel Radar</span>
+                </h2>
                 <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
                   Monitor upcoming passenger flights, schedule changes, and due dates before departure
                 </p>
@@ -330,7 +334,7 @@ export default function HomePage() {
                 <button
                   onClick={fetchData}
                   disabled={loading}
-                  className="p-2 text-slate-600 hover:text-sky-600 bg-white border border-slate-200 rounded-xl transition hover:shadow-sm"
+                  className="p-2 text-slate-600 hover:text-sky-600 bg-white border border-slate-200 rounded-xl transition hover:shadow-xs"
                   title="Refresh Data"
                 >
                   <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
@@ -338,7 +342,7 @@ export default function HomePage() {
 
                 <button
                   onClick={() => handleOpenNewBooking()}
-                  className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs sm:text-sm shadow-sm transition active:scale-95"
+                  className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs sm:text-sm shadow-xs transition active:scale-95"
                 >
                   <PlusCircle size={16} />
                   <span>Add Ticket</span>
@@ -387,6 +391,7 @@ export default function HomePage() {
                 onEditBooking={handleEditBooking}
                 onDeleteBooking={handleDeleteBooking}
                 onSelectCustomer={handleSelectCustomer}
+                onOpenReportPdf={handleOpenReportPdf}
               />
             </div>
           </div>
@@ -408,7 +413,7 @@ export default function HomePage() {
 
               <button
                 onClick={() => handleOpenNewBooking()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs sm:text-sm shadow-sm transition active:scale-95"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs sm:text-sm shadow-xs transition active:scale-95"
               >
                 <PlusCircle size={16} />
                 <span>New Ticket / Booking</span>
@@ -424,6 +429,7 @@ export default function HomePage() {
               onEditBooking={handleEditBooking}
               onDeleteBooking={handleDeleteBooking}
               onSelectCustomer={handleSelectCustomer}
+              onOpenReportPdf={handleOpenReportPdf}
             />
           </div>
         )}
@@ -535,13 +541,13 @@ export default function HomePage() {
       </main>
 
       {/* FOOTER */}
-      <footer className="no-print mt-auto border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
+      <footer className="no-print mt-auto border-t border-slate-200/80 bg-white py-3.5 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
-            <strong>{settings.agencyName}</strong> — Built for Travels Office Customer Management & Due Alerts
+            <strong>{settings.agencyName}</strong> &bull; Travel Desk Management & Due Alerts
           </div>
-          <div className="text-slate-400">
-            Powered by Next.js &bull; Tailwind CSS &bull; PostgreSQL &bull; Prisma
+          <div className="text-slate-400 text-[11px]">
+            &copy; {new Date().getFullYear()} {settings.agencyName}. All rights reserved.
           </div>
         </div>
       </footer>
@@ -600,6 +606,15 @@ export default function HomePage() {
           setIsInvoiceModalOpen(false);
           setInvoiceBooking(null);
         }}
+      />
+
+      {/* 3.1 Printable Ledger & Ticket PDF Report Modal (Mounted at root for full-bleed printing) */}
+      <TicketReportPdfModal
+        isOpen={isReportPdfOpen}
+        onClose={() => setIsReportPdfOpen(false)}
+        bookings={reportPdfBookings}
+        settings={settings}
+        filterLabel={reportPdfLabel}
       />
 
       {/* 4. WhatsApp Alert & Notification Modal */}

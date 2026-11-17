@@ -1020,7 +1020,7 @@ export default function BookingModal({
 
               <div>
                 <label className="block text-slate-600 text-xs font-semibold mb-1">
-                  Delay / Postpone Narration (Included in WhatsApp alert)
+                  Delay / Schedule Notice
                 </label>
                 <input
                   type="text"

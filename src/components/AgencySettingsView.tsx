@@ -632,7 +632,7 @@ export default function AgencySettingsView({
         </div>
 
         <p className="text-xs text-slate-500">
-          Export your entire travels database (all customers, bookings, service types, and office settings) into a single JSON file, or restore previously saved data to your Neon database anytime.
+          Export your entire travels database (all customers, bookings, service types, and office settings) into a single JSON file, or restore previously saved data anytime.
         </p>
 
         {backupSuccess && (
@@ -713,7 +713,7 @@ export default function AgencySettingsView({
                 <span>2. Restore Data from Backup File</span>
               </div>
               <p className="text-xs text-slate-500 mb-2">
-                Upload a valid <code className="text-slate-700 font-mono">.json</code> backup to restore your records into Neon database.
+                Upload a valid <code className="text-slate-700 font-mono">.json</code> backup to restore your records into the database.
               </p>
 
               <label className="block p-3 border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-xl bg-white text-center cursor-pointer transition">

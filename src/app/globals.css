@@ -58,8 +58,9 @@ body {
 
   /* Full-bleed printable modal styling: remove backdrop & shadows */
   .invoice-modal-overlay,
-  .invoice-modal-card {
+  .report-modal-overlay {
     position: static !important;
+    display: block !important;
     background: transparent !important;
     box-shadow: none !important;
     border: none !important;
@@ -70,7 +71,23 @@ body {
     overflow: visible !important;
   }
 
-  #printable-invoice-sheet {
+  .invoice-modal-card,
+  .report-modal-card {
+    position: static !important;
+    display: block !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  #printable-invoice-sheet,
+  #printable-pdf-report {
     display: block !important;
     position: static !important;
     padding: 0 !important;
@@ -80,5 +97,6 @@ body {
     background: white !important;
     box-shadow: none !important;
     border: none !important;
+    overflow: visible !important;
   }
 }

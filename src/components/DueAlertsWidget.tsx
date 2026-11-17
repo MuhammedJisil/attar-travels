@@ -207,101 +207,38 @@ export default function DueAlertsWidget({
         </button>
       </div>
 
-      {/* Filter Quick Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto py-1 text-xs">
-        <span className="text-slate-400 font-semibold flex items-center gap-1 shrink-0 px-1">
-          <Filter size={13} />
-          Filter:
-        </span>
-
-        <button
-          onClick={() => onSelectFilter("all")}
-          className={`px-3 py-1 rounded-full font-medium transition shrink-0 ${
-            activeFilter === "all"
-              ? "bg-slate-900 text-white font-bold"
-              : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
-          }`}
-        >
-          All Tickets & Services ({bookings.length})
-        </button>
-
-        <button
-          onClick={() => onSelectFilter("today")}
-          className={`px-3 py-1 rounded-full font-medium transition shrink-0 ${
-            activeFilter === "today"
-              ? "bg-rose-600 text-white font-bold shadow-sm"
-              : "bg-white border border-slate-200 text-rose-700 hover:bg-rose-50"
-          }`}
-        >
-          🚨 Today ({todayCount})
-        </button>
-
-        <button
-          onClick={() => onSelectFilter("tomorrow")}
-          className={`px-3 py-1 rounded-full font-medium transition shrink-0 ${
-            activeFilter === "tomorrow"
-              ? "bg-amber-600 text-white font-bold shadow-sm"
-              : "bg-white border border-slate-200 text-amber-800 hover:bg-amber-50"
-          }`}
-        >
-          ⏰ Tomorrow ({tomorrowCount})
-        </button>
-
-        <button
-          onClick={() => onSelectFilter("3days")}
-          className={`px-3 py-1 rounded-full font-medium transition shrink-0 ${
-            activeFilter === "3days"
-              ? "bg-orange-600 text-white font-bold shadow-sm"
-              : "bg-white border border-slate-200 text-orange-800 hover:bg-orange-50"
-          }`}
-        >
-          In 3 Days ({next3DaysCount})
-        </button>
-
-        <button
-          onClick={() => onSelectFilter("7days")}
-          className={`px-3 py-1 rounded-full font-medium transition shrink-0 ${
-            activeFilter === "7days"
-              ? "bg-sky-600 text-white font-bold shadow-sm"
-              : "bg-white border border-slate-200 text-sky-800 hover:bg-sky-50"
-          }`}
-        >
-          This Week ({next7DaysCount})
-        </button>
-
-        <button
-          onClick={() => onSelectFilter("delayed")}
-          className={`px-3 py-1 rounded-full font-medium transition shrink-0 ${
-            activeFilter === "delayed"
-              ? "bg-purple-600 text-white font-bold shadow-sm"
-              : "bg-white border border-slate-200 text-purple-700 hover:bg-purple-50"
-          }`}
-        >
-          ⚠️ Delayed / Rescheduled ({delayedCount})
-        </button>
-
-        <button
-          onClick={() => onSelectFilter("pending_balance")}
-          className={`px-3 py-1 rounded-full font-medium transition shrink-0 ${
-            activeFilter === "pending_balance"
-              ? "bg-emerald-600 text-white font-bold shadow-sm"
-              : "bg-white border border-slate-200 text-emerald-800 hover:bg-emerald-50"
-          }`}
-        >
-          💳 Payment Dues ({paymentPendingCount})
-        </button>
-
-        <button
-          onClick={() => onSelectFilter("passports")}
-          className={`px-3 py-1 rounded-full font-medium transition shrink-0 ${
-            activeFilter === "passports"
-              ? "bg-indigo-600 text-white font-bold shadow-sm"
-              : "bg-white border border-slate-200 text-indigo-800 hover:bg-indigo-50"
-          }`}
-        >
-          🛂 Passport Alerts ({passportAlertCount})
-        </button>
-      </div>
+      {/* Active filter notification & quick reset */}
+      {activeFilter !== "all" && (
+        <div className="flex items-center justify-between px-3 py-1.5 bg-sky-50 border border-sky-100 rounded-xl text-xs">
+          <span className="text-slate-600 flex items-center gap-1.5">
+            <Filter size={13} className="text-sky-600" />
+            <span>Filtering by card:</span>
+            <strong className="text-sky-800 capitalize font-bold">
+              {activeFilter === "today"
+                ? "Departing Today"
+                : activeFilter === "tomorrow"
+                ? "Departing Tomorrow"
+                : activeFilter === "3days"
+                ? "Departing Next 3 Days"
+                : activeFilter === "7days"
+                ? "Next 7 Days"
+                : activeFilter === "delayed"
+                ? "Delayed / Rescheduled"
+                : activeFilter === "pending_balance"
+                ? "Pending Dues"
+                : activeFilter === "passports"
+                ? "Passport Alerts"
+                : activeFilter}
+            </strong>
+          </span>
+          <button
+            onClick={() => onSelectFilter("all")}
+            className="text-sky-600 hover:text-sky-800 font-bold hover:underline"
+          >
+            Show All Tickets &times;
+          </button>
+        </div>
+      )}
     </div>
   );
 }

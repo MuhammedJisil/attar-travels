@@ -35,44 +35,39 @@ export default function Navbar({
   onLogout,
 }: NavbarProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-sm">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-2">
+    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-md shadow-xs">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6">
+        <div className="flex items-center justify-between h-15 gap-2 sm:gap-4">
           {/* Brand Logo & Name */}
           <div
-            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group"
+            className="flex items-center gap-2.5 cursor-pointer group shrink-0"
             onClick={() => setActiveTab("dashboard")}
           >
-            <Logo logoUrl={settings.logoUrl} agencyName={settings.agencyName} size="md" />
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-bold text-slate-900 tracking-tight text-sm sm:text-lg group-hover:text-sky-600 transition truncate max-w-[150px] sm:max-w-xs">
-                  {settings.agencyName || "Travels Office"}
-                </h1>
-                <span className="hidden lg:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-800 border border-sky-200">
-                  Desk Manager
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 hidden sm:block truncate max-w-xs">
+            <Logo logoUrl={settings.logoUrl} agencyName={settings.agencyName} size="sm" />
+            <div className="min-w-0">
+              <h1 className="font-bold text-slate-900 tracking-tight text-sm sm:text-base group-hover:text-sky-600 transition truncate max-w-[140px] sm:max-w-xs">
+                {settings.agencyName || "Travels Office"}
+              </h1>
+              <p className="text-[10px] text-slate-400 hidden lg:block truncate max-w-xs">
                 {settings.tagline || "Ticketing & Customer Due Date Alerts"}
               </p>
             </div>
           </div>
 
-          {/* Navigation Links (Desktop) */}
-          <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
+          {/* Navigation Links (Desktop - strictly 1 clean single line) */}
+          <nav className="hidden md:flex items-center gap-1 shrink-0">
             <button
               onClick={() => setActiveTab("dashboard")}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition ${
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-xl text-xs lg:text-sm font-semibold transition ${
                 activeTab === "dashboard"
-                  ? "bg-sky-50 text-sky-700 font-semibold"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  ? "bg-sky-50 text-sky-700 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
               }`}
             >
-              <CalendarDays size={17} />
+              <CalendarDays size={15} />
               <span>Due Alerts</span>
               {urgentAlertCount > 0 && (
-                <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold bg-rose-500 text-white animate-pulse">
+                <span className="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-[10px] font-bold bg-rose-500 text-white animate-pulse">
                   {urgentAlertCount}
                 </span>
               )}
@@ -80,86 +75,71 @@ export default function Navbar({
 
             <button
               onClick={() => setActiveTab("bookings")}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition ${
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-xl text-xs lg:text-sm font-semibold transition ${
                 activeTab === "bookings"
-                  ? "bg-sky-50 text-sky-700 font-semibold"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  ? "bg-sky-50 text-sky-700 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
               }`}
             >
-              <PlaneTakeoff size={17} />
+              <PlaneTakeoff size={15} />
               <span>All Tickets</span>
             </button>
 
             <button
               onClick={() => setActiveTab("customers")}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition ${
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-xl text-xs lg:text-sm font-semibold transition ${
                 activeTab === "customers"
-                  ? "bg-sky-50 text-sky-700 font-semibold"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  ? "bg-sky-50 text-sky-700 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
               }`}
             >
-              <Users size={17} />
+              <Users size={15} />
               <span>Customers</span>
             </button>
 
             <button
               onClick={() => setActiveTab("services")}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition ${
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-xl text-xs lg:text-sm font-semibold transition ${
                 activeTab === "services"
-                  ? "bg-sky-50 text-sky-700 font-semibold"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  ? "bg-sky-50 text-sky-700 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
               }`}
             >
-              <Layers size={17} />
+              <Layers size={15} />
               <span>Services</span>
             </button>
 
             <button
               onClick={() => setActiveTab("settings")}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition ${
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-xl text-xs lg:text-sm font-semibold transition ${
                 activeTab === "settings"
-                  ? "bg-sky-50 text-sky-700 font-semibold"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  ? "bg-sky-50 text-sky-700 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
               }`}
             >
-              <Settings size={17} />
+              <Settings size={15} />
               <span>Settings</span>
             </button>
           </nav>
 
-          {/* Action Buttons & User Menu */}
-          <div className="flex items-center gap-2">
+          {/* Action Buttons & Logout (Clean, no redundant admin pill) */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={onOpenNewBooking}
-              className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 rounded-lg bg-sky-600 text-white text-xs sm:text-sm font-semibold hover:bg-sky-700 shadow-sm hover:shadow transition active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-sky-600 text-white text-xs sm:text-sm font-semibold hover:bg-sky-700 shadow-xs hover:shadow transition active:scale-95"
             >
-              <PlusCircle size={16} />
-              <span className="hidden sm:inline">Add Booking</span>
-              <span className="sm:hidden">New</span>
+              <PlusCircle size={15} />
+              <span>Add Booking</span>
             </button>
 
-            {/* User Profile Pill & Logout */}
-            {currentUser && (
-              <div className="flex items-center gap-1 pl-1 sm:pl-2 border-l border-slate-200">
-                <div
-                  onClick={() => setActiveTab("settings")}
-                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer transition"
-                  title="Signed in as admin. Click to manage ID & password."
-                >
-                  <User size={13} className="text-sky-600" />
-                  <span>{currentUser.username}</span>
-                </div>
-
-                {onLogout && (
-                  <button
-                    onClick={onLogout}
-                    className="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
-                    title="Sign Out"
-                  >
-                    <LogOut size={16} />
-                  </button>
-                )}
-              </div>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                title="Sign Out"
+              >
+                <LogOut size={16} />
+              </button>
             )}
           </div>
         </div>

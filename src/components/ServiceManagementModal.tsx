@@ -473,7 +473,7 @@ export default function ServiceManagementModal({
                     2. Service Form Fields ({customFields.length})
                   </span>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Add any fields you need (Time Setter, Calendar Date, Text, Number, Dropdown)
+                    Configure the input fields for this service
                   </p>
                 </div>
 
@@ -663,7 +663,7 @@ export default function ServiceManagementModal({
 
         {/* Footer */}
         <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>All custom service configurations are saved directly to your Neon database.</span>
+          <span>Active services appear directly in new booking forms.</span>
           <button
             onClick={onClose}
             className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 font-semibold"

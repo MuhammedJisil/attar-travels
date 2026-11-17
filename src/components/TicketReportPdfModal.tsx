@@ -46,6 +46,37 @@ export default function TicketReportPdfModal({
     window.print();
   };
 
+  const handleDownloadHtml = () => {
+    const reportElem = document.getElementById("printable-pdf-report");
+    if (!reportElem) return;
+    const cleanAgency = settings.agencyName.replace(/[^a-zA-Z0-9]/g, "_");
+    const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${settings.agencyName} - Ledger Report</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      @page { size: A4 landscape; margin: 8mm; }
+      body { background: white; margin: 0; padding: 0; }
+    }
+  </style>
+</head>
+<body class="bg-white p-6 text-slate-800">
+  ${reportElem.innerHTML}
+  <script>window.onload = function() { window.print(); };</script>
+</body>
+</html>`;
+    const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${cleanAgency}_Ledger_${new Date().toISOString().substring(0, 10)}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const currentDate = new Date().toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
@@ -55,34 +86,43 @@ export default function TicketReportPdfModal({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn">
+    <div className="report-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
       {/* Container */}
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-5xl overflow-hidden flex flex-col max-h-[95vh]">
+      <div className="report-modal-card bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-5xl overflow-hidden flex flex-col max-h-[95vh]">
         {/* Top Action Bar (Hidden in Print) */}
-        <div className="print:hidden px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+        <div className="no-print print:hidden px-4 sm:px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-rose-600 text-white rounded-xl shadow-sm">
-              <FileText size={18} />
+            <div className="p-2 bg-rose-600 text-white rounded-xl shadow-xs">
+              <FileText size={17} />
             </div>
             <div>
-              <h3 className="font-bold text-base text-white">Travel Ledger & Ticket PDF Report</h3>
-              <p className="text-xs text-slate-400">
-                Print or Save directly as PDF with agency branding ({bookings.length} records)
+              <h3 className="font-bold text-sm sm:text-base text-white">Travel Ledger & PDF Report</h3>
+              <p className="text-[11px] text-slate-400">
+                {bookings.length} record{bookings.length === 1 ? "" : "s"} &bull; {filterLabel}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
-              onClick={handlePrint}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition active:scale-95"
+              onClick={handleDownloadHtml}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition active:scale-95"
+              title="Download standalone HTML file with instant print script"
             >
-              <Printer size={16} />
+              <Download size={14} />
+              <span className="hidden sm:inline">Save File</span>
+            </button>
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition active:scale-95"
+              title="Print or Save as PDF"
+            >
+              <Printer size={15} />
               <span>Print / Save as PDF</span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
             >
               <X size={18} />
             </button>

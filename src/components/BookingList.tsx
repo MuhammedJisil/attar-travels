@@ -34,6 +34,7 @@ interface BookingListProps {
   onEditBooking: (booking: Booking) => void;
   onDeleteBooking: (bookingId: string) => void;
   onSelectCustomer: (customerId: string) => void;
+  onOpenReportPdf?: (bookings: Booking[], filterLabel?: string) => void;
 }
 
 export default function BookingList({
@@ -44,6 +45,7 @@ export default function BookingList({
   onEditBooking,
   onDeleteBooking,
   onSelectCustomer,
+  onOpenReportPdf,
   settings = initialAgencySettings,
 }: BookingListProps) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -164,8 +166,20 @@ export default function BookingList({
 
           {/* Export to PDF Button (Primary, as requested: "instead of excel i need pdf") */}
           <button
-            onClick={() => setIsPdfModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition shadow-xs"
+            onClick={() => {
+              const label =
+                selectedService !== "all"
+                  ? `Service: ${serviceTypes.find((s) => s.id === selectedService)?.name || selectedService}`
+                  : selectedStatus !== "all"
+                  ? `Status: ${selectedStatus}`
+                  : "All Active Tickets";
+              if (onOpenReportPdf) {
+                onOpenReportPdf(filteredBookings, label);
+              } else {
+                setIsPdfModalOpen(true);
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition shadow-xs active:scale-95"
             title="Export & Print Filtered Ledger as PDF"
           >
             <FileText size={15} className="text-rose-600" />
