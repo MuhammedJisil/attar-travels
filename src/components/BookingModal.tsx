@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import {
   getServiceFieldConfig,
+  getServiceDisplayDescription,
   formatFlightTrainTime,
   formatTime12h,
   formatTime24h,
@@ -369,11 +370,14 @@ export default function BookingModal({
               required
               className="w-full p-2.5 bg-white border border-sky-200 rounded-xl font-medium text-slate-800 focus:ring-2 focus:ring-sky-500"
             >
-              {serviceTypes.map((st) => (
-                <option key={st.id} value={st.id}>
-                  {st.name} {st.description ? `— (${st.description})` : ""}
-                </option>
-              ))}
+              {serviceTypes.map((st) => {
+                const desc = getServiceDisplayDescription(st);
+                return (
+                  <option key={st.id} value={st.id}>
+                    {st.name} {desc ? `— (${desc})` : ""}
+                  </option>
+                );
+              })}
             </select>
           </div>
 

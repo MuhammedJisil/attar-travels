@@ -1,6 +1,12 @@
 import prisma, { getDatabaseUrl } from "./prisma";
 import { Booking, Customer, ServiceType, AgencySettings, initialAgencySettings } from "./types";
 import { hashPassword } from "./auth";
+import {
+  getServiceFieldConfig,
+  extractCustomFieldValues,
+  getCleanNotes,
+  serializeCustomFieldValues,
+} from "./service-config";
 
 // Default admin user credentials (username: admin, password: admin123)
 const defaultAdminPass = hashPassword("admin123");
@@ -271,10 +277,102 @@ export async function createServiceType(data: Partial<ServiceType>): Promise<Ser
   return newType;
 }
 
-export async function updateServiceType(id: string, data: Partial<ServiceType>): Promise<ServiceType | null> {
+async function cascadeRemoveCustomFieldsFromBookings(serviceTypeId: string, deletedFieldNames: string[]) {
+  if (!deletedFieldNames || deletedFieldNames.length === 0) return;
+  const deletedSet = new Set(deletedFieldNames.map((n) => n.toLowerCase().trim()));
+
+  // 1. Database (Prisma)
   if (hasDatabase()) {
     try {
-      return await prisma.serviceType.update({
+      const dbBookings = await prisma.booking.findMany({
+        where: { serviceTypeId },
+        select: { id: true, notes: true },
+      });
+
+      for (const b of dbBookings) {
+        if (!b.notes || !b.notes.includes("__CUSTOM_FIELDS__")) continue;
+        const customValues = extractCustomFieldValues(b.notes);
+        let modified = false;
+
+        for (const key of Object.keys(customValues)) {
+          if (deletedSet.has(key.toLowerCase().trim())) {
+            delete customValues[key];
+            modified = true;
+          }
+        }
+
+        if (modified) {
+          const clean = getCleanNotes(b.notes);
+          const newNotes = serializeCustomFieldValues(clean, customValues) || null;
+          await prisma.booking.update({
+            where: { id: b.id },
+            data: { notes: newNotes },
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Prisma error in cascadeRemoveCustomFieldsFromBookings:", e);
+    }
+  }
+
+  // 2. In-Memory store
+  for (const b of memoryBookings) {
+    if (b.serviceTypeId === serviceTypeId && b.notes && b.notes.includes("__CUSTOM_FIELDS__")) {
+      const customValues = extractCustomFieldValues(b.notes);
+      let modified = false;
+
+      for (const key of Object.keys(customValues)) {
+        if (deletedSet.has(key.toLowerCase().trim())) {
+          delete customValues[key];
+          modified = true;
+        }
+      }
+
+      if (modified) {
+        const clean = getCleanNotes(b.notes);
+        b.notes = serializeCustomFieldValues(clean, customValues) || null;
+      }
+    }
+  }
+}
+
+export async function updateServiceType(id: string, data: Partial<ServiceType>): Promise<ServiceType | null> {
+  // 1. Identify previous configuration to detect deleted custom fields
+  let oldService: ServiceType | null = null;
+  if (hasDatabase()) {
+    try {
+      oldService = (await prisma.serviceType.findUnique({ where: { id } })) as unknown as ServiceType;
+    } catch {
+      // ignore
+    }
+  }
+  if (!oldService) {
+    oldService = memoryServiceTypes.find((s) => s.id === id) || null;
+  }
+
+  const deletedFieldNames: string[] = [];
+  if (oldService && oldService.description && data.description) {
+    try {
+      const oldConfig = getServiceFieldConfig(oldService);
+      const newConfig = getServiceFieldConfig({ ...oldService, description: data.description });
+      const oldFields = oldConfig.customFields || [];
+      const newFieldNames = new Set((newConfig.customFields || []).map((f) => f.name.toLowerCase().trim()));
+
+      for (const f of oldFields) {
+        if (!newFieldNames.has(f.name.toLowerCase().trim())) {
+          deletedFieldNames.push(f.name);
+        }
+      }
+    } catch (e) {
+      console.warn("Could not compute deleted custom fields diff:", e);
+    }
+  }
+
+  // 2. Update service in DB
+  let result: ServiceType | null = null;
+  if (hasDatabase()) {
+    try {
+      result = (await prisma.serviceType.update({
         where: { id },
         data: {
           name: data.name,
@@ -282,28 +380,36 @@ export async function updateServiceType(id: string, data: Partial<ServiceType>):
           description: data.description,
           isActive: data.isActive,
         },
-      });
+      })) as unknown as ServiceType;
     } catch (e: unknown) {
       console.warn("Prisma error in updateServiceType, falling back to memory:", (e as Error)?.message);
     }
   }
 
+  // 3. Update service in memory
   const idx = memoryServiceTypes.findIndex((s) => s.id === id);
   if (idx !== -1) {
     memoryServiceTypes[idx] = { ...memoryServiceTypes[idx], ...data };
-    return memoryServiceTypes[idx];
+    if (!result) result = memoryServiceTypes[idx];
+  } else if (!result) {
+    const newType: ServiceType = {
+      id,
+      name: data.name || "Custom Service",
+      code: data.code || "SRV",
+      description: data.description || null,
+      isActive: data.isActive ?? true,
+      createdAt: new Date().toISOString(),
+    };
+    memoryServiceTypes.push(newType);
+    result = newType;
   }
 
-  const newType: ServiceType = {
-    id,
-    name: data.name || "Custom Service",
-    code: data.code || "SRV",
-    description: data.description || null,
-    isActive: data.isActive ?? true,
-    createdAt: new Date().toISOString(),
-  };
-  memoryServiceTypes.push(newType);
-  return newType;
+  // 4. Cascade delete removed custom fields from all bookings/customers of this service
+  if (deletedFieldNames.length > 0) {
+    await cascadeRemoveCustomFieldsFromBookings(id, deletedFieldNames);
+  }
+
+  return result;
 }
 
 export async function deleteServiceType(id: string): Promise<boolean> {

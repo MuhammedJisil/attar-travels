@@ -119,6 +119,9 @@ export default function TicketQuickViewModal({
           {/* Service Details Grid */}
           {(() => {
             const config = getServiceFieldConfig(booking.serviceType);
+            const custom = extractCustomFieldValues(booking.notes);
+            const hasCustomFields = Boolean(config.customFields && config.customFields.length > 0);
+
             return (
               <div className="p-3.5 rounded-xl border border-sky-100 bg-sky-50/40 space-y-3">
                 <div className="flex items-center justify-between">
@@ -130,43 +133,85 @@ export default function TicketQuickViewModal({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.routeLabel}</span>
-                    <span className="font-bold text-slate-900 text-sm">{booking.sector || "N/A"}</span>
-                  </div>
+                {hasCustomFields ? (
+                  /* NORMAL INTEGRATED SERVICE FIELDS */
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    {config.customFields!.map((fld) => {
+                      const val = custom[fld.name] || "";
+                      let displayVal = val;
+                      if (!displayVal) {
+                        const low = fld.name.toLowerCase();
+                        if (low.includes("flight no") || low.includes("train no") || low.includes("number")) {
+                          displayVal = booking.flightNo || "";
+                        } else if (low.includes("pnr") || low.includes("reference") || low.includes("arn")) {
+                          displayVal = booking.pnr || "";
+                        } else if (low.includes("passport")) {
+                          displayVal = booking.passportNo || "";
+                        } else if (low.includes("time")) {
+                          displayVal = booking.flightTime ? `${booking.flightTime} hrs` : "";
+                        } else if (low.includes("expiry")) {
+                          displayVal = booking.expiryDate ? formatDate(booking.expiryDate) : "";
+                        } else if (low.includes("submission")) {
+                          displayVal = booking.submissionDate ? formatDate(booking.submissionDate) : "";
+                        } else if (low.includes("date") && booking.travelDate) {
+                          displayVal = formatDate(booking.travelDate);
+                        } else if (low.includes("route") || low.includes("sector") || low.includes("destination")) {
+                          displayVal = booking.sector || "";
+                        }
+                      } else if (fld.type === "time") {
+                        displayVal = `🕒 ${val} hrs`;
+                      } else if (fld.type === "date" && val) {
+                        displayVal = formatDate(val);
+                      }
 
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.numberLabel}</span>
-                    <span className="font-bold text-sky-700 text-sm">{booking.flightNo || "N/A"}</span>
+                      return (
+                        <div key={fld.id || fld.name} className="p-2 bg-white rounded-lg border border-sky-100">
+                          <span className="text-slate-400 block text-[10px] uppercase font-bold">{fld.name}</span>
+                          <span className="font-bold text-slate-900 text-xs sm:text-sm">{displayVal || "—"}</span>
+                        </div>
+                      );
+                    })}
                   </div>
+                ) : (
+                  /* LEGACY FALLBACK */
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.routeLabel}</span>
+                      <span className="font-bold text-slate-900 text-sm">{booking.sector || "N/A"}</span>
+                    </div>
 
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.pnrLabel}</span>
-                    <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 inline-block">
-                      {booking.pnr || "N/A"}
-                    </span>
-                  </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.numberLabel}</span>
+                      <span className="font-bold text-sky-700 text-sm">{booking.flightNo || "N/A"}</span>
+                    </div>
 
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.timeLabel}</span>
-                    <span className="font-bold text-slate-800">
-                      {booking.flightTime ? `🕒 ${booking.flightTime}` : "As per ticket"}
-                    </span>
-                  </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.pnrLabel}</span>
+                      <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 inline-block">
+                        {booking.pnr || "N/A"}
+                      </span>
+                    </div>
 
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.dateLabel}</span>
-                    <span className="font-bold text-slate-900">
-                      {booking.travelDate ? formatDate(booking.travelDate) : "N/A"}
-                    </span>
-                  </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.timeLabel}</span>
+                      <span className="font-bold text-slate-800">
+                        {booking.flightTime ? `🕒 ${booking.flightTime} hrs` : "As per ticket"}
+                      </span>
+                    </div>
 
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Issued Portal</span>
-                    <span className="font-medium text-slate-800">{booking.portal || "Desk"}</span>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.dateLabel}</span>
+                      <span className="font-bold text-slate-900">
+                        {booking.travelDate ? formatDate(booking.travelDate) : "N/A"}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Issued Portal</span>
+                      <span className="font-medium text-slate-800">{booking.portal || "Desk"}</span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {booking.passengerNames && (
                   <div className="pt-2 border-t border-sky-100">
@@ -176,27 +221,6 @@ export default function TicketQuickViewModal({
                     <span className="font-medium text-slate-800">{booking.passengerNames}</span>
                   </div>
                 )}
-
-                {(() => {
-                  const custom = extractCustomFieldValues(booking.notes);
-                  const keys = Object.keys(custom);
-                  if (keys.length === 0) return null;
-                  return (
-                    <div className="pt-2 border-t border-sky-100 space-y-1">
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold">
-                        Custom Fields
-                      </span>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        {keys.map((k) => (
-                          <div key={k} className="p-1.5 bg-white rounded border border-sky-100">
-                            <span className="text-slate-400 text-[10px] block font-semibold">{k}</span>
-                            <span className="font-bold text-slate-900">{custom[k]}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
               </div>
             );
           })()}

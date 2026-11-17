@@ -179,7 +179,17 @@ export default function ServiceManagementModal({
       hasReturnDate,
       hasPax,
       userDescription: customDesc.trim() || undefined,
-      customFields: customFields.filter((f) => f.name.trim() !== ""),
+      customFields: customFields
+        .filter((f) => f.name.trim() !== "")
+        .map((f) => ({
+          ...f,
+          name: f.name.trim(),
+          placeholder: f.placeholder?.trim() || undefined,
+          options:
+            f.type === "select"
+              ? (f.options || []).map((o) => o.trim()).filter(Boolean)
+              : undefined,
+        })),
     };
 
     const finalDescription = JSON.stringify(configPayload);
@@ -558,21 +568,71 @@ export default function ServiceManagementModal({
 
                       {/* Dropdown Options if select type */}
                       {field.type === "select" && (
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                            Dropdown Choices (Separated by comma)
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Sleeper, 3A, 2A, 1A or Economy, Business"
-                            value={field.options?.join(", ") || ""}
-                            onChange={(e) =>
-                              handleUpdateCustomField(field.id, {
-                                options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                              })
-                            }
-                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs"
-                          />
+                        <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                              Dropdown Choices / Options
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const current = field.options || [];
+                                handleUpdateCustomField(field.id, { options: [...current, ""] });
+                              }}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-600 hover:text-sky-800 bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded-lg transition"
+                            >
+                              <Plus size={13} />
+                              <span>Add Option</span>
+                            </button>
+                          </div>
+
+                          {(!field.options || field.options.length === 0) ? (
+                            <div className="p-3 text-center bg-slate-50 border border-dashed border-slate-200 rounded-lg">
+                              <p className="text-xs text-slate-500">No dropdown choices added yet.</p>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateCustomField(field.id, { options: [""] })}
+                                className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-sky-600 hover:underline"
+                              >
+                                <Plus size={12} /> Click here to add first choice
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                              {field.options.map((opt, optIdx) => (
+                                <div key={optIdx} className="flex items-center gap-2">
+                                  <span className="text-[11px] font-mono font-bold text-slate-400 w-5 text-right">
+                                    {optIdx + 1}.
+                                  </span>
+                                  <input
+                                    type="text"
+                                    placeholder={`e.g. Choice ${optIdx + 1} (e.g. Sleeper, AC 3-Tier)`}
+                                    value={opt}
+                                    onChange={(e) => {
+                                      const next = [...(field.options || [])];
+                                      next[optIdx] = e.target.value;
+                                      handleUpdateCustomField(field.id, { options: next });
+                                    }}
+                                    className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:bg-white focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const next = (field.options || []).filter((_, idx) => idx !== optIdx);
+                                      handleUpdateCustomField(field.id, { options: next });
+                                    }}
+                                    className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition"
+                                    title="Remove this option"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <p className="text-[10px] text-slate-400">
+                            Each choice will appear individually in the booking dropdown selector.
+                          </p>
                         </div>
                       )}
                     </div>
