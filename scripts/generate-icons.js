@@ -63,7 +63,40 @@ async function generate() {
   fs.writeFileSync(path.join(__dirname, '../public/favicon-32x32.png'), await sharp(roundedAppIcon).resize(32, 32).png().toBuffer());
   fs.writeFileSync(path.join(__dirname, '../public/favicon-16x16.png'), await sharp(roundedAppIcon).resize(16, 16).png().toBuffer());
 
-  console.log('Successfully generated all app icons!');
+  // 4. Generate multi-resolution ICO (16, 32, 48, 64)
+  const icoSizes = [16, 32, 48, 64];
+  const pngBuffers = [];
+  for (const s of icoSizes) {
+    const buf = await sharp(roundedAppIcon).resize(s, s).png().toBuffer();
+    pngBuffers.push({ size: s, buffer: buf });
+  }
+
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(0, 0);
+  header.writeUInt16LE(1, 2);
+  header.writeUInt16LE(pngBuffers.length, 4);
+
+  let offset = 6 + (16 * pngBuffers.length);
+  const dirEntries = [];
+  for (const item of pngBuffers) {
+    const entry = Buffer.alloc(16);
+    entry.writeUInt8(item.size, 0);
+    entry.writeUInt8(item.size, 1);
+    entry.writeUInt8(0, 2);
+    entry.writeUInt8(0, 3);
+    entry.writeUInt16LE(1, 4);
+    entry.writeUInt16LE(32, 6);
+    entry.writeUInt32LE(item.buffer.length, 8);
+    entry.writeUInt32LE(offset, 12);
+    offset += item.buffer.length;
+    dirEntries.push(entry);
+  }
+
+  const icoBuffer = Buffer.concat([header, ...dirEntries, ...pngBuffers.map((p) => p.buffer)]);
+  fs.writeFileSync(path.join(__dirname, '../src/app/favicon.ico'), icoBuffer);
+  fs.writeFileSync(path.join(__dirname, '../public/favicon.ico'), icoBuffer);
+
+  console.log('Successfully generated all app icons & favicon.ico!');
 }
 
 generate().catch(console.error);
