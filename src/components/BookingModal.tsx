@@ -1161,7 +1161,7 @@ export default function BookingModal({
           })()}
 
           {/* SECTION 4: Status & Flight Delay / Postponed Alerts */}
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 space-y-3">
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60 space-y-3">
             <div className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs flex items-center gap-1.5">
               <AlertCircle size={15} className="text-amber-500" />
               Service Status & Delay Alerts
