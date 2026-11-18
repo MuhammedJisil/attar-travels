@@ -9,7 +9,6 @@ import {
   Eye,
   EyeOff,
   Plane,
-  ShieldCheck,
   AlertCircle,
   ArrowRight,
 } from "lucide-react";
@@ -49,11 +48,6 @@ export default function LoginScreen({ settings, onLoginSuccess }: LoginScreenPro
     } finally {
       setLoading(false);
     }
-  };
-
-  const fillDefaultCredentials = () => {
-    setUsername("admin");
-    setPassword("admin123");
   };
 
   return (
@@ -145,26 +139,6 @@ export default function LoginScreen({ settings, onLoginSuccess }: LoginScreenPro
             )}
           </button>
         </form>
-
-        {/* Quick First-Time Login Hint */}
-        <div className="pt-3 border-t border-slate-100 text-center">
-          <div className="p-2.5 bg-sky-50 border border-sky-100 rounded-xl text-xs text-sky-800 flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck size={15} className="text-sky-600 shrink-0" />
-              <span>Default: <strong>admin</strong> / <strong>admin123</strong></span>
-            </span>
-            <button
-              type="button"
-              onClick={fillDefaultCredentials}
-              className="text-sky-700 underline font-semibold hover:text-sky-950"
-            >
-              Auto-fill
-            </button>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-2">
-            You can change your Login ID & Password anytime under <strong>Settings</strong>.
-          </p>
-        </div>
       </div>
     </div>
   );
