@@ -43,7 +43,7 @@ export default function HomePage() {
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
   const [settings, setSettings] = useState<AgencySettings>(initialAgencySettings);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Modals state
@@ -169,19 +169,35 @@ export default function HomePage() {
     }
   }, []);
 
+  // Load agency settings (for branding/logo on login screen & dashboard)
+  const fetchSettings = useCallback(async () => {
+    try {
+      const res = await fetch("/api/settings");
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data);
+      }
+    } catch {
+      // Keep default settings
+    }
+  }, []);
+
   useEffect(() => {
+    fetchSettings();
     checkSession().then((isAuthed) => {
       if (isAuthed) {
         fetchData();
       }
     });
-  }, [checkSession, fetchData]);
+  }, [fetchSettings, checkSession, fetchData]);
 
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
       setUser(null);
+      setBookings([]);
+      setLoading(false);
     }
   };
 
@@ -295,9 +311,13 @@ export default function HomePage() {
     setIsWhatsAppModalOpen(true);
   };
 
-  // 1. Initial Skeleton Loading screen (Modern skeleton while verifying session or fetching initial records)
-  if (authLoading || (loading && bookings.length === 0 && !user)) {
-    return <DashboardSkeleton />;
+  // 1. Initial Session Verification (Subtle spinner while checking session cookie)
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-sky-500/20 border-t-sky-500 rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   // 2. Unauthenticated Screen (Login)
@@ -311,6 +331,11 @@ export default function HomePage() {
         }}
       />
     );
+  }
+
+  // 3. Authenticated Loading (Modern skeleton while fetching bookings & records for logged-in user)
+  if (loading && bookings.length === 0) {
+    return <DashboardSkeleton />;
   }
 
   // 3. Authenticated Dashboard
