@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Booking, AgencySettings } from "@/lib/types";
-import { formatDate } from "@/lib/date-utils";
+import { formatDate, formatBookingNo, formatFlightTimeDisplay } from "@/lib/date-utils";
 import Logo from "./Logo";
 import {
   X,
@@ -278,7 +278,7 @@ export default function TicketReportPdfModal({
                   bookings.map((b, idx) => (
                     <tr key={b.id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
                       <td className="py-1.5 px-2 text-center font-mono text-slate-400 text-[10px]">{idx + 1}</td>
-                      <td className="py-1.5 px-2.5 font-mono font-bold text-slate-900 whitespace-nowrap">{b.bookingNo}</td>
+                      <td className="py-1.5 px-2.5 font-mono font-bold text-slate-900 whitespace-nowrap">{formatBookingNo(b.bookingNo)}</td>
                       <td className="py-1.5 px-2.5">
                         <div className="font-bold text-slate-900 leading-tight">{b.customer?.name || "N/A"}</div>
                         <div className="text-[10px] font-mono text-slate-500">{b.customer?.phone}</div>
@@ -294,7 +294,7 @@ export default function TicketReportPdfModal({
                           {b.travelDate ? formatDate(b.travelDate) : "N/A"}
                         </div>
                         {b.flightTime && (
-                          <div className="text-[10px] font-semibold text-sky-700">🕒 {b.flightTime}</div>
+                          <div className="text-[10px] font-semibold text-sky-700 font-mono">{formatFlightTimeDisplay(b.flightTime)}</div>
                         )}
                         {b.returnDate && (
                           <div className="text-[10px] text-slate-500">↩ Ret: {formatDate(b.returnDate)}</div>

@@ -63,6 +63,7 @@ export const DEFAULT_TEMPLATES: Record<ServiceTemplateType, ServiceFieldDefiniti
     customFields: [
       { id: "f_fdate", name: "Travel / Departure Date", type: "date", required: true },
       { id: "f_ftime", name: "Flight Departure Time", type: "time" },
+      { id: "f_atime", name: "Flight Arrival Time", type: "time" },
       { id: "f_route", name: "Sector / Route", type: "text", required: true, placeholder: "e.g. CCJ - DXB" },
       { id: "f_no", name: "Flight Number", type: "text", placeholder: "e.g. EK 532" },
       { id: "f_pnr", name: "Airline PNR", type: "text", required: true, placeholder: "e.g. Z7K9PL" },
@@ -264,9 +265,30 @@ export function getServiceFieldConfig(service?: ServiceType | null): ServiceFiel
     try {
       const parsed = JSON.parse(service.description);
       const base = DEFAULT_TEMPLATES[parsed.template as ServiceTemplateType] || DEFAULT_TEMPLATES.custom;
+      const mergedFields: CustomFieldDefinition[] = parsed.customFields ? [...parsed.customFields] : (base.customFields ? [...base.customFields] : []);
+
+      const isFlight = (parsed.template === "flight") || (service.name && /flight|ticket|airline|air/i.test(service.name));
+      if (isFlight && mergedFields.length > 0) {
+        const hasDep = mergedFields.some((f) => /dep|departure/i.test(f.name) && f.type === "time");
+        if (!hasDep) {
+          const arrIdx = mergedFields.findIndex((f) => /arr|arrival|arrivel/i.test(f.name) && f.type === "time");
+          const depFld: CustomFieldDefinition = {
+            id: "f_ftime_dep",
+            name: "Flight Departure Time",
+            type: "time"
+          };
+          if (arrIdx !== -1) {
+            mergedFields.splice(arrIdx, 0, depFld);
+          } else {
+            mergedFields.unshift(depFld);
+          }
+        }
+      }
+
       return {
         ...base,
         ...parsed,
+        customFields: mergedFields,
         title: parsed.title || `${service.name} Details`,
       };
     } catch {

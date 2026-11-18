@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { Booking, ServiceType, AgencySettings, initialAgencySettings } from "@/lib/types";
-import { getDaysDifference, formatDate } from "@/lib/date-utils";
+import { getDaysDifference, formatDate, formatBookingNo, formatFlightTimeDisplay } from "@/lib/date-utils";
 import { exportBookingsToCSV } from "@/lib/export-csv";
 import { extractCustomFieldValues } from "@/lib/service-config";
 import TicketQuickViewModal from "./TicketQuickViewModal";
@@ -64,14 +64,20 @@ export function getAgentName(b: Booking): string | null {
       v &&
       String(v).trim() !== ""
     ) {
-      return String(v).trim();
+      const val = String(v).trim();
+      if (!/^(admin|select|--\s*select.*--)$/i.test(val)) {
+        return val;
+      }
     }
   }
 
   if (b.notes) {
     const match = b.notes.match(/(?:Agent|Staff|Issued By|Booked By):\s*([^\n\r,;]+)/i);
     if (match && match[1]?.trim()) {
-      return match[1].trim();
+      const val = match[1].trim();
+      if (!/^(admin|select|--\s*select.*--)$/i.test(val)) {
+        return val;
+      }
     }
   }
 
@@ -131,10 +137,14 @@ export default function BookingList({
         const sector = b.sector?.toLowerCase() || "";
         const portal = getDisplayPortal(b).toLowerCase();
         const bookingNo = b.bookingNo.toLowerCase();
-        const travelDate = b.travelDate?.toLowerCase() || "";
-        const formattedTravelDate = b.travelDate ? formatDate(b.travelDate).toLowerCase() : "";
-        const returnDate = b.returnDate?.toLowerCase() || "";
-        const formattedReturnDate = b.returnDate ? formatDate(b.returnDate).toLowerCase() : "";
+        const ccjBookingNo = formatBookingNo(b.bookingNo).toLowerCase();
+        const agent = getAgentName(b)?.toLowerCase() || "";
+
+        // Filter date by ticket issue date or customer creation date (NOT travel date)
+        const issueDate = b.issueDate ? String(b.issueDate).toLowerCase() : "";
+        const formattedIssueDate = b.issueDate ? formatDate(String(b.issueDate)).toLowerCase() : "";
+        const createdAtDate = b.createdAt ? formatDate(String(b.createdAt)).toLowerCase() : "";
+
         const flightTime = b.flightTime?.toLowerCase() || "";
         const passportNo = b.passportNo?.toLowerCase() || "";
         const notes = b.notes?.toLowerCase() || "";
@@ -147,10 +157,11 @@ export default function BookingList({
           sector.includes(q) ||
           portal.includes(q) ||
           bookingNo.includes(q) ||
-          travelDate.includes(q) ||
-          formattedTravelDate.includes(q) ||
-          returnDate.includes(q) ||
-          formattedReturnDate.includes(q) ||
+          ccjBookingNo.includes(q) ||
+          agent.includes(q) ||
+          issueDate.includes(q) ||
+          formattedIssueDate.includes(q) ||
+          createdAtDate.includes(q) ||
           flightTime.includes(q) ||
           passportNo.includes(q) ||
           notes.includes(q)
@@ -327,7 +338,7 @@ export default function BookingList({
                     ) : (
                       <>
                         <span>•</span>
-                        <span className="font-mono text-slate-400">{b.bookingNo}</span>
+                        <span className="font-mono text-slate-400">{formatBookingNo(b.bookingNo)}</span>
                       </>
                     )}
                     {b.pnr && (
@@ -480,7 +491,7 @@ export default function BookingList({
                           </div>
                         ) : (
                           <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
-                            {b.bookingNo}
+                            {formatBookingNo(b.bookingNo)}
                           </div>
                         )}
                         {b.passportNo && (
@@ -531,8 +542,8 @@ export default function BookingList({
                           {b.travelDate ? formatDate(b.travelDate) : "—"}
                         </div>
                         {b.flightTime && (
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                            🕒 {b.flightTime}
+                          <div className="text-[11px] text-slate-600 dark:text-slate-300 font-medium font-mono">
+                            {formatFlightTimeDisplay(b.flightTime)}
                           </div>
                         )}
                         {b.returnDate && (

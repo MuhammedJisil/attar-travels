@@ -32,6 +32,7 @@ import {
   getCleanNotes,
   serializeCustomFieldValues,
 } from "@/lib/service-config";
+import { formatBookingNo } from "@/lib/date-utils";
 import PhoneInput from "./PhoneInput";
 
 interface BookingModalProps {
@@ -139,16 +140,30 @@ export default function BookingModal({
       const extracted = extractCustomFieldValues(booking.notes);
       const mergedCustom: Record<string, string> = { ...extracted };
 
+      // Split flight times if combined e.g. "10:50 - 17:35" or "1050-1735"
+      const timeParts = booking.flightTime ? booking.flightTime.split(/[-–—]/).map((s) => s.trim()) : [];
+      const depPart = timeParts[0] || booking.flightTime || "";
+      const arrPart = timeParts[1] || "";
+
       // Agent Name extraction
       const agentFromCustom = Object.entries(mergedCustom).find(([k]) => {
         const lk = k.toLowerCase();
         return lk.includes("agent") || lk.includes("staff") || lk.includes("issued by") || lk.includes("booked by");
       })?.[1];
       const matchAgent = booking.notes?.match(/(?:Agent|Staff|Issued By|Booked By):\s*([^\n\r,;]+)/i);
-      setAgentName(agentFromCustom || matchAgent?.[1]?.trim() || "");
+      const foundAgent = agentFromCustom || matchAgent?.[1]?.trim() || "";
+      setAgentName(/^(admin|select|--\s*select.*--)$/i.test(foundAgent) ? "" : foundAgent);
 
       const currentService = serviceTypes.find((s) => s.id === booking.serviceTypeId) || booking.serviceType;
       const svcConfig = getServiceFieldConfig(currentService);
+
+      if (depPart) {
+        mergedCustom["Flight Departure Time"] = formatFlightTrainTime(depPart);
+      }
+      if (arrPart) {
+        mergedCustom["Flight Arrivel Time"] = formatFlightTrainTime(arrPart);
+        mergedCustom["Flight Arrival Time"] = formatFlightTrainTime(arrPart);
+      }
 
       if (svcConfig.customFields && svcConfig.customFields.length > 0) {
         for (const f of svcConfig.customFields) {
@@ -161,8 +176,12 @@ export default function BookingModal({
             mergedCustom[f.name] = booking.pnr;
           } else if (low.includes("passport") && booking.passportNo) {
             mergedCustom[f.name] = booking.passportNo;
-          } else if ((low.includes("time") || low.includes("departure time") || low.includes("reporting")) && booking.flightTime) {
-            mergedCustom[f.name] = booking.flightTime;
+          } else if ((low.includes("dep") || low.includes("departure")) && depPart) {
+            mergedCustom[f.name] = formatFlightTrainTime(depPart);
+          } else if ((low.includes("arr") || low.includes("arriv")) && (arrPart || depPart)) {
+            mergedCustom[f.name] = formatFlightTrainTime(arrPart || (timeParts.length === 1 ? "" : depPart));
+          } else if (low.includes("time") && booking.flightTime) {
+            mergedCustom[f.name] = formatFlightTrainTime(depPart);
           } else if (low.includes("expiry") && booking.expiryDate) {
             mergedCustom[f.name] = booking.expiryDate.substring(0, 10);
           } else if (low.includes("submission") && booking.submissionDate) {
@@ -282,11 +301,15 @@ export default function BookingModal({
       let resolvedFlightNo = flightNo.trim();
       let resolvedPnr = pnr.trim() ? pnr.trim().toUpperCase() : "";
       let resolvedTravelDate = travelDate;
-      let resolvedFlightTime = flightTime.trim() ? formatFlightTrainTime(flightTime) : "";
       let resolvedPassportNo = passportNo.trim();
       let resolvedSubmissionDate = submissionDate;
       let resolvedExpiryDate = expiryDate;
       let resolvedPortal = portal.trim();
+
+      // Extract Departure and Arrival Times from custom fields
+      let depTime = "";
+      let arrTime = "";
+      let genericTime = "";
 
       // Automatically map any filled custom fields to core fields:
       for (const [key, rawVal] of Object.entries(customFieldValues)) {
@@ -299,8 +322,12 @@ export default function BookingModal({
           resolvedSubmissionDate = val;
         } else if (low.includes("expiry date") || low.includes("validity date")) {
           resolvedExpiryDate = val;
-        } else if (low.includes("time") || low.includes("reporting") || low.includes("departure time")) {
-          resolvedFlightTime = formatFlightTrainTime(val);
+        } else if (low.includes("dep") && (low.includes("time") || low.includes("flight") || low.includes("departure"))) {
+          depTime = formatFlightTrainTime(val);
+        } else if ((low.includes("arr") || low.includes("arriv")) && (low.includes("time") || low.includes("flight") || low.includes("arrival") || low.includes("arrivel"))) {
+          arrTime = formatFlightTrainTime(val);
+        } else if (low.includes("time") || low.includes("reporting")) {
+          genericTime = formatFlightTrainTime(val);
         } else if (low.includes("date") && !low.includes("expiry") && !low.includes("submission") && !low.includes("return")) {
           resolvedTravelDate = val;
         } else if (low.includes("pnr") || low.includes("arn") || low.includes("reference") || low.includes("file number") || low.includes("confirmation")) {
@@ -314,18 +341,35 @@ export default function BookingModal({
         }
       }
 
-      // Automatically capture or propagate Agent / Staff Name
-      let finalAgent = agentName.trim();
-      if (!finalAgent) {
-        for (const [k, v] of Object.entries(customFieldValues)) {
-          if (/agent|staff|booked by|issued by/i.test(k) && v && String(v).trim()) {
-            finalAgent = String(v).trim();
+      let resolvedFlightTime = "";
+      if (depTime && arrTime) {
+        resolvedFlightTime = `${depTime} - ${arrTime}`;
+      } else if (depTime) {
+        resolvedFlightTime = depTime;
+      } else if (arrTime) {
+        resolvedFlightTime = arrTime;
+      } else if (flightTime.trim()) {
+        resolvedFlightTime = formatFlightTrainTime(flightTime);
+      } else if (genericTime) {
+        resolvedFlightTime = genericTime;
+      }
+
+      // Automatically capture or propagate Agent / Staff Name from custom fields / dropdown only
+      let finalAgent = "";
+      for (const [k, v] of Object.entries(customFieldValues)) {
+        if (/agent|staff|booked by|issued by/i.test(k) && v && String(v).trim()) {
+          const trimmed = String(v).trim();
+          if (!/^(admin|select|--\s*select.*--)$/i.test(trimmed)) {
+            finalAgent = trimmed;
             break;
           }
         }
       }
       if (finalAgent) {
         customFieldValues["Agent Name"] = finalAgent;
+      } else {
+        delete customFieldValues["Agent Name"];
+        delete customFieldValues["Agent / Staff Name"];
       }
 
       if (!resolvedSector) {
@@ -397,7 +441,7 @@ export default function BookingModal({
             </div>
             <div>
               <h2 className="font-bold text-base sm:text-lg">
-                {booking ? `Edit Ticket / Service (${booking.bookingNo})` : "Add New Customer / Ticket"}
+                {booking ? `Edit Ticket / Service (${formatBookingNo(booking.bookingNo)})` : "Add New Customer / Ticket"}
               </h2>
               <p className="text-xs text-slate-400">
                 {isFlightService ? "Flight ticket entry with PNR & due date alerts" : "Service booking & customer ledger"}
@@ -808,33 +852,6 @@ export default function BookingModal({
                       })}
                     </div>
 
-                    {/* Portal & Agent Name row */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                      <div>
-                        <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">
-                          Issued From Portal / Supplier
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Al-Rayan, Alhind, Galileo, Indigo Direct"
-                          value={portal}
-                          onChange={(e) => setPortal(e.target.value)}
-                          className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">
-                          Agent / Staff Name
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Rashid, Sameer, Admin"
-                          value={agentName}
-                          onChange={(e) => setAgentName(e.target.value)}
-                          className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-sky-500"
-                        />
-                      </div>
-                    </div>
 
                     {/* Passenger count and names if enabled */}
                     {config.hasPax && (
@@ -1153,10 +1170,10 @@ export default function BookingModal({
           <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 space-y-3">
             <div className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs flex items-center gap-1.5">
               <AlertCircle size={15} className="text-amber-500" />
-              Service Status, Agent & Delay Alerts
+              Service Status & Delay Alerts
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">Status</label>
                 <select
@@ -1171,19 +1188,6 @@ export default function BookingModal({
                   <option value="Completed">🏁 Completed</option>
                   <option value="Cancelled">❌ Cancelled</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">
-                  Agent / Staff Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Rashid, Admin"
-                  value={agentName}
-                  onChange={(e) => setAgentName(e.target.value)}
-                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-sky-500"
-                />
               </div>
 
               <div>

@@ -123,3 +123,24 @@ export function formatDateTime(dateString?: string | null): string {
   }
 }
 
+/**
+ * Universal helper to format booking numbers, always displaying CCJ- instead of TRV-
+ */
+export function formatBookingNo(bookingNo?: string | null): string {
+  if (!bookingNo) return "";
+  return bookingNo.replace(/^TRV-/i, "CCJ-").replace(/^TRV/i, "CCJ");
+}
+
+/**
+ * Helper to display flight times clearly (showing departure and arrival if available)
+ */
+export function formatFlightTimeDisplay(timeStr?: string | null): string {
+  if (!timeStr) return "";
+  const trimmed = timeStr.trim();
+  if (trimmed.includes("-") || trimmed.includes("–") || trimmed.includes("—")) {
+    const parts = trimmed.split(/[-–—]/).map((s) => s.trim());
+    return `🛫 ${parts[0]}  🛬 ${parts[1]}`;
+  }
+  return `🕒 ${trimmed}`;
+}
+

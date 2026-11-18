@@ -3,7 +3,7 @@
 import React, { useRef } from "react";
 import Logo from "./Logo";
 import { Booking, AgencySettings } from "@/lib/types";
-import { formatDate } from "@/lib/date-utils";
+import { formatDate, formatBookingNo } from "@/lib/date-utils";
 import { generateWhatsAppUrl, createInvoiceShareMessage } from "@/lib/whatsapp";
 import {
   Printer,
@@ -41,7 +41,7 @@ export default function InvoiceModal({
       `            ${settings.agencyName.toUpperCase()}`,
       `     ${settings.tagline || "Travel & Ticketing Services"}`,
       "===========================================================",
-      `INVOICE / VOUCHER NO: ${booking.bookingNo}`,
+      `INVOICE / VOUCHER NO: ${formatBookingNo(booking.bookingNo)}`,
       `DATE: ${booking.issueDate ? formatDate(booking.issueDate) : formatDate(new Date().toISOString())}`,
       `STATUS: ${booking.status.toUpperCase()}`,
       "-----------------------------------------------------------",
@@ -75,7 +75,7 @@ export default function InvoiceModal({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `Invoice-${booking.bookingNo}.txt`;
+    link.download = `Invoice-${formatBookingNo(booking.bookingNo)}.txt`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -143,7 +143,7 @@ export default function InvoiceModal({
           <div className="flex items-center gap-2">
             <FileCheck size={20} className="text-sky-400" />
             <span className="font-semibold text-sm">Travel Invoice & Voucher</span>
-            <span className="text-xs text-slate-300">({booking.bookingNo})</span>
+            <span className="text-xs text-slate-300">({formatBookingNo(booking.bookingNo)})</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -215,7 +215,7 @@ export default function InvoiceModal({
               <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
                 Invoice / Voucher
               </div>
-              <div className="text-base font-black text-sky-700">{booking.bookingNo}</div>
+              <div className="text-base font-black text-sky-700">{formatBookingNo(booking.bookingNo)}</div>
               <div className="text-xs text-slate-600 mt-0.5">
                 <span className="text-slate-400">Date:</span> {invoiceDate}
               </div>

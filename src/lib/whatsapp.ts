@@ -1,4 +1,5 @@
 import { Booking, AgencySettings } from "./types";
+import { formatBookingNo, formatFlightTimeDisplay } from "./date-utils";
 
 export function formatPhoneNumber(phone: string): string {
   // Strip non-digits
@@ -37,11 +38,11 @@ Dear *${customerName}*,
 
 Greetings from *${agencyName}*! Here are the details for your upcoming travel:
 
-📋 *Booking Ref:* ${booking.bookingNo}
+📋 *Booking Ref:* ${formatBookingNo(booking.bookingNo)}
 🛫 *Flight:* ${booking.flightNo || "N/A"}
 📍 *Sector:* ${booking.sector || "N/A"}
 📅 *Travel Date:* ${travelDateStr}
-⏰ *Flight Time:* ${booking.flightTime || "As per ticket"}
+⏰ *Flight Time:* ${booking.flightTime ? formatFlightTimeDisplay(booking.flightTime) : "As per ticket"}
 🎫 *PNR:* ${booking.pnr || "N/A"}
 👥 *Passengers:* ${booking.passengerNames || `${booking.passengerCount} Pax`}
 📌 *Status:* ${booking.status}
@@ -96,7 +97,7 @@ Greetings from *${agencyName}*.
 
 This is a gentle reminder regarding the outstanding balance for your travel booking:
 
-📋 *Booking Ref:* ${booking.bookingNo}
+📋 *Booking Ref:* ${formatBookingNo(booking.bookingNo)}
 🎫 *Service:* ${booking.serviceType?.name || "Travel Booking"} (${booking.sector || booking.flightNo || "Details"})
 💰 *Total Amount:* ₹${booking.totalAmount.toLocaleString()}
 ✅ *Paid Amount:* ₹${booking.paidAmount.toLocaleString()}
@@ -121,7 +122,7 @@ Dear *${customerName}*,
 
 Thank you for choosing *${agencyName}*. Here is your booking confirmation:
 
-🧾 *Invoice/Booking No:* ${booking.bookingNo}
+🧾 *Invoice/Booking No:* ${formatBookingNo(booking.bookingNo)}
 💼 *Service:* ${booking.serviceType?.name || "Flight Ticket"}
 📍 *Sector/Details:* ${booking.sector || "N/A"}
 🎫 *PNR / Ref:* ${booking.pnr || "N/A"}

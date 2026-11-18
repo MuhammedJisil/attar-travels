@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Customer, Booking, AgencySettings } from "@/lib/types";
-import { getDaysDifference, formatDate } from "@/lib/date-utils";
+import { getDaysDifference, formatDate, formatBookingNo, formatFlightTimeDisplay } from "@/lib/date-utils";
 import {
   X,
   User,
@@ -195,7 +195,7 @@ export default function CustomerDrawer({
                         <span className="px-2 py-0.5 rounded-md bg-sky-100 text-sky-800 font-bold text-xs">
                           {booking.serviceType?.name || "Service"}
                         </span>
-                        <span className="text-xs font-mono text-slate-400">{booking.bookingNo}</span>
+                        <span className="text-xs font-mono text-slate-400">{formatBookingNo(booking.bookingNo)}</span>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -232,7 +232,7 @@ export default function CustomerDrawer({
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">Travel Date</span>
                         <span className="font-bold text-slate-900">
                           {booking.travelDate ? formatDate(booking.travelDate) : "—"}{" "}
-                          {booking.flightTime && <span className="text-slate-500 font-normal">at {booking.flightTime}</span>}
+                          {booking.flightTime && <span className="text-slate-500 font-normal">({formatFlightTimeDisplay(booking.flightTime)})</span>}
                         </span>
                       </div>
 

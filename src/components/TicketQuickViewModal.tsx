@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Booking } from "@/lib/types";
-import { getDaysDifference, formatDate } from "@/lib/date-utils";
+import { getDaysDifference, formatDate, formatBookingNo, formatFlightTimeDisplay } from "@/lib/date-utils";
 import { getServiceFieldConfig, extractCustomFieldValues } from "@/lib/service-config";
 import {
   X,
@@ -55,7 +55,7 @@ export default function TicketQuickViewModal({
             </div>
             <div>
               <h3 className="font-bold text-base leading-tight">Ticket & Flight Details</h3>
-              <p className="text-xs text-slate-400 font-mono">{booking.bookingNo}</p>
+              <p className="text-xs text-slate-400 font-mono">{formatBookingNo(booking.bookingNo)}</p>
             </div>
           </div>
           <button
@@ -147,6 +147,12 @@ export default function TicketQuickViewModal({
                           displayVal = booking.pnr || "";
                         } else if (low.includes("passport")) {
                           displayVal = booking.passportNo || "";
+                        } else if (low.includes("dep") && (low.includes("time") || low.includes("departure"))) {
+                          const dep = booking.flightTime ? booking.flightTime.split(/[-–—]/)[0]?.trim() || booking.flightTime : "";
+                          displayVal = dep ? `${dep} hrs` : "";
+                        } else if ((low.includes("arr") || low.includes("arriv")) && low.includes("time")) {
+                          const arr = booking.flightTime ? booking.flightTime.split(/[-–—]/)[1]?.trim() || "" : "";
+                          displayVal = arr ? `${arr} hrs` : "";
                         } else if (low.includes("time")) {
                           displayVal = booking.flightTime ? `${booking.flightTime} hrs` : "";
                         } else if (low.includes("expiry")) {
@@ -195,7 +201,7 @@ export default function TicketQuickViewModal({
                     <div>
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.timeLabel}</span>
                       <span className="font-bold text-slate-800">
-                        {booking.flightTime ? `🕒 ${booking.flightTime} hrs` : "As per ticket"}
+                        {booking.flightTime ? formatFlightTimeDisplay(booking.flightTime) : "As per ticket"}
                       </span>
                     </div>
 
