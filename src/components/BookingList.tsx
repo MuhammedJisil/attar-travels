@@ -51,7 +51,7 @@ export function getDisplayPortal(b: Booking): string {
   return b.portal || "Direct Desk";
 }
 
-export function getAgentName(b: Booking): string {
+export function getAgentName(b: Booking): string | null {
   const custom = extractCustomFieldValues(b.notes);
   for (const [k, v] of Object.entries(custom)) {
     const lk = k.toLowerCase();
@@ -62,9 +62,9 @@ export function getAgentName(b: Booking): string {
         lk.includes("booked by") ||
         lk.includes("operator")) &&
       v &&
-      v.trim() !== ""
+      String(v).trim() !== ""
     ) {
-      return v.trim();
+      return String(v).trim();
     }
   }
 
@@ -75,7 +75,7 @@ export function getAgentName(b: Booking): string {
     }
   }
 
-  return "Admin";
+  return null;
 }
 
 export default function BookingList({
@@ -319,8 +319,17 @@ export default function BookingList({
                     </span>
                     <span>•</span>
                     <span className="font-mono">{b.flightNo || b.serviceType?.name || "Service"}</span>
-                    <span>•</span>
-                    <span className="font-medium text-slate-600 dark:text-slate-300">👤 {getAgentName(b)}</span>
+                    {getAgentName(b) ? (
+                      <>
+                        <span>•</span>
+                        <span className="font-semibold text-sky-700 dark:text-sky-300">👤 {getAgentName(b)}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>•</span>
+                        <span className="font-mono text-slate-400">{b.bookingNo}</span>
+                      </>
+                    )}
                     {b.pnr && (
                       <>
                         <span>•</span>
@@ -462,12 +471,18 @@ export default function BookingList({
                         <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                           {b.serviceType?.name || "Flight"}
                         </span>
-                        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
-                          <span className="text-[10px]">👤</span>
-                          <span className="truncate max-w-[120px]" title={`Agent: ${getAgentName(b)}`}>
-                            {getAgentName(b)}
-                          </span>
-                        </div>
+                        {getAgentName(b) ? (
+                          <div className="text-[11px] font-semibold text-sky-700 dark:text-sky-300 mt-0.5 flex items-center gap-1">
+                            <span className="text-[10px]">👤</span>
+                            <span className="truncate max-w-[120px]" title={`Agent: ${getAgentName(b)}`}>
+                              {getAgentName(b)}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
+                            {b.bookingNo}
+                          </div>
+                        )}
                         {b.passportNo && (
                           <div className="text-[10px] font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-800 mt-1 flex items-center gap-1">
                             <span>🛂</span>

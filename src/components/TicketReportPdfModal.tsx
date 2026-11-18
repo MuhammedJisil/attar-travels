@@ -10,11 +10,6 @@ import {
   FileText,
   Phone,
   Mail,
-  MapPin,
-  Calendar,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
   Download,
 } from "lucide-react";
 
@@ -49,7 +44,7 @@ export default function TicketReportPdfModal({
   const handleDownloadHtml = () => {
     const reportElem = document.getElementById("printable-pdf-report");
     if (!reportElem) return;
-    const cleanAgency = settings.agencyName.replace(/[^a-zA-Z0-9]/g, "_");
+    const cleanAgency = (settings.agencyName || "Travels").replace(/[^a-zA-Z0-9]/g, "_");
     const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
@@ -58,12 +53,12 @@ export default function TicketReportPdfModal({
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @media print {
-      @page { size: A4 landscape; margin: 8mm; }
+      @page { size: A4 landscape; margin: 6mm 8mm; }
       body { background: white; margin: 0; padding: 0; }
     }
   </style>
 </head>
-<body class="bg-white p-6 text-slate-800">
+<body class="bg-white p-4 text-slate-800">
   ${reportElem.innerHTML}
   <script>window.onload = function() { window.print(); };</script>
 </body>
@@ -87,8 +82,54 @@ export default function TicketReportPdfModal({
 
   return (
     <div className="report-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+      {/* Landscape Print Specific Rules to prevent horizontal cutoffs */}
+      <style>{`
+        @media print {
+          @page {
+            size: A4 landscape !important;
+            margin: 6mm 8mm !important;
+          }
+          html, html.dark, body, html.dark body {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            color-scheme: light !important;
+          }
+          #main-app-content, .no-print {
+            display: none !important;
+          }
+          .report-modal-overlay {
+            position: static !important;
+            display: block !important;
+            background: #ffffff !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+          }
+          .report-modal-card {
+            position: static !important;
+            display: block !important;
+            background: #ffffff !important;
+            box-shadow: none !important;
+            border: none !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+          #printable-pdf-report {
+            padding: 4mm 6mm !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+          }
+        }
+      `}</style>
+
       {/* Container */}
-      <div className="report-modal-card bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-5xl overflow-hidden flex flex-col max-h-[95vh]">
+      <div className="report-modal-card bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-6xl overflow-hidden flex flex-col max-h-[95vh]">
         {/* Top Action Bar (Hidden in Print) */}
         <div className="no-print print:hidden px-4 sm:px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-2.5">
@@ -130,9 +171,9 @@ export default function TicketReportPdfModal({
         </div>
 
         {/* Printable Document Area */}
-        <div id="printable-pdf-report" className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 text-slate-800 bg-white">
+        <div id="printable-pdf-report" className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-5 text-slate-800 bg-white">
           {/* Document Header with Agency Branding */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b-2 border-slate-900">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b-2 border-slate-900">
             <div className="flex items-center gap-3">
               <Logo logoUrl={settings.logoUrl} agencyName={settings.agencyName} size="lg" />
               <div>
@@ -177,53 +218,53 @@ export default function TicketReportPdfModal({
 
           {/* Key Metric KPI Summary Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-center">
               <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
                 Total Bookings
               </span>
-              <span className="text-lg font-black text-slate-900">{totalBookings}</span>
+              <span className="text-base font-black text-slate-900">{totalBookings}</span>
               <span className="text-[10px] text-slate-500 block">({totalPax} Pax)</span>
             </div>
 
-            <div className="p-3 bg-sky-50 rounded-xl border border-sky-200 text-center">
+            <div className="p-2.5 bg-sky-50 rounded-xl border border-sky-200 text-center">
               <span className="text-[10px] uppercase font-bold text-sky-700 block tracking-wider">
                 Total Amount
               </span>
-              <span className="text-lg font-black text-sky-950">₹{totalVolume.toLocaleString()}</span>
+              <span className="text-base font-black text-sky-950">₹{totalVolume.toLocaleString()}</span>
               <span className="text-[10px] text-sky-600 block">Gross Volume</span>
             </div>
 
-            <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
+            <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
               <span className="text-[10px] uppercase font-bold text-emerald-700 block tracking-wider">
                 Collected
               </span>
-              <span className="text-lg font-black text-emerald-800">₹{totalPaid.toLocaleString()}</span>
+              <span className="text-base font-black text-emerald-800">₹{totalPaid.toLocaleString()}</span>
               <span className="text-[10px] text-emerald-600 block">Paid in full/partial</span>
             </div>
 
-            <div className="p-3 bg-rose-50 rounded-xl border border-rose-200 text-center">
+            <div className="p-2.5 bg-rose-50 rounded-xl border border-rose-200 text-center">
               <span className="text-[10px] uppercase font-bold text-rose-700 block tracking-wider">
                 Balance Due
               </span>
-              <span className="text-lg font-black text-rose-700">₹{totalBalance.toLocaleString()}</span>
+              <span className="text-base font-black text-rose-700">₹{totalBalance.toLocaleString()}</span>
               <span className="text-[10px] text-rose-600 block">Outstanding dues</span>
             </div>
           </div>
 
-          {/* Detailed Ledger Table */}
-          <div className="overflow-x-auto border border-slate-200 rounded-xl">
-            <table className="w-full text-left text-xs border-collapse">
+          {/* Detailed Ledger Table (Optimized for full-bleed printing with zero side cutoffs) */}
+          <div className="border border-slate-200 rounded-xl overflow-hidden">
+            <table className="w-full text-left text-[11px] border-collapse table-auto">
               <thead>
-                <tr className="bg-slate-900 text-white font-bold text-[11px] uppercase tracking-wider">
-                  <th className="py-2.5 px-3">#</th>
-                  <th className="py-2.5 px-3">Booking No</th>
-                  <th className="py-2.5 px-3">Customer / Mobile</th>
-                  <th className="py-2.5 px-3">Service & Route</th>
-                  <th className="py-2.5 px-3">Travel Date & Time</th>
-                  <th className="py-2.5 px-3">PNR / Ref</th>
-                  <th className="py-2.5 px-3 text-right">Fare (₹)</th>
-                  <th className="py-2.5 px-3 text-right">Due (₹)</th>
-                  <th className="py-2.5 px-3 text-center">Status</th>
+                <tr className="bg-slate-900 text-white font-bold text-[10px] uppercase tracking-wider">
+                  <th className="py-2 px-2 text-center w-8">#</th>
+                  <th className="py-2 px-2.5 whitespace-nowrap">Booking No</th>
+                  <th className="py-2 px-2.5">Customer / Mobile</th>
+                  <th className="py-2 px-2.5">Service & Route</th>
+                  <th className="py-2 px-2.5 whitespace-nowrap">Travel Date & Time</th>
+                  <th className="py-2 px-2.5 whitespace-nowrap">PNR / Ref</th>
+                  <th className="py-2 px-2.5 text-right whitespace-nowrap">Fare (₹)</th>
+                  <th className="py-2 px-2.5 text-right whitespace-nowrap">Due (₹)</th>
+                  <th className="py-2 px-2.5 text-center whitespace-nowrap">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-800">
@@ -236,42 +277,45 @@ export default function TicketReportPdfModal({
                 ) : (
                   bookings.map((b, idx) => (
                     <tr key={b.id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
-                      <td className="py-2 px-3 font-mono text-slate-400 text-[11px]">{idx + 1}</td>
-                      <td className="py-2 px-3 font-mono font-bold text-slate-900">{b.bookingNo}</td>
-                      <td className="py-2 px-3">
-                        <div className="font-bold text-slate-900">{b.customer?.name || "N/A"}</div>
+                      <td className="py-1.5 px-2 text-center font-mono text-slate-400 text-[10px]">{idx + 1}</td>
+                      <td className="py-1.5 px-2.5 font-mono font-bold text-slate-900 whitespace-nowrap">{b.bookingNo}</td>
+                      <td className="py-1.5 px-2.5">
+                        <div className="font-bold text-slate-900 leading-tight">{b.customer?.name || "N/A"}</div>
                         <div className="text-[10px] font-mono text-slate-500">{b.customer?.phone}</div>
                       </td>
-                      <td className="py-2 px-3">
-                        <div className="font-semibold text-slate-900">{b.sector || b.serviceType?.name || "Service"}</div>
+                      <td className="py-1.5 px-2.5">
+                        <div className="font-semibold text-slate-900 leading-tight">{b.sector || b.serviceType?.name || "Service"}</div>
                         <div className="text-[10px] text-slate-500">
                           {b.flightNo ? `No: ${b.flightNo}` : b.serviceType?.name}
                         </div>
                       </td>
-                      <td className="py-2 px-3">
+                      <td className="py-1.5 px-2.5 whitespace-nowrap">
                         <div className="font-bold text-slate-800">
                           {b.travelDate ? formatDate(b.travelDate) : "N/A"}
                         </div>
                         {b.flightTime && (
                           <div className="text-[10px] font-semibold text-sky-700">🕒 {b.flightTime}</div>
                         )}
+                        {b.returnDate && (
+                          <div className="text-[10px] text-slate-500">↩ Ret: {formatDate(b.returnDate)}</div>
+                        )}
                       </td>
-                      <td className="py-2 px-3 font-mono font-bold text-slate-900">
+                      <td className="py-1.5 px-2.5 font-mono font-bold text-slate-900 whitespace-nowrap">
                         {b.pnr ? (
-                          <span className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          <span className="bg-slate-100 px-1 py-0.5 rounded border border-slate-200">
                             {b.pnr}
                           </span>
                         ) : (
                           "—"
                         )}
                       </td>
-                      <td className="py-2 px-3 text-right font-bold text-slate-900">
+                      <td className="py-1.5 px-2.5 text-right font-bold text-slate-900 whitespace-nowrap">
                         ₹{b.totalAmount.toLocaleString()}
                       </td>
-                      <td className="py-2 px-3 text-right font-bold text-rose-600">
+                      <td className="py-1.5 px-2.5 text-right font-bold text-rose-600 whitespace-nowrap">
                         {b.balanceAmount > 0 ? `₹${b.balanceAmount.toLocaleString()}` : "—"}
                       </td>
-                      <td className="py-2 px-3 text-center">
+                      <td className="py-1.5 px-2.5 text-center whitespace-nowrap">
                         <span
                           className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
                             b.status === "Confirmed"
@@ -294,44 +338,31 @@ export default function TicketReportPdfModal({
                     <td colSpan={6} className="py-2.5 px-3 text-right uppercase tracking-wider">
                       Grand Totals:
                     </td>
-                    <td className="py-2.5 px-3 text-right text-slate-950 font-black">
+                    <td className="py-2.5 px-3 text-right text-slate-950 font-black whitespace-nowrap">
                       ₹{totalVolume.toLocaleString()}
                     </td>
-                    <td className="py-2.5 px-3 text-right text-rose-700 font-black">
+                    <td className="py-2.5 px-3 text-right text-rose-700 font-black whitespace-nowrap">
                       ₹{totalBalance.toLocaleString()}
                     </td>
-                    <td className="py-2.5 px-3 text-center text-[10px] text-slate-500">
-                      {bookings.length} Tickets
-                    </td>
+                    <td></td>
                   </tr>
                 </tfoot>
               )}
             </table>
           </div>
 
-          {/* Footer Notes & Signature Box */}
-          <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-slate-500">
-            <div>
-              <p className="font-semibold text-slate-700">{settings.agencyName}</p>
-              <p className="text-[11px] text-slate-500">{settings.address}</p>
-              {settings.bankDetails && (
-                <p className="text-[10px] text-slate-400 mt-1">Bank / UPI: {settings.bankDetails}</p>
-              )}
-            </div>
-
-            <div className="text-right sm:self-end">
-              <div className="border-b border-slate-400 w-40 mb-1"></div>
-              <p className="text-[11px] font-bold text-slate-700 uppercase">Authorized Signature & Stamp</p>
-            </div>
+          {/* Footer Notes */}
+          <div className="pt-2 flex justify-between items-center text-[10px] text-slate-400">
+            <span>Generated from {settings.agencyName} Travel Desk</span>
+            <span>Page 1 &bull; End of Manifest</span>
           </div>
         </div>
 
-        {/* Modal Bottom Bar (Hidden in Print) */}
-        <div className="print:hidden px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <span>Tip: When the print dialog opens, select <strong>"Save as PDF"</strong> in the destination menu.</span>
+        {/* Modal Bottom Close */}
+        <div className="no-print bg-slate-100 px-6 py-3 border-t border-slate-200 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-white border border-slate-300 rounded-lg font-semibold hover:bg-slate-100 text-slate-700 transition"
+            className="px-4 py-2 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
           >
             Close
           </button>

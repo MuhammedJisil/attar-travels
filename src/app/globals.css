@@ -50,39 +50,69 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
 
+/* ========================================================================= */
+/* UNIVERSAL PRINT & PDF EXPORT STYLES (NO CUTOFFS, ZERO DARK BLEED)         */
+/* ========================================================================= */
 @media print {
-  @page {
-    size: A4 portrait;
-    margin: 8mm;
-  }
-  html, body {
-    background: white !important;
-    color: black !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-  }
-  * {
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+
+  /* Force pure white background and dark text across all root elements */
+  :root,
+  html,
+  html.dark,
+  body,
+  html.dark body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    color-scheme: light !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide app navigation, dark mode wrapper backgrounds, and non-printable elements */
   .no-print,
   #main-app-content,
   nav,
-  main,
-  footer {
+  header,
+  footer,
+  aside {
     display: none !important;
   }
-  .print-only {
-    display: block !important;
+
+  /* Unset dark mode backgrounds on all containers during print */
+  html.dark div,
+  html.dark table,
+  html.dark tr,
+  html.dark td,
+  html.dark th,
+  html.dark section,
+  html.dark main {
+    background-color: transparent !important;
+    color: inherit !important;
+    border-color: #e2e8f0 !important;
   }
 
-  /* Full-bleed printable modal styling: remove backdrop & shadows */
+  /* Full-bleed printable modal styling: eliminate overlay, backdrops, rounding, shadows */
   .invoice-modal-overlay,
   .report-modal-overlay {
     position: static !important;
     display: block !important;
-    background: transparent !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    backdrop-filter: none !important;
     box-shadow: none !important;
     border: none !important;
     padding: 0 !important;
@@ -90,15 +120,18 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     width: 100% !important;
     max-width: 100% !important;
     overflow: visible !important;
+    z-index: auto !important;
   }
 
   .invoice-modal-card,
   .report-modal-card {
     position: static !important;
     display: block !important;
-    background: white !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
     box-shadow: none !important;
     border: none !important;
+    border-radius: 0 !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
@@ -111,13 +144,21 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   #printable-pdf-report {
     display: block !important;
     position: static !important;
-    padding: 0 !important;
-    margin: 0 auto !important;
     width: 100% !important;
     max-width: 100% !important;
-    background: white !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
     box-shadow: none !important;
     border: none !important;
     overflow: visible !important;
+  }
+
+  /* Avoid page breaks inside table rows and key invoice blocks */
+  tr, .avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }

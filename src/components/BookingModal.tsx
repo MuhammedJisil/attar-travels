@@ -94,7 +94,7 @@ export default function BookingModal({
   const [paidAmount, setPaidAmount] = useState<number | string>(0);
   const [dueDate, setDueDate] = useState<string>("");
   const [notes, setNotes] = useState("");
-  const [agentName, setAgentName] = useState("Admin");
+  const [agentName, setAgentName] = useState("");
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
 
   const [loading, setLoading] = useState(false);
@@ -145,7 +145,7 @@ export default function BookingModal({
         return lk.includes("agent") || lk.includes("staff") || lk.includes("issued by") || lk.includes("booked by");
       })?.[1];
       const matchAgent = booking.notes?.match(/(?:Agent|Staff|Issued By|Booked By):\s*([^\n\r,;]+)/i);
-      setAgentName(agentFromCustom || matchAgent?.[1]?.trim() || "Admin");
+      setAgentName(agentFromCustom || matchAgent?.[1]?.trim() || "");
 
       const currentService = serviceTypes.find((s) => s.id === booking.serviceTypeId) || booking.serviceType;
       const svcConfig = getServiceFieldConfig(currentService);
@@ -205,7 +205,7 @@ export default function BookingModal({
       setSubmissionDate("");
       setExpiryDate("");
       setNotes("");
-      setAgentName("Admin");
+      setAgentName("");
       setCustomFieldValues({});
       setStatus("Confirmed");
       setAlertNotes("");
@@ -314,8 +314,18 @@ export default function BookingModal({
         }
       }
 
-      if (agentName.trim()) {
-        customFieldValues["Agent Name"] = agentName.trim();
+      // Automatically capture or propagate Agent / Staff Name
+      let finalAgent = agentName.trim();
+      if (!finalAgent) {
+        for (const [k, v] of Object.entries(customFieldValues)) {
+          if (/agent|staff|booked by|issued by/i.test(k) && v && String(v).trim()) {
+            finalAgent = String(v).trim();
+            break;
+          }
+        }
+      }
+      if (finalAgent) {
+        customFieldValues["Agent Name"] = finalAgent;
       }
 
       if (!resolvedSector) {
@@ -787,12 +797,43 @@ export default function BookingModal({
                                 if (low.includes("portal") || low.includes("supplier") || low.includes("booked from") || low.includes("issue portal") || low.includes("desk")) {
                                   setPortal(textVal);
                                 }
+                                if (low.includes("agent") || low.includes("staff") || low.includes("issued by") || low.includes("booked by")) {
+                                  setAgentName(textVal);
+                                }
                               }}
                               className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-sky-500"
                             />
                           </div>
                         );
                       })}
+                    </div>
+
+                    {/* Portal & Agent Name row */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <div>
+                        <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">
+                          Issued From Portal / Supplier
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Al-Rayan, Alhind, Galileo, Indigo Direct"
+                          value={portal}
+                          onChange={(e) => setPortal(e.target.value)}
+                          className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">
+                          Agent / Staff Name
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Rashid, Sameer, Admin"
+                          value={agentName}
+                          onChange={(e) => setAgentName(e.target.value)}
+                          className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-sky-500"
+                        />
+                      </div>
                     </div>
 
                     {/* Passenger count and names if enabled */}
@@ -892,12 +933,12 @@ export default function BookingModal({
                           </div>
                         ) : (
                           <div>
-                            <label className="block text-slate-500 dark:text-slate-400 text-[11px] mb-1">Issued From Portal</label>
+                            <label className="block text-slate-500 dark:text-slate-400 text-[11px] mb-1">Agent / Staff Name</label>
                             <input
                               type="text"
-                              placeholder={config.portalLabel}
-                              value={portal}
-                              onChange={(e) => setPortal(e.target.value)}
+                              placeholder="e.g. Rashid, Admin"
+                              value={agentName}
+                              onChange={(e) => setAgentName(e.target.value)}
                               className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs"
                             />
                           </div>
@@ -1012,6 +1053,34 @@ export default function BookingModal({
                           />
                         </div>
                       )}
+                    </div>
+
+                    {/* Portal & Agent Row */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <div>
+                        <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">
+                          {config.portalLabel || "Issued From Portal / Supplier"}
+                        </label>
+                        <input
+                          type="text"
+                          placeholder={config.portalLabel || "e.g. Al-Rayan, Alhind, Galileo, Direct Desk"}
+                          value={portal}
+                          onChange={(e) => setPortal(e.target.value)}
+                          className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">
+                          Agent / Staff Name
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Rashid, Sameer, Admin"
+                          value={agentName}
+                          onChange={(e) => setAgentName(e.target.value)}
+                          className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-sky-500"
+                        />
+                      </div>
                     </div>
 
                     {/* Passport & Visa specific extra fields */}
