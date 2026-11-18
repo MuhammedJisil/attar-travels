@@ -261,22 +261,22 @@ export default function ServiceManagementModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-sky-50 to-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-sky-50 to-white dark:from-slate-800 dark:to-slate-900">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-sky-600 text-white rounded-xl shadow-sm">
               <Layers size={18} />
             </div>
             <div>
-              <h3 className="font-black text-slate-900 text-base">
+              <h3 className="font-black text-slate-900 dark:text-white text-base">
                 {viewMode === "list"
                   ? "Manage Services & Custom Form Fields"
                   : viewMode === "create"
                   ? "Create New Service with Custom Fields"
                   : "Edit Service & Form Fields"}
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {viewMode === "list"
                   ? "Customize field labels, calendar, and time setter for each service"
                   : "Choose a template and configure labels (Flight Time, Train Time, PNR, Route...)"}
@@ -288,14 +288,14 @@ export default function ServiceManagementModal({
               if (viewMode !== "list") setViewMode("list");
               else onClose();
             }}
-            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition"
+            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             <X size={18} />
           </button>
         </div>
 
         {error && (
-          <div className="mx-6 mt-4 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-2 text-xs">
+          <div className="mx-6 mt-4 p-3.5 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-xl flex items-center gap-2 text-xs">
             <AlertCircle size={15} className="shrink-0" />
             <span>{error}</span>
           </div>
@@ -305,7 +305,7 @@ export default function ServiceManagementModal({
         {viewMode === "list" && (
           <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs sm:text-sm">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-700 uppercase tracking-wider text-xs">
+              <span className="font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">
                 Active Services ({serviceTypes.length})
               </span>
               <button
@@ -323,10 +323,10 @@ export default function ServiceManagementModal({
                 return (
                   <div
                     key={st.id}
-                    className="p-4 bg-slate-50 hover:bg-white rounded-xl border border-slate-200 hover:border-sky-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
+                    className="p-4 bg-slate-50 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-600 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-lg bg-sky-100 text-sky-700 mt-0.5">
+                      <div className="p-2 rounded-lg bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 mt-0.5">
                         {cfg.template === "flight" ? (
                           <Plane size={16} />
                         ) : cfg.template === "train" ? (
@@ -343,20 +343,20 @@ export default function ServiceManagementModal({
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-900 text-sm">{st.name}</span>
-                          <span className="text-[10px] font-mono font-bold bg-white border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded">
+                          <span className="font-bold text-slate-900 dark:text-white text-sm">{st.name}</span>
+                          <span className="text-[10px] font-mono font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 px-1.5 py-0.5 rounded">
                             {st.code || "SRV"}
                           </span>
-                          <span className="text-[10px] uppercase font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">
+                          <span className="text-[10px] uppercase font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/60 px-2 py-0.5 rounded-full border border-sky-100 dark:border-sky-900">
                             {cfg.template}
                           </span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 mt-1 text-slate-500 text-xs">
+                        <div className="flex flex-wrap items-center gap-2 mt-1 text-slate-500 dark:text-slate-400 text-xs">
                           <span>{getServiceDisplayDescription(st)}</span>
                           {cfg.customFields && cfg.customFields.length > 0 && (
                             <>
                               <span>•</span>
-                              <span className="font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                              <span className="font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded border border-emerald-100 dark:border-emerald-900">
                                 {cfg.customFields.length} Form Fields
                               </span>
                             </>
@@ -369,7 +369,7 @@ export default function ServiceManagementModal({
                       <button
                         onClick={() => handleStartEdit(st)}
                         disabled={deletingServiceId === st.id}
-                        className="p-2 text-slate-600 hover:text-sky-700 hover:bg-sky-50 rounded-lg transition disabled:opacity-50"
+                        className="p-2 text-slate-600 dark:text-slate-300 hover:text-sky-700 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-slate-700 rounded-lg transition disabled:opacity-50"
                         title="Configure form fields"
                       >
                         <Settings2 size={16} />
@@ -377,7 +377,7 @@ export default function ServiceManagementModal({
                       <button
                         onClick={() => handleDelete(st.id, st.name)}
                         disabled={deletingServiceId === st.id}
-                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Delete service"
                       >
                         {deletingServiceId === st.id ? (
@@ -398,13 +398,13 @@ export default function ServiceManagementModal({
         {viewMode !== "list" && (
           <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-5 text-xs sm:text-sm">
             {/* Step 1: Basic Info */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-              <span className="font-bold text-slate-800 uppercase tracking-wider text-xs">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
+              <span className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs">
                 1. Service Identity
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 text-xs font-semibold mb-1">
+                  <label className="block text-slate-700 dark:text-slate-300 text-xs font-semibold mb-1">
                     Service Name * (e.g. Flight Ticket, Train Ticket, Tatkal Passport)
                   </label>
                   <input
@@ -413,11 +413,11 @@ export default function ServiceManagementModal({
                     placeholder="e.g. Train Ticket"
                     value={serviceName}
                     onChange={(e) => setServiceName(e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-medium focus:ring-2 focus:ring-sky-500"
+                    className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 text-xs font-semibold mb-1">
+                  <label className="block text-slate-700 dark:text-slate-300 text-xs font-semibold mb-1">
                     Service Short Code (e.g. TRAIN, FLIGHT, BUS)
                   </label>
                   <input
@@ -425,13 +425,13 @@ export default function ServiceManagementModal({
                     placeholder="e.g. TRAIN"
                     value={serviceCode}
                     onChange={(e) => setServiceCode(e.target.value.toUpperCase())}
-                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono focus:ring-2 focus:ring-sky-500"
+                    className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-700 text-xs font-semibold mb-1">
+                <label className="block text-slate-700 dark:text-slate-300 text-xs font-semibold mb-1">
                   Service Description (Human Friendly)
                 </label>
                 <input
@@ -439,13 +439,13 @@ export default function ServiceManagementModal({
                   placeholder="e.g. Domestic & International airline tickets, Tatkal bookings, Visa assistance..."
                   value={customDesc}
                   onChange={(e) => setCustomDesc(e.target.value)}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-sky-500"
+                  className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500"
                 />
               </div>
 
               {/* Template Picker */}
               <div>
-                <label className="block text-slate-700 text-xs font-semibold mb-1.5">
+                <label className="block text-slate-700 dark:text-slate-300 text-xs font-semibold mb-1.5">
                   Choose Base Template
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -471,10 +471,10 @@ export default function ServiceManagementModal({
                         className={`p-2.5 rounded-xl border text-left flex items-center gap-2 transition ${
                           isSelected
                             ? "bg-sky-600 text-white border-sky-600 shadow-sm font-bold"
-                            : "bg-white text-slate-700 border-slate-200 hover:border-sky-300"
+                            : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-sky-300"
                         }`}
                       >
-                        <Icon size={14} className={isSelected ? "text-white" : "text-sky-600"} />
+                        <Icon size={14} className={isSelected ? "text-white" : "text-sky-600 dark:text-sky-400"} />
                         <span className="text-xs">{t.label}</span>
                       </button>
                     );
@@ -484,14 +484,14 @@ export default function ServiceManagementModal({
             </div>
 
             {/* Step 2: Service Fields (Unified Custom Fields Builder) */}
-            <div className="p-4 rounded-xl bg-sky-50/60 border border-sky-200 space-y-4">
+            <div className="p-4 rounded-xl bg-sky-50/60 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-900 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <span className="font-bold text-sky-950 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                  <span className="font-bold text-sky-950 dark:text-sky-200 uppercase tracking-wider text-xs flex items-center gap-1.5">
                     <Plus size={15} className="text-sky-600" />
                     2. Service Form Fields ({customFields.length})
                   </span>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                     Configure the input fields for this service
                   </p>
                 </div>
@@ -507,14 +507,14 @@ export default function ServiceManagementModal({
               </div>
 
               {customFields.length === 0 ? (
-                <div className="p-6 bg-white rounded-xl border border-dashed border-sky-200 text-center space-y-2">
-                  <p className="text-xs text-slate-500">
+                <div className="p-6 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-sky-200 dark:border-sky-800 text-center space-y-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     No custom fields added yet for this service.
                   </p>
                   <button
                     type="button"
                     onClick={handleAddCustomField}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 rounded-lg text-xs font-bold transition"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-sky-50 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 hover:bg-sky-100 dark:hover:bg-sky-900/60 rounded-lg text-xs font-bold transition"
                   >
                     <Plus size={13} />
                     <span>Click here to add your first field</span>
@@ -525,17 +525,17 @@ export default function ServiceManagementModal({
                   {customFields.map((field, idx) => (
                     <div
                       key={field.id}
-                      className="p-3.5 bg-white rounded-xl border border-sky-200 space-y-2.5 shadow-xs"
+                      className="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-sky-200 dark:border-slate-800 space-y-2.5 shadow-xs"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           {/* Reordering Up/Down controls */}
-                          <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                          <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700">
                             <button
                               type="button"
                               disabled={idx === 0}
                               onClick={() => handleMoveCustomField(idx, "up")}
-                              className="p-1 text-slate-500 hover:text-sky-600 disabled:opacity-25 disabled:hover:text-slate-500 rounded hover:bg-white transition"
+                              className="p-1 text-slate-500 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 disabled:opacity-25 disabled:hover:text-slate-500 rounded hover:bg-white dark:hover:bg-slate-700 transition"
                               title="Move field up"
                             >
                               <ChevronUp size={13} />
@@ -544,24 +544,24 @@ export default function ServiceManagementModal({
                               type="button"
                               disabled={idx === customFields.length - 1}
                               onClick={() => handleMoveCustomField(idx, "down")}
-                              className="p-1 text-slate-500 hover:text-sky-600 disabled:opacity-25 disabled:hover:text-slate-500 rounded hover:bg-white transition"
+                              className="p-1 text-slate-500 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 disabled:opacity-25 disabled:hover:text-slate-500 rounded hover:bg-white dark:hover:bg-slate-700 transition"
                               title="Move field down"
                             >
                               <ChevronDown size={13} />
                             </button>
                           </div>
 
-                          <span className="w-5 h-5 rounded-full bg-sky-100 text-sky-800 font-bold text-[10px] flex items-center justify-center">
+                          <span className="w-5 h-5 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200 font-bold text-[10px] flex items-center justify-center">
                             {idx + 1}
                           </span>
-                          <span className="text-xs font-bold text-slate-800">
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                             {field.name || `Field #${idx + 1}`}
                           </span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleRemoveCustomField(field.id)}
-                          className="text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition"
+                          className="text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
                           title="Delete field"
                         >
                           <Trash2 size={15} />
@@ -571,7 +571,7 @@ export default function ServiceManagementModal({
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                         {/* Field Label */}
                         <div className="sm:col-span-2">
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
                             Field Name / Label *
                           </label>
                           <input
@@ -580,13 +580,13 @@ export default function ServiceManagementModal({
                             placeholder="e.g. Flight Time, Travel Date, Train Route, PNR..."
                             value={field.name}
                             onChange={(e) => handleUpdateCustomField(field.id, { name: e.target.value })}
-                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium focus:ring-2 focus:ring-sky-500"
+                            className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-sky-500"
                           />
                         </div>
 
                         {/* Field Type Selector */}
                         <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
                             Field Input Type *
                           </label>
                           <select
@@ -596,7 +596,7 @@ export default function ServiceManagementModal({
                                 type: e.target.value as CustomFieldDefinition["type"],
                               })
                             }
-                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-bold focus:ring-2 focus:ring-sky-500"
+                            className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-sky-500"
                           >
                             <option value="time">🕒 Time Setter (Clock)</option>
                             <option value="date">📅 Date Picker (Calendar)</option>
@@ -609,9 +609,9 @@ export default function ServiceManagementModal({
 
                       {/* Dropdown Options if select type */}
                       {field.type === "select" && (
-                        <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-2.5">
+                        <div className="p-3 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2.5">
                           <div className="flex items-center justify-between">
-                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                               Dropdown Choices / Options
                             </label>
                             <button
@@ -620,7 +620,7 @@ export default function ServiceManagementModal({
                                 const current = field.options || [];
                                 handleUpdateCustomField(field.id, { options: [...current, ""] });
                               }}
-                              className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-600 hover:text-sky-800 bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded-lg transition"
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 bg-sky-50 dark:bg-sky-900/40 hover:bg-sky-100 dark:hover:bg-sky-900/60 px-2.5 py-1 rounded-lg transition"
                             >
                               <Plus size={13} />
                               <span>Add Option</span>
@@ -628,12 +628,12 @@ export default function ServiceManagementModal({
                           </div>
 
                           {(!field.options || field.options.length === 0) ? (
-                            <div className="p-3 text-center bg-slate-50 border border-dashed border-slate-200 rounded-lg">
-                              <p className="text-xs text-slate-500">No dropdown choices added yet.</p>
+                            <div className="p-3 text-center bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+                              <p className="text-xs text-slate-500 dark:text-slate-400">No dropdown choices added yet.</p>
                               <button
                                 type="button"
                                 onClick={() => handleUpdateCustomField(field.id, { options: [""] })}
-                                className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-sky-600 hover:underline"
+                                className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline"
                               >
                                 <Plus size={12} /> Click here to add first choice
                               </button>
@@ -642,7 +642,7 @@ export default function ServiceManagementModal({
                             <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                               {field.options.map((opt, optIdx) => (
                                 <div key={optIdx} className="flex items-center gap-2">
-                                  <span className="text-[11px] font-mono font-bold text-slate-400 w-5 text-right">
+                                  <span className="text-[11px] font-mono font-bold text-slate-400 dark:text-slate-500 w-5 text-right">
                                     {optIdx + 1}.
                                   </span>
                                   <input
@@ -654,7 +654,7 @@ export default function ServiceManagementModal({
                                       next[optIdx] = e.target.value;
                                       handleUpdateCustomField(field.id, { options: next });
                                     }}
-                                    className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:bg-white focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition"
+                                    className="flex-1 p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:bg-white dark:focus:bg-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition"
                                   />
                                   <button
                                     type="button"
@@ -662,7 +662,7 @@ export default function ServiceManagementModal({
                                       const next = (field.options || []).filter((_, idx) => idx !== optIdx);
                                       handleUpdateCustomField(field.id, { options: next });
                                     }}
-                                    className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition"
+                                    className="p-2 text-rose-500 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
                                     title="Remove this option"
                                   >
                                     <Trash2 size={14} />
@@ -671,7 +671,7 @@ export default function ServiceManagementModal({
                               ))}
                             </div>
                           )}
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500">
                             Each choice will appear individually in the booking dropdown selector.
                           </p>
                         </div>
@@ -687,7 +687,7 @@ export default function ServiceManagementModal({
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
-                className="px-4 py-2 text-slate-600 hover:text-slate-800 font-semibold text-xs rounded-xl"
+                className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold text-xs rounded-xl"
               >
                 Back to List
               </button>
@@ -712,11 +712,11 @@ export default function ServiceManagementModal({
         )}
 
         {/* Footer */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+        <div className="px-6 py-3 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
           <span>Active services appear directly in new booking forms.</span>
           <button
             onClick={onClose}
-            className="px-3 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 font-semibold"
+            className="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 font-semibold transition"
           >
             Done
           </button>

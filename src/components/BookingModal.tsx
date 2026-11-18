@@ -94,6 +94,7 @@ export default function BookingModal({
   const [paidAmount, setPaidAmount] = useState<number | string>(0);
   const [dueDate, setDueDate] = useState<string>("");
   const [notes, setNotes] = useState("");
+  const [agentName, setAgentName] = useState("Admin");
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
 
   const [loading, setLoading] = useState(false);
@@ -137,6 +138,14 @@ export default function BookingModal({
       // Populate custom fields intelligently from both notes and core fields
       const extracted = extractCustomFieldValues(booking.notes);
       const mergedCustom: Record<string, string> = { ...extracted };
+
+      // Agent Name extraction
+      const agentFromCustom = Object.entries(mergedCustom).find(([k]) => {
+        const lk = k.toLowerCase();
+        return lk.includes("agent") || lk.includes("staff") || lk.includes("issued by") || lk.includes("booked by");
+      })?.[1];
+      const matchAgent = booking.notes?.match(/(?:Agent|Staff|Issued By|Booked By):\s*([^\n\r,;]+)/i);
+      setAgentName(agentFromCustom || matchAgent?.[1]?.trim() || "Admin");
 
       const currentService = serviceTypes.find((s) => s.id === booking.serviceTypeId) || booking.serviceType;
       const svcConfig = getServiceFieldConfig(currentService);
@@ -196,6 +205,7 @@ export default function BookingModal({
       setSubmissionDate("");
       setExpiryDate("");
       setNotes("");
+      setAgentName("Admin");
       setCustomFieldValues({});
       setStatus("Confirmed");
       setAlertNotes("");
@@ -304,6 +314,10 @@ export default function BookingModal({
         }
       }
 
+      if (agentName.trim()) {
+        customFieldValues["Agent Name"] = agentName.trim();
+      }
+
       if (!resolvedSector) {
         resolvedSector = activeService?.name || "Travel Service";
       }
@@ -364,9 +378,9 @@ export default function BookingModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-3xl my-6 overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-3xl my-6 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Header */}
-        <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between">
+        <div className="bg-slate-900 dark:bg-slate-950 px-6 py-4 text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center border border-sky-500/30">
               {isFlightService ? <Plane size={20} /> : <FileText size={20} />}
@@ -391,23 +405,23 @@ export default function BookingModal({
         {/* Modal Form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 text-xs sm:text-sm">
           {error && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-2 text-xs">
+            <div className="p-3.5 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-xl flex items-center gap-2 text-xs">
               <AlertCircle size={16} className="shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
           {/* SECTION 1: Service Type (Dynamic Dropdown) */}
-          <div className="p-4 rounded-xl bg-sky-50/60 border border-sky-100">
+          <div className="p-4 rounded-xl bg-sky-50/60 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/60">
             <div className="flex items-center justify-between mb-2">
-              <label className="font-bold text-sky-950 uppercase tracking-wider text-xs flex items-center gap-1.5">
+              <label className="font-bold text-sky-950 dark:text-sky-300 uppercase tracking-wider text-xs flex items-center gap-1.5">
                 <Compass size={15} className="text-sky-600" />
                 Select Service Type *
               </label>
               <button
                 type="button"
                 onClick={onOpenManageServices}
-                className="text-xs font-semibold text-sky-700 hover:text-sky-900 underline flex items-center gap-1"
+                className="text-xs font-semibold text-sky-700 dark:text-sky-400 hover:text-sky-900 dark:hover:text-sky-300 underline flex items-center gap-1"
               >
                 + Add / Manage Services
               </button>
@@ -417,7 +431,7 @@ export default function BookingModal({
               value={selectedServiceId}
               onChange={(e) => setSelectedServiceId(e.target.value)}
               required
-              className="w-full p-2.5 bg-white border border-sky-200 rounded-xl font-medium text-slate-800 focus:ring-2 focus:ring-sky-500"
+              className="w-full p-2.5 bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-700 rounded-xl font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500"
             >
               {serviceTypes.map((st) => {
                 const desc = getServiceDisplayDescription(st);
@@ -431,20 +445,20 @@ export default function BookingModal({
           </div>
 
           {/* SECTION 2: Customer / Party Info */}
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between mb-3">
-              <label className="font-bold text-slate-800 uppercase tracking-wider text-xs flex items-center gap-1.5">
-                <User size={15} className="text-slate-600" />
+              <label className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                <User size={15} className="text-slate-600 dark:text-slate-400" />
                 Customer / Party *
               </label>
 
               {!booking && (
-                <div className="flex rounded-lg bg-slate-200 p-0.5 text-xs font-medium">
+                <div className="flex rounded-lg bg-slate-200 dark:bg-slate-700 p-0.5 text-xs font-medium">
                   <button
                     type="button"
                     onClick={() => setCustomerMode("existing")}
                     className={`px-2.5 py-1 rounded-md transition ${
-                      customerMode === "existing" ? "bg-white text-slate-900 shadow-sm font-bold" : "text-slate-600"
+                      customerMode === "existing" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm font-bold" : "text-slate-600 dark:text-slate-300"
                     }`}
                   >
                     Select Existing
@@ -453,7 +467,7 @@ export default function BookingModal({
                     type="button"
                     onClick={() => setCustomerMode("new")}
                     className={`px-2.5 py-1 rounded-md transition ${
-                      customerMode === "new" ? "bg-white text-slate-900 shadow-sm font-bold" : "text-slate-600"
+                      customerMode === "new" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm font-bold" : "text-slate-600 dark:text-slate-300"
                     }`}
                   >
                     + New Customer
@@ -469,7 +483,7 @@ export default function BookingModal({
                   onChange={(e) => setSelectedCustomerId(e.target.value)}
                   disabled={!!booking}
                   required
-                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100"
+                  className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100 dark:disabled:bg-slate-800/50"
                 >
                   <option value="">-- Choose Customer / Party --</option>
                   {booking?.customer && !customers.some((c) => c.id === booking.customerId) && (
@@ -487,19 +501,19 @@ export default function BookingModal({
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
-                  <label className="block text-slate-500 text-xs mb-1">Party / Customer Name *</label>
+                  <label className="block text-slate-500 dark:text-slate-400 text-xs mb-1">Party / Customer Name *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Mohammed Rashid / Sky Enterprises"
                     value={newCustomerName}
                     onChange={(e) => setNewCustomerName(e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-sky-500"
+                    className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-500 text-xs mb-1">Mobile No (for WhatsApp Alerts) *</label>
+                  <label className="block text-slate-500 dark:text-slate-400 text-xs mb-1">Mobile No (for WhatsApp Alerts) *</label>
                   <PhoneInput
                     value={newCustomerPhone}
                     onChange={setNewCustomerPhone}
@@ -509,24 +523,24 @@ export default function BookingModal({
                 </div>
 
                 <div>
-                  <label className="block text-slate-500 text-xs mb-1">Email (Optional)</label>
+                  <label className="block text-slate-500 dark:text-slate-400 text-xs mb-1">Email (Optional)</label>
                   <input
                     type="email"
                     placeholder="e.g. client@gmail.com"
                     value={newCustomerEmail}
                     onChange={(e) => setNewCustomerEmail(e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-sky-500"
+                    className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-500 text-xs mb-1">City / Location</label>
+                  <label className="block text-slate-500 dark:text-slate-400 text-xs mb-1">City / Location</label>
                   <input
                     type="text"
                     placeholder="e.g. Calicut / Dubai"
                     value={newCustomerCity}
                     onChange={(e) => setNewCustomerCity(e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-sky-500"
+                    className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
               </div>
@@ -564,17 +578,17 @@ export default function BookingModal({
                   /* RENDER CONFIGURED FIELDS AS NORMAL FORM FIELDS */
                   <div className="space-y-4">
                     {/* Common Issue & Booking Date */}
-                    <div className="p-3 bg-white rounded-xl border border-slate-200">
+                    <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                          <Calendar size={13} className="text-sky-600" />
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                          <Calendar size={13} className="text-sky-600 dark:text-sky-400" />
                           Booking / Issue Date
                         </label>
                         <input
                           type="date"
                           value={issueDate}
                           onChange={(e) => setIssueDate(e.target.value)}
-                          className="p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium"
+                          className="p-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium"
                         />
                       </div>
                     </div>
@@ -586,15 +600,15 @@ export default function BookingModal({
 
                         if (fld.type === "time") {
                           return (
-                            <div key={fld.id} className="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
+                            <div key={fld.id} className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
                               <div className="flex items-center justify-between">
-                                <label className="text-slate-700 text-xs font-bold flex items-center gap-1">
-                                  <Clock size={13} className="text-sky-600" />
+                                <label className="text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1">
+                                  <Clock size={13} className="text-sky-600 dark:text-sky-400" />
                                   {fld.name}
                                   {fld.required && <span className="text-rose-500">*</span>}
                                 </label>
                                 {val && (
-                                  <span className="text-[11px] font-mono font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+                                  <span className="text-[11px] font-mono font-bold text-sky-800 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/60 px-2 py-0.5 rounded border border-sky-200 dark:border-sky-800">
                                     🕒 {val} hrs
                                   </span>
                                 )}
@@ -609,12 +623,12 @@ export default function BookingModal({
                                     setCustomFieldValues((prev) => ({ ...prev, [fld.name]: t24 }));
                                     if (!flightTime) setFlightTime(t24);
                                   }}
-                                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono font-bold text-xs cursor-pointer focus:ring-2 focus:ring-sky-500"
+                                  className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono font-bold text-xs cursor-pointer focus:ring-2 focus:ring-sky-500"
                                 />
 
                                 {/* 24-hour Train & Flight Time Presets (e.g. 22:00) */}
                                 <div className="flex flex-wrap items-center gap-1 text-[10px]">
-                                  <span className="text-slate-400 text-[10px] mr-0.5">24h Presets:</span>
+                                  <span className="text-slate-400 dark:text-slate-500 text-[10px] mr-0.5">24h Presets:</span>
                                   {TRAIN_FLIGHT_TIME_PRESETS.map((t) => (
                                     <button
                                       key={t}
@@ -626,7 +640,7 @@ export default function BookingModal({
                                       className={`px-1.5 py-0.5 rounded border transition font-mono ${
                                         val === t
                                           ? "bg-sky-600 text-white border-sky-600 font-bold"
-                                          : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-sky-50"
+                                          : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-sky-50 dark:hover:bg-slate-700"
                                       }`}
                                     >
                                       {t}
@@ -640,10 +654,10 @@ export default function BookingModal({
 
                         if (fld.type === "date") {
                           return (
-                            <div key={fld.id} className="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
+                            <div key={fld.id} className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
                               <div className="flex items-center justify-between">
-                                <label className="text-slate-700 text-xs font-bold flex items-center gap-1">
-                                  <Calendar size={13} className="text-sky-600" />
+                                <label className="text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1">
+                                  <Calendar size={13} className="text-sky-600 dark:text-sky-400" />
                                   {fld.name}
                                   {fld.required && <span className="text-rose-500">*</span>}
                                 </label>
@@ -664,7 +678,7 @@ export default function BookingModal({
                                         setCustomFieldValues((prev) => ({ ...prev, [fld.name]: dateStr }));
                                         if (!travelDate) setTravelDate(dateStr);
                                       }}
-                                      className="px-1 py-0.5 rounded bg-slate-100 hover:bg-sky-100 text-slate-600 font-medium"
+                                      className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-700 hover:bg-sky-100 dark:hover:bg-sky-900/40 text-slate-600 dark:text-slate-300 font-medium"
                                     >
                                       {p.label}
                                     </button>
@@ -687,7 +701,7 @@ export default function BookingModal({
                                     setTravelDate(dateVal);
                                   }
                                 }}
-                                className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-semibold focus:ring-2 focus:ring-sky-500"
+                                className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-semibold focus:ring-2 focus:ring-sky-500"
                               />
                             </div>
                           );
@@ -695,8 +709,8 @@ export default function BookingModal({
 
                         if (fld.type === "select") {
                           return (
-                            <div key={fld.id} className="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5">
-                              <label className="text-slate-700 text-xs font-bold">
+                            <div key={fld.id} className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl space-y-1.5">
+                              <label className="text-slate-700 dark:text-slate-200 text-xs font-bold">
                                 {fld.name}
                                 {fld.required && <span className="text-rose-500"> *</span>}
                               </label>
@@ -711,7 +725,7 @@ export default function BookingModal({
                                     setPortal(selVal);
                                   }
                                 }}
-                                className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium focus:ring-2 focus:ring-sky-500"
+                                className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-sky-500"
                               >
                                 <option value="">-- Select {fld.name} --</option>
                                 {(fld.options || []).map((opt) => (
@@ -726,8 +740,8 @@ export default function BookingModal({
 
                         if (fld.type === "number") {
                           return (
-                            <div key={fld.id} className="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5">
-                              <label className="text-slate-700 text-xs font-bold">
+                            <div key={fld.id} className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl space-y-1.5">
+                              <label className="text-slate-700 dark:text-slate-200 text-xs font-bold">
                                 {fld.name}
                                 {fld.required && <span className="text-rose-500"> *</span>}
                               </label>
@@ -739,7 +753,7 @@ export default function BookingModal({
                                 onChange={(e) =>
                                   setCustomFieldValues((prev) => ({ ...prev, [fld.name]: e.target.value }))
                                 }
-                                className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium focus:ring-2 focus:ring-sky-500"
+                                className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-sky-500"
                               />
                             </div>
                           );
@@ -747,8 +761,8 @@ export default function BookingModal({
 
                         // Default Text Field
                         return (
-                          <div key={fld.id} className="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5">
-                            <label className="text-slate-700 text-xs font-bold">
+                          <div key={fld.id} className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl space-y-1.5">
+                            <label className="text-slate-700 dark:text-slate-200 text-xs font-bold">
                               {fld.name}
                               {fld.required && <span className="text-rose-500"> *</span>}
                             </label>
@@ -774,7 +788,7 @@ export default function BookingModal({
                                   setPortal(textVal);
                                 }
                               }}
-                              className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium focus:ring-2 focus:ring-sky-500"
+                              className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-sky-500"
                             />
                           </div>
                         );
@@ -783,26 +797,26 @@ export default function BookingModal({
 
                     {/* Passenger count and names if enabled */}
                     {config.hasPax && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-white rounded-xl border border-slate-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
                         <div>
-                          <label className="block text-slate-600 text-xs font-semibold mb-1">No. of Passengers (Pax)</label>
+                          <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">No. of Passengers (Pax)</label>
                           <input
                             type="number"
                             min="1"
                             value={passengerCount}
                             onChange={(e) => setPassengerCount(parseInt(e.target.value) || 1)}
-                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium"
+                            className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-medium"
                           />
                         </div>
 
                         <div className="sm:col-span-2">
-                          <label className="block text-slate-600 text-xs font-semibold mb-1">Passenger Names</label>
+                          <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">Passenger Names</label>
                           <input
                             type="text"
                             placeholder="e.g. Mohammed Rashid, Aysha Rashid"
                             value={passengerNames}
                             onChange={(e) => setPassengerNames(e.target.value)}
-                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                            className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
                           />
                         </div>
                       </div>
@@ -812,14 +826,14 @@ export default function BookingModal({
                   /* LEGACY FALLBACK FOR SERVICES WITHOUT EXPLICIT CUSTOM FIELDS */
                   <div className="space-y-4">
                     {/* Dates & Calendar Shortcuts */}
-                    <div className="p-3 bg-white rounded-xl border border-sky-100 space-y-2">
+                    <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-sky-100 dark:border-slate-700 space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-1.5">
-                        <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                          <Calendar size={14} className="text-sky-600" />
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                          <Calendar size={14} className="text-sky-600 dark:text-sky-400" />
                           {config.dateLabel} *
                         </span>
                         <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-400 mr-1">Quick Pick:</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 mr-1">Quick Pick:</span>
                           {[
                             { label: "Today", days: 0 },
                             { label: "Tomorrow", days: 1 },
@@ -834,7 +848,7 @@ export default function BookingModal({
                                 d.setDate(d.getDate() + p.days);
                                 setTravelDate(d.toISOString().substring(0, 10));
                               }}
-                              className="px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-sky-100 hover:text-sky-800 text-slate-600 rounded transition"
+                              className="px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 dark:bg-slate-700 hover:bg-sky-100 dark:hover:bg-sky-900 hover:text-sky-800 dark:hover:text-sky-200 text-slate-600 dark:text-slate-300 rounded transition"
                             >
                               {p.label}
                             </button>
@@ -844,17 +858,17 @@ export default function BookingModal({
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                          <label className="block text-slate-500 text-[11px] mb-1">Issue / Booking Date</label>
+                          <label className="block text-slate-500 dark:text-slate-400 text-[11px] mb-1">Issue / Booking Date</label>
                           <input
                             type="date"
                             value={issueDate}
                             onChange={(e) => setIssueDate(e.target.value)}
-                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs"
+                            className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-rose-600 font-bold text-[11px] mb-1">
+                          <label className="block text-rose-600 dark:text-rose-400 font-bold text-[11px] mb-1">
                             {config.dateLabel} *
                           </label>
                           <input
@@ -862,29 +876,29 @@ export default function BookingModal({
                             required
                             value={travelDate}
                             onChange={(e) => setTravelDate(e.target.value)}
-                            className="w-full p-2 bg-white border border-rose-300 rounded-lg text-slate-900 font-semibold focus:ring-2 focus:ring-rose-500 text-xs"
+                            className="w-full p-2 bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-700 rounded-lg text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-rose-500 text-xs"
                           />
                         </div>
 
                         {config.hasReturnDate ? (
                           <div>
-                            <label className="block text-slate-500 text-[11px] mb-1">Return / End Date (Optional)</label>
+                            <label className="block text-slate-500 dark:text-slate-400 text-[11px] mb-1">Return / End Date (Optional)</label>
                             <input
                               type="date"
                               value={returnDate}
                               onChange={(e) => setReturnDate(e.target.value)}
-                              className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs"
+                              className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs"
                             />
                           </div>
                         ) : (
                           <div>
-                            <label className="block text-slate-500 text-[11px] mb-1">Issued From Portal</label>
+                            <label className="block text-slate-500 dark:text-slate-400 text-[11px] mb-1">Issued From Portal</label>
                             <input
                               type="text"
                               placeholder={config.portalLabel}
                               value={portal}
                               onChange={(e) => setPortal(e.target.value)}
-                              className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs"
+                              className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs"
                             />
                           </div>
                         )}
@@ -894,7 +908,7 @@ export default function BookingModal({
                     {/* Route & Number Identification */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="sm:col-span-2">
-                        <label className="block text-slate-600 text-xs font-semibold mb-1">
+                        <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">
                           {config.routeLabel} *
                         </label>
                         <input
@@ -903,12 +917,12 @@ export default function BookingModal({
                           placeholder={config.routePlaceholder}
                           value={sector}
                           onChange={(e) => setSector(e.target.value)}
-                          className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-medium"
+                          className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-medium"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-slate-600 text-xs font-semibold mb-1">
+                        <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">
                           {config.numberLabel}
                         </label>
                         <input
@@ -916,7 +930,7 @@ export default function BookingModal({
                           placeholder={config.numberPlaceholder}
                           value={flightNo}
                           onChange={(e) => setFlightNo(e.target.value)}
-                          className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-semibold"
+                          className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-semibold"
                         />
                       </div>
                     </div>
@@ -924,7 +938,7 @@ export default function BookingModal({
                     {/* PNR & TIME SETTER */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-slate-600 text-xs font-semibold mb-1">
+                        <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">
                           {config.pnrLabel} *
                         </label>
                         <input
@@ -933,20 +947,20 @@ export default function BookingModal({
                           placeholder={config.pnrPlaceholder}
                           value={pnr}
                           onChange={(e) => setPnr(e.target.value.toUpperCase())}
-                          className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono font-bold tracking-wider"
+                          className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono font-bold tracking-wider"
                         />
                       </div>
 
                       {/* TIME PICKER (Flight Time / Train Time in 24h format) */}
                       {config.hasTime && (
-                        <div className="sm:col-span-2 p-2.5 bg-white border border-sky-200 rounded-xl space-y-2">
+                        <div className="sm:col-span-2 p-2.5 bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-700 rounded-xl space-y-2">
                           <div className="flex items-center justify-between">
-                            <label className="text-slate-700 text-xs font-bold flex items-center gap-1">
-                              <Clock size={13} className="text-sky-600" />
+                            <label className="text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1">
+                              <Clock size={13} className="text-sky-600 dark:text-sky-400" />
                               {config.timeLabel}
                             </label>
                             {flightTime && (
-                              <span className="text-xs font-mono font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+                              <span className="text-xs font-mono font-bold text-sky-800 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/60 px-2 py-0.5 rounded border border-sky-200 dark:border-sky-800">
                                 🕒 {flightTime} hrs
                               </span>
                             )}
@@ -960,7 +974,7 @@ export default function BookingModal({
                                 const val = e.target.value;
                                 setFlightTime(val ? formatFlightTrainTime(val) : "");
                               }}
-                              className="px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono font-bold text-xs focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                              className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono font-bold text-xs focus:ring-2 focus:ring-sky-500 cursor-pointer"
                             />
 
                             {/* 24-hour Presets */}
@@ -973,7 +987,7 @@ export default function BookingModal({
                                   className={`px-1.5 py-1 rounded border transition font-mono ${
                                     flightTime === t
                                       ? "bg-sky-600 text-white border-sky-600 font-bold"
-                                      : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-sky-50"
+                                      : "bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-sky-50 dark:hover:bg-slate-800"
                                   }`}
                                 >
                                   {t}
@@ -986,7 +1000,7 @@ export default function BookingModal({
 
                       {!config.hasTime && config.hasReturnDate && (
                         <div>
-                          <label className="block text-slate-600 text-xs font-semibold mb-1">
+                          <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">
                             {config.portalLabel}
                           </label>
                           <input
@@ -994,7 +1008,7 @@ export default function BookingModal({
                             placeholder={config.portalLabel}
                             value={portal}
                             onChange={(e) => setPortal(e.target.value)}
-                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900"
+                            className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
                           />
                         </div>
                       )}
@@ -1002,33 +1016,33 @@ export default function BookingModal({
 
                     {/* Passport & Visa specific extra fields */}
                     {(config.hasPassportField || config.hasSubmissionDates) && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
                         <div>
-                          <label className="block text-slate-600 text-xs font-semibold mb-1">Passport / Doc Number</label>
+                          <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">Passport / Doc Number</label>
                           <input
                             type="text"
                             placeholder="e.g. Z5892341"
                             value={passportNo}
                             onChange={(e) => setPassportNo(e.target.value)}
-                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono"
+                            className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono"
                           />
                         </div>
                         <div>
-                          <label className="block text-slate-600 text-xs font-semibold mb-1">Submission Date</label>
+                          <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">Submission Date</label>
                           <input
                             type="date"
                             value={submissionDate}
                             onChange={(e) => setSubmissionDate(e.target.value)}
-                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs"
+                            className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs"
                           />
                         </div>
                         <div>
-                          <label className="block text-slate-600 text-xs font-semibold mb-1">Expiry / Validity Date</label>
+                          <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">Expiry / Validity Date</label>
                           <input
                             type="date"
                             value={expiryDate}
                             onChange={(e) => setExpiryDate(e.target.value)}
-                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs"
+                            className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs"
                           />
                         </div>
                       </div>
@@ -1038,24 +1052,24 @@ export default function BookingModal({
                     {config.hasPax && (
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                          <label className="block text-slate-600 text-xs font-semibold mb-1">No. of Passengers (Pax)</label>
+                          <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">No. of Passengers (Pax)</label>
                           <input
                             type="number"
                             min="1"
                             value={passengerCount}
                             onChange={(e) => setPassengerCount(parseInt(e.target.value) || 1)}
-                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-medium"
+                            className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-medium"
                           />
                         </div>
 
                         <div className="sm:col-span-2">
-                          <label className="block text-slate-600 text-xs font-semibold mb-1">Passenger Names</label>
+                          <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">Passenger Names</label>
                           <input
                             type="text"
                             placeholder="e.g. Mohammed Rashid, Aysha Rashid"
                             value={passengerNames}
                             onChange={(e) => setPassengerNames(e.target.value)}
-                            className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900"
+                            className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
                           />
                         </div>
                       </div>
@@ -1067,19 +1081,19 @@ export default function BookingModal({
           })()}
 
           {/* SECTION 4: Status & Flight Delay / Postponed Alerts */}
-          <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
-            <div className="font-bold text-slate-800 uppercase tracking-wider text-xs flex items-center gap-1.5">
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 space-y-3">
+            <div className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs flex items-center gap-1.5">
               <AlertCircle size={15} className="text-amber-500" />
-              Service Status & Delay / Postpone Alerts
+              Service Status, Agent & Delay Alerts
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-slate-600 text-xs font-semibold mb-1">Status</label>
+                <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">Status</label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-semibold text-slate-800 focus:ring-2 focus:ring-sky-500"
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg font-semibold text-slate-800 dark:text-white focus:ring-2 focus:ring-sky-500 text-xs"
                 >
                   <option value="Confirmed">✅ Confirmed</option>
                   <option value="Flight Delayed">⚠️ Flight Delayed</option>
@@ -1091,57 +1105,70 @@ export default function BookingModal({
               </div>
 
               <div>
-                <label className="block text-slate-600 text-xs font-semibold mb-1">
+                <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">
+                  Agent / Staff Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Rashid, Admin"
+                  value={agentName}
+                  onChange={(e) => setAgentName(e.target.value)}
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">
                   Delay / Schedule Notice
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Delayed by 2 hours. New departure: 16:30"
+                  placeholder="e.g. Delayed by 2 hours"
                   value={alertNotes}
                   onChange={(e) => setAlertNotes(e.target.value)}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900"
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs"
                 />
               </div>
             </div>
           </div>
 
           {/* SECTION 5: Financials & Due Date */}
-          <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50/40 space-y-3">
-            <div className="font-bold text-emerald-900 uppercase tracking-wider text-xs flex items-center gap-1.5">
-              <CreditCard size={15} className="text-emerald-600" />
+          <div className="p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/60 bg-emerald-50/40 dark:bg-emerald-950/30 space-y-3">
+            <div className="font-bold text-emerald-900 dark:text-emerald-300 uppercase tracking-wider text-xs flex items-center gap-1.5">
+              <CreditCard size={15} className="text-emerald-600 dark:text-emerald-400" />
               Pricing, Payment & Due Date
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div>
-                <label className="block text-slate-700 text-xs font-semibold mb-1">Total Fare / Amount (₹)</label>
+                <label className="block text-slate-700 dark:text-slate-300 text-xs font-semibold mb-1">Total Fare / Amount (₹)</label>
                 <input
                   type="number"
                   min="0"
                   step="any"
                   value={totalAmount}
                   onChange={(e) => setTotalAmount(e.target.value)}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-900"
+                  className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg font-bold text-slate-900 dark:text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-700 text-xs font-semibold mb-1">Paid Amount (₹)</label>
+                <label className="block text-slate-700 dark:text-slate-300 text-xs font-semibold mb-1">Paid Amount (₹)</label>
                 <input
                   type="number"
                   min="0"
                   step="any"
                   value={paidAmount}
                   onChange={(e) => setPaidAmount(e.target.value)}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-semibold text-emerald-700"
+                  className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg font-semibold text-emerald-700 dark:text-emerald-400"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-700 text-xs font-semibold mb-1">Balance Due (₹)</label>
+                <label className="block text-slate-700 dark:text-slate-300 text-xs font-semibold mb-1">Balance Due (₹)</label>
                 <div
-                  className={`p-2 bg-white border rounded-lg font-bold ${
-                    calculatedBalance > 0 ? "border-rose-300 text-rose-600" : "border-emerald-300 text-emerald-700"
+                  className={`p-2 bg-white dark:bg-slate-800 border rounded-lg font-bold ${
+                    calculatedBalance > 0 ? "border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400" : "border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400"
                   }`}
                 >
                   ₹{calculatedBalance.toLocaleString()}
@@ -1149,12 +1176,12 @@ export default function BookingModal({
               </div>
 
               <div>
-                <label className="block text-slate-700 text-xs font-semibold mb-1">Payment Due Date</label>
+                <label className="block text-slate-700 dark:text-slate-300 text-xs font-semibold mb-1">Payment Due Date</label>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900"
+                  className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
                 />
               </div>
             </div>
@@ -1162,24 +1189,24 @@ export default function BookingModal({
 
           {/* SECTION 6: Narration / Notes */}
           <div>
-            <label className="block text-slate-600 text-xs font-semibold mb-1">Office Notes / Narration</label>
+            <label className="block text-slate-600 dark:text-slate-300 text-xs font-semibold mb-1">Office Notes / Narration</label>
             <textarea
               rows={2}
               placeholder="e.g. Client requested 30kg baggage allowance. Wheelchair assistance booked."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900"
+              className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
             />
           </div>
         </form>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>

@@ -51,6 +51,33 @@ export function getDisplayPortal(b: Booking): string {
   return b.portal || "Direct Desk";
 }
 
+export function getAgentName(b: Booking): string {
+  const custom = extractCustomFieldValues(b.notes);
+  for (const [k, v] of Object.entries(custom)) {
+    const lk = k.toLowerCase();
+    if (
+      (lk.includes("agent") ||
+        lk.includes("staff") ||
+        lk.includes("issued by") ||
+        lk.includes("booked by") ||
+        lk.includes("operator")) &&
+      v &&
+      v.trim() !== ""
+    ) {
+      return v.trim();
+    }
+  }
+
+  if (b.notes) {
+    const match = b.notes.match(/(?:Agent|Staff|Issued By|Booked By):\s*([^\n\r,;]+)/i);
+    if (match && match[1]?.trim()) {
+      return match[1].trim();
+    }
+  }
+
+  return "Admin";
+}
+
 export default function BookingList({
   bookings,
   serviceTypes,
@@ -292,6 +319,8 @@ export default function BookingList({
                     </span>
                     <span>•</span>
                     <span className="font-mono">{b.flightNo || b.serviceType?.name || "Service"}</span>
+                    <span>•</span>
+                    <span className="font-medium text-slate-600 dark:text-slate-300">👤 {getAgentName(b)}</span>
                     {b.pnr && (
                       <>
                         <span>•</span>
@@ -372,7 +401,7 @@ export default function BookingList({
                 <th className="py-3 px-4">Service</th>
                 <th className="py-3 px-4">Sector / Flight</th>
                 <th className="py-3 px-4">PNR</th>
-                <th className="py-3 px-4">Travel Date & Time</th>
+                <th className="py-3 px-4">Travel Date & Return</th>
                 <th className="py-3 px-4">Portal</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4 text-right">Fare & Dues</th>
@@ -433,8 +462,11 @@ export default function BookingList({
                         <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                           {b.serviceType?.name || "Flight"}
                         </span>
-                        <div className="text-[10px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
-                          {b.bookingNo}
+                        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
+                          <span className="text-[10px]">👤</span>
+                          <span className="truncate max-w-[120px]" title={`Agent: ${getAgentName(b)}`}>
+                            {getAgentName(b)}
+                          </span>
                         </div>
                         {b.passportNo && (
                           <div className="text-[10px] font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-800 mt-1 flex items-center gap-1">
@@ -478,7 +510,7 @@ export default function BookingList({
                         )}
                       </td>
 
-                      {/* 6. Travel Date & Flight Time */}
+                      {/* 6. Travel Date, Flight Time & Return Date */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         <div className="font-bold text-slate-900 dark:text-white">
                           {b.travelDate ? formatDate(b.travelDate) : "—"}
@@ -486,6 +518,12 @@ export default function BookingList({
                         {b.flightTime && (
                           <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                             🕒 {b.flightTime}
+                          </div>
+                        )}
+                        {b.returnDate && (
+                          <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                            <span>↩</span>
+                            <span>Ret: {formatDate(b.returnDate)}</span>
                           </div>
                         )}
                       </td>

@@ -168,39 +168,6 @@ export default function DueAlertsWidget({
           <div className="text-[11px] text-indigo-700 dark:text-indigo-400 font-medium truncate">Expiry & Renewal</div>
         </button>
       </div>
-
-      {/* Active filter notification & quick reset */}
-      {activeFilter !== "all" && (
-        <div className="flex items-center justify-between px-3 py-1.5 bg-sky-50 border border-sky-100 rounded-xl text-xs">
-          <span className="text-slate-600 flex items-center gap-1.5">
-            <Filter size={13} className="text-sky-600" />
-            <span>Filtering by card:</span>
-            <strong className="text-sky-800 capitalize font-bold">
-              {activeFilter === "today"
-                ? "Departing Today"
-                : activeFilter === "tomorrow"
-                ? "Departing Tomorrow"
-                : activeFilter === "3days"
-                ? "Departing Next 3 Days"
-                : activeFilter === "7days"
-                ? "Next 7 Days"
-                : activeFilter === "delayed"
-                ? "Delayed / Rescheduled"
-                : activeFilter === "pending_balance"
-                ? "Pending Dues"
-                : activeFilter === "passports"
-                ? "Passport Alerts"
-                : activeFilter}
-            </strong>
-          </span>
-          <button
-            onClick={() => onSelectFilter("all")}
-            className="text-sky-600 hover:text-sky-800 font-bold hover:underline"
-          >
-            Show All Tickets &times;
-          </button>
-        </div>
-      )}
     </div>
   );
 }
