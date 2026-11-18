@@ -624,11 +624,23 @@ export default function BookingList({
                             <div className="font-bold text-slate-900 dark:text-white">
                               {displayDateVal}
                             </div>
-                            {b.flightTime && (
-                              <div className="text-[11px] text-slate-600 dark:text-slate-300 font-medium font-mono">
-                                {isFlight ? formatFlightTimeDisplay(b.flightTime) : `🕒 ${b.flightTime}`}
-                              </div>
-                            )}
+                            {(() => {
+                              const depVal = custom["Flight Departure Time"] || custom["Flight Time"] || "";
+                              const arrVal = custom["Flight Arrivel Time"] || custom["Flight Arrival Time"] || "";
+                              let timeDisplay = "";
+                              if (depVal && arrVal) {
+                                timeDisplay = `🕒 ${depVal} - ${arrVal} hrs`;
+                              } else if (depVal) {
+                                timeDisplay = `🕒 ${depVal} hrs`;
+                              } else if (b.flightTime) {
+                                timeDisplay = isFlight ? formatFlightTimeDisplay(b.flightTime) : `🕒 ${b.flightTime}`;
+                              }
+                              return timeDisplay ? (
+                                <div className="text-[11px] text-slate-600 dark:text-slate-300 font-medium font-mono">
+                                  {timeDisplay}
+                                </div>
+                              ) : null;
+                            })()}
                             {serviceConfig.hasReturnDate && b.returnDate && (
                               <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
                                 <span>↩</span>

@@ -201,13 +201,31 @@ export function formatBookingNo(bookingNo?: string | null): string {
 /**
  * Helper to display flight times clearly (showing departure and arrival if available)
  */
+function cleanTimePart(str: string): string {
+  const trimmed = str.trim();
+  if (/^\d{3,4}$/.test(trimmed)) {
+    const padded = trimmed.padStart(4, "0");
+    return `${padded.slice(0, 2)}:${padded.slice(2)}`;
+  }
+  return trimmed;
+}
+
 export function formatFlightTimeDisplay(timeStr?: string | null): string {
   if (!timeStr) return "";
   const trimmed = timeStr.trim();
-  if (trimmed.includes("-") || trimmed.includes("–") || trimmed.includes("—")) {
-    const parts = trimmed.split(/[-–—]/).map((s) => s.trim());
-    return `🕒 ${parts[0]} - ${parts[1]}`;
+  // Strip any date prefix e.g. "2026-11-30 - 0845" -> "0845"
+  const cleaned = trimmed.replace(/^\d{4}-\d{2}-\d{2}\s*[-–—]?\s*/, "").trim();
+  if (!cleaned) return "";
+
+  if (cleaned.includes("-") || cleaned.includes("–") || cleaned.includes("—")) {
+    const parts = cleaned.split(/\s*[-–—]\s*/).map((s) => s.trim());
+    const validParts = parts.filter((p) => !/^\d{4}$/.test(p));
+    if (validParts.length >= 2) {
+      return `🕒 ${cleanTimePart(validParts[0])} - ${cleanTimePart(validParts[1])} hrs`;
+    } else if (validParts.length === 1) {
+      return `🕒 ${cleanTimePart(validParts[0])} hrs`;
+    }
   }
-  return `🕒 ${trimmed}`;
+  return `🕒 ${cleanTimePart(cleaned)} hrs`;
 }
 

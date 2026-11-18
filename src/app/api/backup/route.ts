@@ -163,15 +163,21 @@ export async function POST(request: Request) {
         if (!cust.name || !cust.phone) continue;
 
         if (hasDb) {
-          // Check if customer with same ID or phone exists
-          const existing = await prisma.customer.findFirst({
-            where: {
-              OR: [
-                ...(cust.id ? [{ id: cust.id }] : []),
-                { phone: cust.phone.trim() },
-              ],
-            },
-          });
+          // Check if customer with same ID exists first, or matches BOTH exact name AND phone
+          let existing = null;
+          if (cust.id) {
+            existing = await prisma.customer.findUnique({
+              where: { id: cust.id },
+            });
+          }
+          if (!existing) {
+            existing = await prisma.customer.findFirst({
+              where: {
+                name: cust.name.trim(),
+                phone: cust.phone.trim(),
+              },
+            });
+          }
 
           if (existing) {
             customerIdMap.set(cust.id, existing.id);

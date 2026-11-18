@@ -140,10 +140,11 @@ export default function BookingModal({
       const extracted = extractCustomFieldValues(booking.notes);
       const mergedCustom: Record<string, string> = { ...extracted };
 
-      // Split flight times if combined e.g. "10:50 - 17:35" or "1050-1735"
-      const timeParts = booking.flightTime ? booking.flightTime.split(/[-–—]/).map((s) => s.trim()) : [];
-      const depPart = timeParts[0] || booking.flightTime || "";
-      const arrPart = timeParts[1] || "";
+      // Split flight times if combined e.g. "10:50 - 17:35", stripping any date prefix
+      const rawFlightTime = (booking.flightTime || "").replace(/^\d{4}-\d{2}-\d{2}\s*[-–—]?\s*/, "").trim();
+      const timeParts = rawFlightTime ? rawFlightTime.split(/\s*[-–—]\s*/).map((s) => s.trim()) : [];
+      const depPart = timeParts[0] && !/^\d{4}$/.test(timeParts[0]) ? timeParts[0] : "";
+      const arrPart = timeParts[1] && !/^\d{4}$/.test(timeParts[1]) ? timeParts[1] : "";
 
       // Agent Name extraction
       const agentFromCustom = Object.entries(mergedCustom).find(([k]) => {
@@ -157,10 +158,11 @@ export default function BookingModal({
       const currentService = serviceTypes.find((s) => s.id === booking.serviceTypeId) || booking.serviceType;
       const svcConfig = getServiceFieldConfig(currentService);
 
-      if (depPart) {
+      // Only fallback to flightTime parts if custom fields do NOT already have departure/arrival time!
+      if (!mergedCustom["Flight Departure Time"] && depPart) {
         mergedCustom["Flight Departure Time"] = formatFlightTrainTime(depPart);
       }
-      if (arrPart) {
+      if (!mergedCustom["Flight Arrivel Time"] && !mergedCustom["Flight Arrival Time"] && arrPart) {
         mergedCustom["Flight Arrivel Time"] = formatFlightTrainTime(arrPart);
         mergedCustom["Flight Arrival Time"] = formatFlightTrainTime(arrPart);
       }
