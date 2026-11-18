@@ -334,7 +334,7 @@ export default function BookingModal({
           resolvedTravelDate = val;
         } else if (low.includes("pnr") || low.includes("tracking") || low.includes("consignment") || low.includes("awb") || low.includes("waybill") || low.includes("arn") || low.includes("reference") || low.includes("file number") || low.includes("confirmation")) {
           resolvedPnr = val.toUpperCase();
-        } else if (low.includes("flight no") || low.includes("train no") || low.includes("bus no") || low.includes("awb no") || low.includes("package code") || low.includes("ticket no") || low.includes("voucher")) {
+        } else if (low.includes("flight no") || low.includes("flight number") || low.includes("train no") || low.includes("train number") || low.includes("bus no") || low.includes("awb no") || low.includes("package code") || low.includes("ticket no") || low.includes("voucher") || (low.includes("flight") && (low.includes("number") || low.includes("no")))) {
           resolvedFlightNo = val;
         } else if (low.includes("sector") || low.includes("route") || low.includes("destination") || low.includes("delivery") || low.includes("city") || low.includes("hotel") || low.includes("package") || low.includes("country")) {
           resolvedSector = val;
@@ -831,7 +831,7 @@ export default function BookingModal({
                                 if (low.includes("sector") || low.includes("route") || low.includes("destination") || low.includes("hotel") || low.includes("package")) {
                                   setSector(textVal);
                                 }
-                                if (low.includes("flight no") || low.includes("train no") || low.includes("bus no") || low.includes("package code") || low.includes("ticket no")) {
+                                if (low.includes("flight no") || low.includes("flight number") || low.includes("train no") || low.includes("bus no") || low.includes("package code") || low.includes("ticket no") || (low.includes("flight") && (low.includes("number") || low.includes("no")))) {
                                   setFlightNo(textVal);
                                 }
                                 if (low.includes("portal") || low.includes("supplier") || low.includes("booked from") || low.includes("issue portal") || low.includes("desk")) {

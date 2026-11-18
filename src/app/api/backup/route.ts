@@ -13,6 +13,7 @@ import {
   ensureDatabaseTables,
 } from "@/lib/data-store";
 import prisma, { getDatabaseUrl } from "@/lib/prisma";
+import { formatBookingNo } from "@/lib/date-utils";
 
 // GET /api/backup - Export complete database backup as JSON
 export async function GET() {
@@ -232,7 +233,7 @@ export async function POST(request: Request) {
 
         if (!targetCustomerId || !targetServiceId) continue;
 
-        const bookingNo = bk.bookingNo || `CCJ-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+        const bookingNo = bk.bookingNo ? formatBookingNo(bk.bookingNo) : `ATT-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
 
         if (hasDb) {
           const existingBooking = await prisma.booking.findFirst({

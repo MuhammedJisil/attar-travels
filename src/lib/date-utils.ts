@@ -191,11 +191,19 @@ export function formatDateTime(dateString?: string | null): string {
 }
 
 /**
- * Universal helper to format booking numbers, always displaying CCJ- instead of TRV-
+ * Universal helper to format booking numbers, always displaying ATT- (Attar Travels)
  */
 export function formatBookingNo(bookingNo?: string | null): string {
   if (!bookingNo) return "";
-  return bookingNo.replace(/^TRV-/i, "CCJ-").replace(/^TRV/i, "CCJ");
+  const cleaned = String(bookingNo).trim();
+  if (/^\d+$/.test(cleaned)) {
+    return `ATT-2026-${cleaned.padStart(3, "0")}`;
+  }
+  return cleaned
+    .replace(/^TRV-/i, "ATT-")
+    .replace(/^CCJ-/i, "ATT-")
+    .replace(/^TRV/i, "ATT")
+    .replace(/^CCJ/i, "ATT");
 }
 
 /**

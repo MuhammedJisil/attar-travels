@@ -683,12 +683,12 @@ export function formatCustomWhatsAppMessage(
   const customerName = booking.customer?.name || "Valued Customer";
   const agencyName = agency?.agencyName || "Travel Desk";
   const agencyPhone = agency?.phone || "";
-  const bookingNo = booking.bookingNo ? `CCJ-2026-${String(booking.bookingNo).padStart(3, "0")}` : "N/A";
+  const bookingNo = booking.bookingNo ? `ATT-2026-${String(booking.bookingNo).replace(/^(CCJ|TRV|ATT)-/i, "").padStart(3, "0")}` : "N/A";
   const serviceName = booking.serviceType?.name || "Service";
   const custom = extractCustomFieldValues(booking.notes);
 
   const isFlight = isFlightOrTravelService(booking.serviceType as any);
-  const isFakeAutoPnr = !isFlight && booking.pnr && /^CCJ-\d+$/i.test(booking.pnr);
+  const isFakeAutoPnr = !isFlight && booking.pnr && /^(CCJ|ATT|TRV)-\d+$/i.test(booking.pnr);
   const customRef = Object.entries(custom).find(([k]) => /tracking|consignment|awb|waybill|arn|file|pnr|ref/i.test(k))?.[1];
   const pnrVal = (!isFakeAutoPnr && booking.pnr) ? booking.pnr : (customRef || "—");
 
