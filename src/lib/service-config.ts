@@ -8,6 +8,7 @@ export type ServiceTemplateType =
   | "visa"
   | "hotel"
   | "tour"
+  | "courier"
   | "custom";
 
 export interface CustomFieldDefinition {
@@ -17,6 +18,7 @@ export interface CustomFieldDefinition {
   required?: boolean;
   placeholder?: string;
   options?: string[]; // for type === 'select'
+  showInTable?: boolean; // display as column/badge on main dashboard table
 }
 
 export interface ServiceFieldDefinition {
@@ -232,6 +234,33 @@ export const DEFAULT_TEMPLATES: Record<ServiceTemplateType, ServiceFieldDefiniti
       { id: "f_tpnr", name: "Voucher / Reference No", type: "text", placeholder: "e.g. TOUR-2026-441" },
     ],
   },
+  courier: {
+    template: "courier",
+    title: "Courier & Cargo Shipment Details",
+    routeLabel: "Destination / Delivery City",
+    routePlaceholder: "e.g. Dubai, UAE / Calicut to Riyadh",
+    numberLabel: "AWB / Waybill Number",
+    numberPlaceholder: "e.g. AWB-9821457",
+    pnrLabel: "Tracking / Consignment No",
+    pnrPlaceholder: "e.g. DHL-782190",
+    timeLabel: "Dispatch / Pickup Time",
+    hasTime: false,
+    dateLabel: "Booking / Dispatch Date",
+    hasReturnDate: false,
+    hasPax: false,
+    hasPassportField: false,
+    hasSubmissionDates: false,
+    portalLabel: "Courier Company / Network (e.g. DHL, FedEx, BlueDart)",
+    notesPlaceholder: "Weight, parcel contents, receiver address, contact...",
+    customFields: [
+      { id: "c_date", name: "Booking / Dispatch Date", type: "date", required: true, showInTable: true },
+      { id: "c_route", name: "Destination / Delivery City", type: "text", required: true, placeholder: "e.g. Dubai, UAE", showInTable: true },
+      { id: "c_track", name: "Tracking / Consignment No", type: "text", required: true, placeholder: "e.g. DHL-9812401", showInTable: true },
+      { id: "c_partner", name: "Courier Company / Network", type: "text", placeholder: "e.g. DHL Express, Aramex, DTDC", showInTable: true },
+      { id: "c_weight", name: "Weight / Package Type", type: "text", placeholder: "e.g. 2.5 kg Document", showInTable: false },
+      { id: "c_receiver", name: "Receiver Name & Phone", type: "text", placeholder: "e.g. Ahmed (+971 50 1234567)", showInTable: false },
+    ],
+  },
   custom: {
     template: "custom",
     title: "Service Details",
@@ -317,6 +346,9 @@ export function getServiceFieldConfig(service?: ServiceType | null): ServiceFiel
   if (n.includes("tour") || n.includes("package") || n.includes("holiday") || n.includes("umrah") || n.includes("hajj")) {
     return DEFAULT_TEMPLATES.tour;
   }
+  if (n.includes("courier") || n.includes("coriur") || n.includes("cargo") || n.includes("parcel") || n.includes("shipment") || n.includes("delivery") || n.includes("dhl") || n.includes("dtdc")) {
+    return DEFAULT_TEMPLATES.courier;
+  }
   if (n.includes("flight") || n.includes("airline") || n.includes("air ticket") || n.includes("ticket")) {
     return DEFAULT_TEMPLATES.flight;
   }
@@ -326,6 +358,23 @@ export function getServiceFieldConfig(service?: ServiceType | null): ServiceFiel
     ...DEFAULT_TEMPLATES.custom,
     title: `${service.name} Details`,
   };
+}
+
+/**
+ * Check if a service is a flight or passenger transport service (where departure times & flight/bus/train terminology apply)
+ */
+export function isFlightOrTravelService(service?: ServiceType | null): boolean {
+  if (!service) return true;
+  const n = (service.name + " " + (service.code || "")).toLowerCase();
+  return (
+    n.includes("flight") ||
+    n.includes("airline") ||
+    n.includes("ticket") ||
+    n.includes("train") ||
+    n.includes("rail") ||
+    n.includes("bus") ||
+    n.includes("travel")
+  ) && !n.includes("courier") && !n.includes("coriur") && !n.includes("cargo") && !n.includes("parcel") && !n.includes("passport") && !n.includes("visa");
 }
 
 /**

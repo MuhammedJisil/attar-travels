@@ -93,6 +93,73 @@ export function getDaysDifference(dateString?: string | null): {
   };
 }
 
+/**
+ * Service-aware timeline label:
+ * Flight / Train / Bus -> "Departed Xd ago", "Today! 🚨", "In X days"
+ * Courier / Cargo -> "Dispatched Xd ago", "Dispatch Today 📦", "In Xd"
+ * Passport / Visa -> "Appt Xd ago", "Appointment Today! 🚨", "Appt in Xd"
+ * General -> "Booked Xd ago", "Scheduled Today 📌", "In X days"
+ */
+export function getServiceTimeline(
+  dateString?: string | null,
+  serviceName?: string | null
+): {
+  days: number;
+  isPast: boolean;
+  isToday: boolean;
+  isTomorrow: boolean;
+  label: string;
+  badgeClass: string;
+} {
+  const base = getDaysDifference(dateString);
+  if (!dateString || base.days === 999) return base;
+
+  const n = (serviceName || "").toLowerCase();
+  const isFlight =
+    (n.includes("flight") || n.includes("airline") || n.includes("ticket") || n.includes("train") || n.includes("bus")) &&
+    !n.includes("courier") &&
+    !n.includes("coriur") &&
+    !n.includes("cargo");
+  const isCourier = n.includes("courier") || n.includes("coriur") || n.includes("cargo") || n.includes("parcel") || n.includes("shipment");
+  const isDoc = n.includes("passport") || n.includes("visa");
+
+  if (isFlight) {
+    return base;
+  }
+
+  const absDays = Math.abs(base.days);
+
+  if (base.isPast) {
+    if (isCourier) {
+      return { ...base, label: absDays === 1 ? "Dispatched yesterday" : `Dispatched ${absDays}d ago` };
+    }
+    if (isDoc) {
+      return { ...base, label: absDays === 1 ? "Appt yesterday" : `Appt ${absDays}d ago` };
+    }
+    return { ...base, label: absDays === 1 ? "Booked yesterday" : `Booked ${absDays}d ago` };
+  }
+
+  if (base.isToday) {
+    if (isCourier) return { ...base, label: "Dispatch Today 📦" };
+    if (isDoc) return { ...base, label: "Appointment Today! 🚨" };
+    return { ...base, label: "Scheduled Today 📌" };
+  }
+
+  if (base.isTomorrow) {
+    if (isCourier) return { ...base, label: "Dispatch Tomorrow (1d)" };
+    if (isDoc) return { ...base, label: "Appt Tomorrow (1d)" };
+    return { ...base, label: "Tomorrow (1d)" };
+  }
+
+  if (isDoc) {
+    return { ...base, label: `Appt in ${base.days}d` };
+  }
+  if (isCourier) {
+    return { ...base, label: `In ${base.days}d` };
+  }
+  return { ...base, label: `In ${base.days} days` };
+}
+
 export function formatDate(dateString?: string | null): string {
   if (!dateString) return "—";
   try {

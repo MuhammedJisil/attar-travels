@@ -607,6 +607,29 @@ export default function ServiceManagementModal({
                         </div>
                       </div>
 
+                      {/* Display in Dashboard & Required Toggles */}
+                      <div className="flex flex-wrap items-center gap-3 pt-1">
+                        <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-300">
+                          <input
+                            type="checkbox"
+                            checked={!!field.required}
+                            onChange={(e) => handleUpdateCustomField(field.id, { required: e.target.checked })}
+                            className="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"
+                          />
+                          <span>Mandatory Field</span>
+                        </label>
+
+                        <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 px-2.5 py-1 rounded-lg border border-sky-200 dark:border-sky-800">
+                          <input
+                            type="checkbox"
+                            checked={field.showInTable ?? true}
+                            onChange={(e) => handleUpdateCustomField(field.id, { showInTable: e.target.checked })}
+                            className="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"
+                          />
+                          <span>📊 Show in Main Dashboard Table</span>
+                        </label>
+                      </div>
+
                       {/* Dropdown Options if select type */}
                       {field.type === "select" && (
                         <div className="p-3 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2.5">

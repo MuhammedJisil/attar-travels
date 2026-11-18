@@ -5,6 +5,7 @@ import { Booking, AgencySettings } from "@/lib/types";
 import {
   generateWhatsAppUrl,
   createFlightReminderMessage,
+  createServiceReminderMessage,
   createFlightDelayMessage,
   createPaymentReminderMessage,
   createInvoiceShareMessage,
@@ -55,7 +56,7 @@ export default function WhatsAppModal({
     if (!booking) return;
 
     if (template === "reminder") {
-      setMessage(createFlightReminderMessage(booking, settings));
+      setMessage(createServiceReminderMessage(booking, settings));
     } else if (template === "delay") {
       setMessage(createFlightDelayMessage(booking, settings));
     } else if (template === "payment") {

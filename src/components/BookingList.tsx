@@ -2,9 +2,9 @@
 
 import React, { useState, useMemo } from "react";
 import { Booking, ServiceType, AgencySettings, initialAgencySettings } from "@/lib/types";
-import { getDaysDifference, formatDate, formatBookingNo, formatFlightTimeDisplay } from "@/lib/date-utils";
+import { getDaysDifference, getServiceTimeline, formatDate, formatBookingNo, formatFlightTimeDisplay } from "@/lib/date-utils";
 import { exportBookingsToCSV } from "@/lib/export-csv";
-import { extractCustomFieldValues } from "@/lib/service-config";
+import { extractCustomFieldValues, getServiceFieldConfig, isFlightOrTravelService } from "@/lib/service-config";
 import TicketQuickViewModal from "./TicketQuickViewModal";
 import TicketReportPdfModal from "./TicketReportPdfModal";
 import {
@@ -302,8 +302,13 @@ export default function BookingList({
           </div>
         ) : (
           paginatedBookings.map((b) => {
-            const diff = getDaysDifference(b.travelDate);
+            const diff = getServiceTimeline(b.travelDate, b.serviceType?.name);
             const isDelay = b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
+            const isFlight = isFlightOrTravelService(b.serviceType);
+            const custom = extractCustomFieldValues(b.notes);
+            const isFakeAutoPnr = !isFlight && b.pnr && /^CCJ-\d+$/i.test(b.pnr);
+            const customRef = Object.entries(custom).find(([k]) => /tracking|consignment|awb|waybill|arn|file|pnr|ref/i.test(k))?.[1];
+            const displayPnr = (!isFakeAutoPnr && b.pnr) ? b.pnr : (customRef || null);
 
             return (
               <div
@@ -341,10 +346,12 @@ export default function BookingList({
                         <span className="font-mono text-slate-400">{formatBookingNo(b.bookingNo)}</span>
                       </>
                     )}
-                    {b.pnr && (
+                    {displayPnr && (
                       <>
                         <span>•</span>
-                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{b.pnr}</span>
+                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                          {isFlight ? displayPnr : `📦 ${displayPnr}`}
+                        </span>
                       </>
                     )}
                   </div>
@@ -411,163 +418,203 @@ export default function BookingList({
       {/* ========================================================================= */}
       {/* 2. DESKTOP VIEW: Full Detailed Table                                      */}
       {/* ========================================================================= */}
-      <div className="hidden md:block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 uppercase tracking-wider font-semibold text-[11px]">
-                <th className="py-3 px-4">Days Left</th>
-                <th className="py-3 px-4">Party Name & Mobile</th>
-                <th className="py-3 px-4">Service</th>
-                <th className="py-3 px-4">Sector / Flight</th>
-                <th className="py-3 px-4">PNR</th>
-                <th className="py-3 px-4">Travel Date & Return</th>
-                <th className="py-3 px-4">Portal</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Fare & Dues</th>
-                <th className="py-3 px-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {paginatedBookings.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400 dark:text-slate-500">
-                    <Plane size={32} className="mx-auto mb-2 opacity-40" />
-                    <p className="font-semibold text-slate-600 dark:text-slate-300">No tickets or bookings match your criteria</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Try adjusting your search or filters</p>
-                  </td>
-                </tr>
-              ) : (
-                paginatedBookings.map((b) => {
-                  const diff = getDaysDifference(b.travelDate);
-                  const isDelay =
-                    b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
-                  const portalDisplay = getDisplayPortal(b);
+      {(() => {
+        const activeFilteredService = serviceTypes.find((s) => s.id === selectedService);
+        const filteredConfig = activeFilteredService ? getServiceFieldConfig(activeFilteredService) : null;
+        const isFilteredFlight = !activeFilteredService || isFlightOrTravelService(activeFilteredService);
 
-                  return (
-                    <tr
-                      key={b.id}
-                      className={`hover:bg-sky-50/40 dark:hover:bg-slate-800/50 transition group ${
-                        isDelay ? "bg-amber-50/20 dark:bg-amber-950/20" : ""
-                      }`}
-                    >
-                      {/* 1. Days Left Alert Badge */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${diff.badgeClass}`}
-                        >
-                          <Clock size={12} />
-                          {diff.label}
-                        </span>
+        const col1Header = filteredConfig ? (isFilteredFlight ? "Days Left" : "Timeline") : "Days Left / Timeline";
+        const col4Header = filteredConfig ? (filteredConfig.routeLabel || "Sector / Route") : "Sector / Route / Item";
+        const col5Header = filteredConfig ? (filteredConfig.pnrLabel || "PNR / Ref") : "PNR / Ref / Tracking";
+        const col6Header = filteredConfig
+          ? `${filteredConfig.dateLabel || "Date"}${filteredConfig.hasTime ? " & Time" : ""}${filteredConfig.hasReturnDate ? " & Return" : ""}`
+          : "Travel Date & Return";
+        const col7Header = filteredConfig ? (filteredConfig.portalLabel || "Portal / Provider") : "Portal / Provider";
+
+        return (
+          <div className="hidden md:block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 uppercase tracking-wider font-semibold text-[11px]">
+                    <th className="py-3 px-4">{col1Header}</th>
+                    <th className="py-3 px-4">Party Name & Mobile</th>
+                    <th className="py-3 px-4">Service</th>
+                    <th className="py-3 px-4">{col4Header}</th>
+                    <th className="py-3 px-4">{col5Header}</th>
+                    <th className="py-3 px-4">{col6Header}</th>
+                    <th className="py-3 px-4">{col7Header}</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Fare & Dues</th>
+                    <th className="py-3 px-4 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {paginatedBookings.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                        <Plane size={32} className="mx-auto mb-2 opacity-40" />
+                        <p className="font-semibold text-slate-600 dark:text-slate-300">No tickets or bookings match your criteria</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Try adjusting your search or filters</p>
                       </td>
+                    </tr>
+                  ) : (
+                    paginatedBookings.map((b) => {
+                      const diff = getServiceTimeline(b.travelDate, b.serviceType?.name);
+                      const isDelay =
+                        b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
+                      const portalDisplay = getDisplayPortal(b);
+                      const serviceConfig = getServiceFieldConfig(b.serviceType);
+                      const isFlight = isFlightOrTravelService(b.serviceType);
+                      const custom = extractCustomFieldValues(b.notes);
 
-                      {/* 2. Customer / Party Name */}
-                      <td className="py-3 px-4">
-                        <div
-                          onClick={() => onSelectCustomer(b.customerId)}
-                          className="cursor-pointer group-hover:text-sky-600 dark:group-hover:text-sky-400"
+                      // User-selected custom table fields
+                      const tableCustomFields = (serviceConfig.customFields || []).filter(
+                        (f) => f.showInTable && custom[f.name] && custom[f.name].trim() !== ""
+                      );
+
+                      // Route / Sector resolution (clean fallback if b.sector matches service name)
+                      const isSectorSameAsServiceName = b.sector && b.serviceType?.name && b.sector.toLowerCase().trim() === b.serviceType.name.toLowerCase().trim();
+                      const customRoute = Object.entries(custom).find(([k]) => /route|destination|delivery|city|hotel|package|item/i.test(k))?.[1];
+                      const displayRoute = (!isSectorSameAsServiceName && b.sector) ? b.sector : (customRoute || (!isSectorSameAsServiceName ? b.sector : null) || "—");
+
+                      // PNR / Tracking / Ref resolution (prevent fake CCJ-xxxx autogenerated PNR on non-flight)
+                      const isFakeAutoPnr = !isFlight && b.pnr && /^CCJ-\d+$/i.test(b.pnr);
+                      const customRef = Object.entries(custom).find(([k]) => /tracking|consignment|awb|waybill|arn|file|pnr|ref/i.test(k))?.[1];
+                      const displayPnr = (!isFakeAutoPnr && b.pnr) ? b.pnr : (customRef || null);
+
+                      return (
+                        <tr
+                          key={b.id}
+                          className={`hover:bg-sky-50/40 dark:hover:bg-slate-800/50 transition group ${
+                            isDelay ? "bg-amber-50/20 dark:bg-amber-950/20" : ""
+                          }`}
                         >
-                          <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1">
-                            <span>{b.customer?.name}</span>
-                            <ExternalLink size={11} className="opacity-0 group-hover:opacity-100 transition" />
-                          </div>
-                          <div className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">
-                            {b.customer?.phone}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* 3. Service Type */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                          {b.serviceType?.name || "Flight"}
-                        </span>
-                        {getAgentName(b) ? (
-                          <div className="text-[11px] font-semibold text-sky-700 dark:text-sky-300 mt-0.5 flex items-center gap-1">
-                            <span className="text-[10px]">👤</span>
-                            <span className="truncate max-w-[120px]" title={`Agent: ${getAgentName(b)}`}>
-                              {getAgentName(b)}
+                          {/* 1. Days Left / Timeline Alert Badge */}
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${diff.badgeClass}`}
+                            >
+                              <Clock size={12} />
+                              {diff.label}
                             </span>
-                          </div>
-                        ) : (
-                          <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
-                            {formatBookingNo(b.bookingNo)}
-                          </div>
-                        )}
-                        {b.passportNo && (
-                          <div className="text-[10px] font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-800 mt-1 flex items-center gap-1">
-                            <span>🛂</span>
-                            <span>{b.passportNo}</span>
-                          </div>
-                        )}
-                        {b.expiryDate && (() => {
-                          const exp = getDaysDifference(b.expiryDate);
-                          if (exp.days <= 180) {
-                            return (
-                              <div className={`text-[10px] font-bold mt-0.5 ${exp.days <= 30 ? "text-rose-600 dark:text-rose-400" : "text-amber-600 dark:text-amber-400"}`}>
-                                ⚠️ Exp: {formatDate(b.expiryDate)} ({exp.days < 0 ? "Expired" : `${exp.days}d left`})
+                          </td>
+
+                          {/* 2. Customer / Party Name */}
+                          <td className="py-3 px-4">
+                            <div
+                              onClick={() => onSelectCustomer(b.customerId)}
+                              className="cursor-pointer group-hover:text-sky-600 dark:group-hover:text-sky-400"
+                            >
+                              <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1">
+                                <span>{b.customer?.name}</span>
+                                <ExternalLink size={11} className="opacity-0 group-hover:opacity-100 transition" />
                               </div>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </td>
+                              <div className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                                {b.customer?.phone}
+                              </div>
+                            </div>
+                          </td>
 
-                      {/* 4. Sector / Flight No */}
-                      <td className="py-3 px-4">
-                        <div className="font-bold text-slate-900 dark:text-white max-w-[180px] truncate" title={b.sector || ""}>
-                          {b.sector || "—"}
-                        </div>
-                        {b.flightNo && (
-                          <div className="text-[11px] text-sky-700 dark:text-sky-400 font-semibold">
-                            {b.flightNo}
-                          </div>
-                        )}
-                      </td>
+                          {/* 3. Service Type */}
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                              {b.serviceType?.name || "Flight"}
+                            </span>
+                            {getAgentName(b) ? (
+                              <div className="text-[11px] font-semibold text-sky-700 dark:text-sky-300 mt-0.5 flex items-center gap-1">
+                                <span className="text-[10px]">👤</span>
+                                <span className="truncate max-w-[120px]" title={`Agent: ${getAgentName(b)}`}>
+                                  {getAgentName(b)}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
+                                {formatBookingNo(b.bookingNo)}
+                              </div>
+                            )}
+                            {b.passportNo && (
+                              <div className="text-[10px] font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-800 mt-1 flex items-center gap-1">
+                                <span>🛂</span>
+                                <span>{b.passportNo}</span>
+                              </div>
+                            )}
+                            {b.expiryDate && (() => {
+                              const exp = getDaysDifference(b.expiryDate);
+                              if (exp.days <= 180) {
+                                return (
+                                  <div className={`text-[10px] font-bold mt-0.5 ${exp.days <= 30 ? "text-rose-600 dark:text-rose-400" : "text-amber-600 dark:text-amber-400"}`}>
+                                    ⚠️ Exp: {formatDate(b.expiryDate)} ({exp.days < 0 ? "Expired" : `${exp.days}d left`})
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </td>
 
-                      {/* 5. Airline PNR */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        {b.pnr ? (
-                          <span className="inline-block px-2 py-0.5 rounded font-mono font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                            {b.pnr}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 dark:text-slate-500">—</span>
-                        )}
-                      </td>
+                          {/* 4. Sector / Route / Item */}
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-slate-900 dark:text-white max-w-[180px] truncate" title={displayRoute || ""}>
+                              {displayRoute}
+                            </div>
+                            {b.flightNo && (
+                              <div className="text-[11px] text-sky-700 dark:text-sky-400 font-semibold font-mono">
+                                {isFlight ? `✈️ ${b.flightNo}` : b.flightNo}
+                              </div>
+                            )}
+                            {/* Display user-selected custom fields */}
+                            {tableCustomFields
+                              .filter((f) => !/route|destination|city|pnr|track|flight/i.test(f.name))
+                              .map((fld) => (
+                                <div key={fld.id} className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-[180px] mt-0.5">
+                                  <span className="font-semibold text-slate-700 dark:text-slate-300">{fld.name}:</span> {custom[fld.name]}
+                                </div>
+                              ))}
+                          </td>
 
-                      {/* 6. Travel Date, Flight Time & Return Date */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <div className="font-bold text-slate-900 dark:text-white">
-                          {b.travelDate ? formatDate(b.travelDate) : "—"}
-                        </div>
-                        {b.flightTime && (
-                          <div className="text-[11px] text-slate-600 dark:text-slate-300 font-medium font-mono">
-                            {formatFlightTimeDisplay(b.flightTime)}
-                          </div>
-                        )}
-                        {b.returnDate && (
-                          <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
-                            <span>↩</span>
-                            <span>Ret: {formatDate(b.returnDate)}</span>
-                          </div>
-                        )}
-                      </td>
+                          {/* 5. PNR / Ref / Tracking */}
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            {displayPnr ? (
+                              <span className="inline-block px-2 py-0.5 rounded font-mono font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                                {isFlight ? displayPnr : `📦 ${displayPnr}`}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 dark:text-slate-500">—</span>
+                            )}
+                          </td>
 
-                      {/* 7. Issued Portal */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span className="text-slate-700 dark:text-slate-300 font-medium">
-                          {portalDisplay}
-                        </span>
-                      </td>
+                          {/* 6. Travel Date, Flight Time & Return Date */}
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <div className="font-bold text-slate-900 dark:text-white">
+                              {b.travelDate ? formatDate(b.travelDate) : "—"}
+                            </div>
+                            {b.flightTime && (
+                              <div className="text-[11px] text-slate-600 dark:text-slate-300 font-medium font-mono">
+                                {isFlight ? formatFlightTimeDisplay(b.flightTime) : `🕒 ${b.flightTime}`}
+                              </div>
+                            )}
+                            {serviceConfig.hasReturnDate && b.returnDate && (
+                              <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                                <span>↩</span>
+                                <span>Ret: {formatDate(b.returnDate)}</span>
+                              </div>
+                            )}
+                          </td>
 
-                      {/* 8. Status */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        {isDelay ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 animate-pulse">
-                            <AlertTriangle size={12} />
-                            {b.status}
-                          </span>
+                          {/* 7. Issued Portal / Provider */}
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <span className="text-slate-700 dark:text-slate-300 font-medium">
+                              {portalDisplay}
+                            </span>
+                          </td>
+
+                          {/* 8. Status */}
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            {isDelay ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 animate-pulse">
+                                <AlertTriangle size={12} />
+                                {b.status}
+                              </span>
                         ) : (
                           <span
                             className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
@@ -662,6 +709,8 @@ export default function BookingList({
           </table>
         </div>
       </div>
+    );
+  })()}
 
       {/* ========================================================================= */}
       {/* 3. PAGINATION CONTROLS & SUMMARY (Responsive)                             */}

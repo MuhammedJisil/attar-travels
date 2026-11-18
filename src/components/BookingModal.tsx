@@ -330,13 +330,13 @@ export default function BookingModal({
           genericTime = formatFlightTrainTime(val);
         } else if (low.includes("date") && !low.includes("expiry") && !low.includes("submission") && !low.includes("return")) {
           resolvedTravelDate = val;
-        } else if (low.includes("pnr") || low.includes("arn") || low.includes("reference") || low.includes("file number") || low.includes("confirmation")) {
+        } else if (low.includes("pnr") || low.includes("tracking") || low.includes("consignment") || low.includes("awb") || low.includes("waybill") || low.includes("arn") || low.includes("reference") || low.includes("file number") || low.includes("confirmation")) {
           resolvedPnr = val.toUpperCase();
-        } else if (low.includes("flight no") || low.includes("train no") || low.includes("bus no") || low.includes("package code") || low.includes("ticket no")) {
+        } else if (low.includes("flight no") || low.includes("train no") || low.includes("bus no") || low.includes("awb no") || low.includes("package code") || low.includes("ticket no") || low.includes("voucher")) {
           resolvedFlightNo = val;
-        } else if (low.includes("sector") || low.includes("route") || low.includes("destination") || low.includes("hotel") || low.includes("package") || low.includes("country")) {
+        } else if (low.includes("sector") || low.includes("route") || low.includes("destination") || low.includes("delivery") || low.includes("city") || low.includes("hotel") || low.includes("package") || low.includes("country")) {
           resolvedSector = val;
-        } else if (low.includes("portal") || low.includes("supplier") || low.includes("booked from") || low.includes("issue portal") || low.includes("desk")) {
+        } else if (low.includes("portal") || low.includes("supplier") || low.includes("partner") || low.includes("company") || low.includes("booked from") || low.includes("issue portal") || low.includes("desk")) {
           resolvedPortal = val;
         }
       }
@@ -372,12 +372,6 @@ export default function BookingModal({
         delete customFieldValues["Agent / Staff Name"];
       }
 
-      if (!resolvedSector) {
-        resolvedSector = activeService?.name || "Travel Service";
-      }
-      if (!resolvedPnr) {
-        resolvedPnr = `CCJ-${Date.now().toString().slice(-6)}`;
-      }
       if (!resolvedTravelDate) {
         resolvedTravelDate = issueDate || new Date().toISOString().substring(0, 10);
       }
