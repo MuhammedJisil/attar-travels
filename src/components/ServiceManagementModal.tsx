@@ -23,6 +23,7 @@ import {
   ChevronUp,
   ChevronDown,
   MessageCircle,
+  CreditCard,
 } from "lucide-react";
 import {
   DEFAULT_TEMPLATES,
@@ -33,11 +34,62 @@ import {
   CustomFieldDefinition,
 } from "@/lib/service-config";
 
+const DEFAULT_DELAY_TEMPLATE = `⚠️ *{service_name} STATUS UPDATE ALERT*
+━━━━━━━━━━━━━━━━━━
+Dear *{customer_name}*,
+
+This is an update notification from *{agency_name}* regarding your {service_name} booking.
+
+📋 *Booking Ref:* {booking_no}
+💼 *Service:* {service_name}
+📍 *Details:* {route}
+🚨 *Updated Status:* *{status}*
+📝 *Notes:* {alert_notes}
+
+Please contact our desk if you require any assistance:
+📞 *Call/WhatsApp:* {agency_phone}`;
+
+const DEFAULT_PAYMENT_TEMPLATE = `💳 *PAYMENT DUE REMINDER*
+━━━━━━━━━━━━━━━━━━
+Dear *{customer_name}*,
+
+Greetings from *{agency_name}*.
+
+This is a gentle reminder regarding the outstanding balance for your travel booking:
+
+📋 *Booking Ref:* {booking_no}
+💼 *Service:* {service_name}
+💰 *Total Amount:* {total_amount}
+✅ *Amount Paid:* {paid_amount}
+🔴 *Balance Due:* *{balance_due}*
+📅 *Due Date:* {due_date}
+
+Kindly clear the balance at your earliest convenience.
+📞 Contact: {agency_phone}`;
+
+const DEFAULT_INVOICE_TEMPLATE = `📄 *BOOKING INVOICE & CONFIRMATION*
+━━━━━━━━━━━━━━━━━━
+Dear *{customer_name}*,
+
+Thank you for choosing *{agency_name}*. Here are your booking details:
+
+🧾 *Booking Ref:* {booking_no}
+💼 *Service:* {service_name}
+📍 *Details:* {route}
+🎫 *Reference / Tracking:* {pnr}
+📅 *Date:* {date}
+💰 *Total Amount:* {total_amount}
+💳 *Paid:* {paid_amount}
+⚖️ *Balance:* {balance_due}
+
+📞 For queries, contact: {agency_phone}`;
+
 interface ServiceManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
   serviceTypes: ServiceType[];
   onRefresh: () => void;
+  initialServiceId?: string | null;
 }
 
 export default function ServiceManagementModal({
@@ -45,6 +97,7 @@ export default function ServiceManagementModal({
   onClose,
   serviceTypes,
   onRefresh,
+  initialServiceId,
 }: ServiceManagementModalProps) {
   // Mode: "list" | "create" | "edit"
   const [viewMode, setViewMode] = useState<"list" | "create" | "edit">("list");
@@ -68,12 +121,21 @@ export default function ServiceManagementModal({
   const [hasPax, setHasPax] = useState(true);
   const [customDesc, setCustomDesc] = useState("");
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
-  const [whatsappTemplate, setWhatsappTemplate] = useState("");
+  const [activeWaTab, setActiveWaTab] = useState<"reminder" | "delay" | "payment" | "invoice">("reminder");
+  const [waTemplates, setWaTemplates] = useState<{
+    reminder: string;
+    delay: string;
+    payment: string;
+    invoice: string;
+  }>({
+    reminder: "",
+    delay: "",
+    payment: "",
+    invoice: "",
+  });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!isOpen) return null;
 
   const resetForm = () => {
     setServiceName("");
@@ -82,7 +144,13 @@ export default function ServiceManagementModal({
     applyTemplate("flight");
     setCustomDesc("");
     setCustomFields([]);
-    setWhatsappTemplate(DEFAULT_TEMPLATES.flight.whatsappTemplate || "");
+    setWaTemplates({
+      reminder: DEFAULT_TEMPLATES.flight.whatsappTemplate || "",
+      delay: DEFAULT_DELAY_TEMPLATE,
+      payment: DEFAULT_PAYMENT_TEMPLATE,
+      invoice: DEFAULT_INVOICE_TEMPLATE,
+    });
+    setActiveWaTab("reminder");
     setEditingId(null);
     setError(null);
   };
@@ -132,7 +200,10 @@ export default function ServiceManagementModal({
     setDateLabel(tmpl.dateLabel);
     setHasReturnDate(tmpl.hasReturnDate);
     setHasPax(tmpl.hasPax);
-    setWhatsappTemplate(tmpl.whatsappTemplate || "");
+    setWaTemplates((prev) => ({
+      ...prev,
+      reminder: tmpl.whatsappTemplate || "",
+    }));
     setCustomFields(tmpl.customFields ? JSON.parse(JSON.stringify(tmpl.customFields)) : []);
   };
 
@@ -143,6 +214,7 @@ export default function ServiceManagementModal({
 
   const handleStartEdit = (service: ServiceType) => {
     const config = getServiceFieldConfig(service);
+    const rawTemplates = (config as any).whatsappTemplates || {};
     setEditingId(service.id);
     setServiceName(service.name);
     setServiceCode(service.code || "");
@@ -156,7 +228,13 @@ export default function ServiceManagementModal({
     setDateLabel(config.dateLabel);
     setHasReturnDate(config.hasReturnDate);
     setHasPax(config.hasPax);
-    setWhatsappTemplate(config.whatsappTemplate || DEFAULT_TEMPLATES[config.template]?.whatsappTemplate || "");
+    setWaTemplates({
+      reminder: rawTemplates.reminder || config.whatsappTemplate || DEFAULT_TEMPLATES[config.template]?.whatsappTemplate || "",
+      delay: rawTemplates.delay || DEFAULT_DELAY_TEMPLATE,
+      payment: rawTemplates.payment || DEFAULT_PAYMENT_TEMPLATE,
+      invoice: rawTemplates.invoice || DEFAULT_INVOICE_TEMPLATE,
+    });
+    setActiveWaTab("reminder");
     setCustomFields(config.customFields || []);
 
     // Extract human description if present
@@ -177,6 +255,20 @@ export default function ServiceManagementModal({
 
     setViewMode("edit");
   };
+
+  // Auto-open specific service in edit mode if initialServiceId is passed
+  React.useEffect(() => {
+    if (!isOpen) return;
+    if (initialServiceId) {
+      const found = serviceTypes.find((s) => s.id === initialServiceId);
+      if (found) {
+        handleStartEdit(found);
+        return;
+      }
+    }
+  }, [isOpen, initialServiceId, serviceTypes]);
+
+  if (!isOpen) return null;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -223,7 +315,13 @@ export default function ServiceManagementModal({
       hasTime,
       dateLabel: dFld?.name || dateLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].dateLabel,
       portalLabel: supFld?.name || DEFAULT_TEMPLATES[serviceTemplate].portalLabel,
-      whatsappTemplate: whatsappTemplate.trim() || undefined,
+      whatsappTemplate: waTemplates.reminder.trim() || undefined,
+      whatsappTemplates: {
+        reminder: waTemplates.reminder.trim() || undefined,
+        delay: waTemplates.delay.trim() || undefined,
+        payment: waTemplates.payment.trim() || undefined,
+        invoice: waTemplates.invoice.trim() || undefined,
+      },
       hasReturnDate,
       hasPax,
       userDescription: customDesc.trim() || undefined,
@@ -720,34 +818,114 @@ export default function ServiceManagementModal({
               )}
             </div>
 
-            {/* Step 3: WhatsApp Notification Message Template */}
+            {/* Step 3: WhatsApp Notification Message Templates (4 Alert Types) */}
             <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <span className="font-bold text-emerald-950 dark:text-emerald-200 uppercase tracking-wider text-xs flex items-center gap-1.5">
                     <MessageCircle size={15} className="text-emerald-600 dark:text-emerald-400" />
-                    3. WhatsApp Message Template for this Service
+                    3. WhatsApp Message Templates for this Service
                   </span>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Customize the exact message text sent to customers on WhatsApp for this service
+                    Customize the 4 alert message types sent to customers for this service
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setWhatsappTemplate(DEFAULT_TEMPLATES[serviceTemplate]?.whatsappTemplate || "")}
+                  onClick={() => {
+                    if (activeWaTab === "reminder") {
+                      setWaTemplates((prev) => ({
+                        ...prev,
+                        reminder: DEFAULT_TEMPLATES[serviceTemplate]?.whatsappTemplate || "",
+                      }));
+                    } else if (activeWaTab === "delay") {
+                      setWaTemplates((prev) => ({ ...prev, delay: DEFAULT_DELAY_TEMPLATE }));
+                    } else if (activeWaTab === "payment") {
+                      setWaTemplates((prev) => ({ ...prev, payment: DEFAULT_PAYMENT_TEMPLATE }));
+                    } else if (activeWaTab === "invoice") {
+                      setWaTemplates((prev) => ({ ...prev, invoice: DEFAULT_INVOICE_TEMPLATE }));
+                    }
+                  }}
                   className="text-[11px] text-emerald-700 dark:text-emerald-400 hover:underline font-bold self-start sm:self-auto"
                 >
-                  Reset Template
+                  Reset Active Template
                 </button>
               </div>
 
-              <textarea
-                rows={7}
-                value={whatsappTemplate}
-                onChange={(e) => setWhatsappTemplate(e.target.value)}
-                placeholder="Enter customized WhatsApp message for this service..."
-                className="w-full p-3 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 leading-relaxed"
-              />
+              {/* 4 Template Selector Tabs matching WhatsApp modal */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveWaTab("reminder")}
+                  className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
+                    activeWaTab === "reminder"
+                      ? "bg-sky-50 dark:bg-sky-950/60 border-sky-400 text-sky-700 dark:text-sky-300 ring-2 ring-sky-400/40 shadow-xs"
+                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <Plane size={14} className={activeWaTab === "reminder" ? "text-sky-600" : ""} />
+                  <span>Booking Details</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveWaTab("delay")}
+                  className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
+                    activeWaTab === "delay"
+                      ? "bg-amber-50 dark:bg-amber-950/60 border-amber-400 text-amber-800 dark:text-amber-300 ring-2 ring-amber-400/40 shadow-xs"
+                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <Clock size={14} className={activeWaTab === "delay" ? "text-amber-600" : ""} />
+                  <span>Status Alert</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveWaTab("payment")}
+                  className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
+                    activeWaTab === "payment"
+                      ? "bg-rose-50 dark:bg-rose-950/60 border-rose-400 text-rose-700 dark:text-rose-300 ring-2 ring-rose-400/40 shadow-xs"
+                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <CreditCard size={14} className={activeWaTab === "payment" ? "text-rose-600" : ""} />
+                  <span>Payment Due</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveWaTab("invoice")}
+                  className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
+                    activeWaTab === "invoice"
+                      ? "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-400 text-emerald-800 dark:text-emerald-300 ring-2 ring-emerald-400/40 shadow-xs"
+                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <FileText size={14} className={activeWaTab === "invoice" ? "text-emerald-600" : ""} />
+                  <span>Invoice / Ref</span>
+                </button>
+              </div>
+
+              {/* Template Textarea for active tab */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="font-semibold">
+                    Editing: {activeWaTab === "reminder" ? "Booking Details / Reminder" : activeWaTab === "delay" ? "Status Alert / Delay" : activeWaTab === "payment" ? "Payment Due Reminder" : "Invoice / Voucher Reference"}
+                  </span>
+                  <span>Supports markdown: *bold*, _italic_</span>
+                </div>
+                <textarea
+                  rows={8}
+                  value={waTemplates[activeWaTab]}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setWaTemplates((prev) => ({ ...prev, [activeWaTab]: val }));
+                  }}
+                  placeholder={`Enter customized message template for ${activeWaTab}...`}
+                  className="w-full p-3 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 leading-relaxed"
+                />
+              </div>
 
               {/* Dynamic tag chips */}
               <div className="space-y-1.5">
@@ -767,11 +945,21 @@ export default function ServiceManagementModal({
                     "{booking_no}",
                     "{agency_name}",
                     "{agency_phone}",
+                    "{total_amount}",
+                    "{paid_amount}",
+                    "{balance_due}",
+                    "{alert_notes}",
+                    "{due_date}",
                   ].map((tag) => (
                     <button
                       key={tag}
                       type="button"
-                      onClick={() => setWhatsappTemplate((prev) => prev ? `${prev} ${tag}` : tag)}
+                      onClick={() =>
+                        setWaTemplates((prev) => ({
+                          ...prev,
+                          [activeWaTab]: prev[activeWaTab] ? `${prev[activeWaTab]} ${tag}` : tag,
+                        }))
+                      }
                       className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-800 text-[10px] font-mono text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition"
                     >
                       {tag}

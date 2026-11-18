@@ -189,6 +189,12 @@ export function createFlightDelayMessage(
   booking: Booking,
   agency?: Partial<AgencySettings>
 ): string {
+  // Check if service has custom delay/status alert template
+  const serviceConfig = getServiceFieldConfig(booking.serviceType);
+  if (serviceConfig.whatsappTemplates?.delay && serviceConfig.whatsappTemplates.delay.trim() !== "") {
+    return formatCustomWhatsAppMessage(serviceConfig.whatsappTemplates.delay, booking, agency);
+  }
+
   const isFlight = isFlightOrTravelService(booking.serviceType);
   const customerName = booking.customer?.name || "Valued Customer";
   const agencyName = agency?.agencyName || "Travel Desk";
@@ -230,6 +236,12 @@ export function createPaymentReminderMessage(
   booking: Booking,
   agency?: Partial<AgencySettings>
 ): string {
+  // Check if service has custom payment reminder template
+  const serviceConfig = getServiceFieldConfig(booking.serviceType);
+  if (serviceConfig.whatsappTemplates?.payment && serviceConfig.whatsappTemplates.payment.trim() !== "") {
+    return formatCustomWhatsAppMessage(serviceConfig.whatsappTemplates.payment, booking, agency);
+  }
+
   const customerName = booking.customer?.name || "Valued Customer";
   const agencyName = agency?.agencyName || "Travel Desk";
   const dueDateStr = booking.dueDate
@@ -264,6 +276,12 @@ export function createInvoiceShareMessage(
   booking: Booking,
   agency?: Partial<AgencySettings>
 ): string {
+  // Check if service has custom invoice share template
+  const serviceConfig = getServiceFieldConfig(booking.serviceType);
+  if (serviceConfig.whatsappTemplates?.invoice && serviceConfig.whatsappTemplates.invoice.trim() !== "") {
+    return formatCustomWhatsAppMessage(serviceConfig.whatsappTemplates.invoice, booking, agency);
+  }
+
   const isFlight = isFlightOrTravelService(booking.serviceType);
   const customerName = booking.customer?.name || "Valued Customer";
   const agencyName = agency?.agencyName || "Travel Desk";

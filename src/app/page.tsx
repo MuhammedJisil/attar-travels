@@ -69,6 +69,7 @@ export default function HomePage() {
   };
 
   const [isServicesModalOpen, setIsServicesModalOpen] = useState(false);
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; message?: string } | null>(null);
@@ -340,7 +341,7 @@ export default function HomePage() {
 
   // 3. Authenticated Dashboard
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col selection:bg-sky-500 selection:text-white transition-colors duration-200">
+    <div className="min-h-screen max-w-full overflow-x-hidden bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col selection:bg-sky-500 selection:text-white transition-colors duration-200">
       {/* App main content hidden during invoice / report printing */}
       <div id="main-app-content" className="no-print flex-1 flex flex-col">
         {/* Top Navbar */}
@@ -542,7 +543,10 @@ export default function HomePage() {
               </div>
 
               <button
-                onClick={() => setIsServicesModalOpen(true)}
+                onClick={() => {
+                  setEditingServiceId(null);
+                  setIsServicesModalOpen(true);
+                }}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs sm:text-sm shadow-sm transition active:scale-95"
               >
                 <PlusCircle size={16} />
@@ -576,7 +580,10 @@ export default function HomePage() {
                         Total bookings: <strong className="text-slate-800 dark:text-slate-200">{count}</strong>
                       </span>
                       <button
-                        onClick={() => setIsServicesModalOpen(true)}
+                        onClick={() => {
+                          setEditingServiceId(service.id);
+                          setIsServicesModalOpen(true);
+                        }}
                         className="font-bold text-sky-600 dark:text-sky-400 hover:underline"
                       >
                         Edit →
@@ -602,12 +609,12 @@ export default function HomePage() {
       </main>
 
       {/* FOOTER */}
-      <footer className="no-print mt-auto border-t border-slate-200/80 bg-white py-3.5 text-center text-xs text-slate-500">
+      <footer className="no-print mt-auto border-t border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 py-3.5 text-center text-xs text-slate-500 dark:text-slate-400">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
-            <strong>{settings.agencyName}</strong> &bull; Travel Desk Management & Due Alerts
+            <strong className="text-slate-800 dark:text-slate-200">{settings.agencyName}</strong> &bull; Travel Desk Management & Due Alerts
           </div>
-          <div className="text-slate-400 text-[11px]">
+          <div className="text-slate-400 dark:text-slate-500 text-[11px]">
             &copy; {new Date().getFullYear()} {settings.agencyName}. All rights reserved.
           </div>
         </div>
@@ -627,7 +634,10 @@ export default function HomePage() {
         booking={editingBooking}
         customers={customers}
         serviceTypes={serviceTypes}
-        onOpenManageServices={() => setIsServicesModalOpen(true)}
+        onOpenManageServices={() => {
+          setEditingServiceId(null);
+          setIsServicesModalOpen(true);
+        }}
         preselectedCustomerId={preselectedCustomerId}
       />
 
@@ -692,9 +702,13 @@ export default function HomePage() {
       {/* 5. Services Dropdown Management Modal */}
       <ServiceManagementModal
         isOpen={isServicesModalOpen}
-        onClose={() => setIsServicesModalOpen(false)}
+        onClose={() => {
+          setIsServicesModalOpen(false);
+          setEditingServiceId(null);
+        }}
         serviceTypes={serviceTypes}
         onRefresh={fetchData}
+        initialServiceId={editingServiceId}
       />
 
       {/* 6. Add / Edit Customer Modal */}

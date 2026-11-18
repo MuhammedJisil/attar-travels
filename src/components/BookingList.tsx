@@ -217,7 +217,7 @@ export default function BookingList({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full max-w-full overflow-hidden">
       {/* Search and Filters Bar */}
       <div className="p-3 sm:p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-2.5 sm:gap-3 items-stretch md:items-center justify-between">
         {/* Search Input */}
@@ -323,7 +323,7 @@ export default function BookingList({
       {/* ========================================================================= */}
       {/* 1. MOBILE OPTIMIZED VIEW: Customer Name + Icons Only                      */}
       {/* ========================================================================= */}
-      <div className="md:hidden space-y-2">
+      <div className="md:hidden space-y-2 w-full max-w-full overflow-hidden">
         {paginatedBookings.length === 0 ? (
           <div className="py-10 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
             <Plane size={28} className="mx-auto mb-2 text-slate-300 dark:text-slate-600" />
@@ -342,15 +342,13 @@ export default function BookingList({
             return (
               <div
                 key={b.id}
-                className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm hover:border-sky-300 dark:hover:border-sky-700 transition flex items-center justify-between gap-2"
+                onClick={() => setQuickViewBooking(b)}
+                className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm hover:border-sky-300 dark:hover:border-sky-700 transition flex items-center justify-between gap-2 cursor-pointer"
               >
-                {/* Left: Customer Name + Quick Badge */}
+                {/* Left: Customer Name + Days Left / Departed Count only */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span
-                      onClick={() => setQuickViewBooking(b)}
-                      className="font-bold text-sm text-slate-900 dark:text-white truncate hover:text-sky-600 dark:hover:text-sky-400 cursor-pointer"
-                    >
+                    <span className="font-bold text-sm text-slate-900 dark:text-white truncate">
                       {b.customer?.name}
                     </span>
                     {isDelay && (
@@ -362,42 +360,15 @@ export default function BookingList({
                     <span className={`font-semibold ${diff.days <= 1 ? "text-rose-600 dark:text-rose-400 font-bold" : "text-sky-700 dark:text-sky-400"}`}>
                       {diff.label}
                     </span>
-                    <span>•</span>
-                    <span className="font-mono">{b.flightNo || b.serviceType?.name || "Service"}</span>
-                    {getAgentName(b) ? (
-                      <>
-                        <span>•</span>
-                        <span className="font-semibold text-sky-700 dark:text-sky-300">👤 {getAgentName(b)}</span>
-                      </>
-                    ) : isFlight ? (
-                      <>
-                        <span>•</span>
-                        <span className="font-mono text-slate-400">{formatBookingNo(b.bookingNo)}</span>
-                      </>
-                    ) : null}
-                    {displayPnr && (
-                      <>
-                        <span>•</span>
-                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
-                          {isFlight ? displayPnr : `📦 ${displayPnr}`}
-                        </span>
-                      </>
-                    )}
                   </div>
                 </div>
 
-                {/* Right: Icon Buttons Only (WhatsApp, View, Invoice, Edit, Delete) */}
-                <div className="flex items-center gap-1 shrink-0">
-                  {/* 1. View Full Details Icon */}
-                  <button
-                    onClick={() => setQuickViewBooking(b)}
-                    className="p-2 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition active:scale-95"
-                    title="View Full Details"
-                  >
-                    <Eye size={17} />
-                  </button>
-
-                  {/* 2. WhatsApp Alert Icon */}
+                {/* Right: Icon Buttons Only (WhatsApp, Invoice, Edit, Delete) */}
+                <div
+                  className="flex items-center gap-1 shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* 1. WhatsApp Alert Icon */}
                   <button
                     onClick={() => onOpenWhatsApp(b)}
                     className="p-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition active:scale-95 shadow-sm"
@@ -406,7 +377,7 @@ export default function BookingList({
                     <MessageCircle size={17} />
                   </button>
 
-                  {/* 3. Invoice Icon */}
+                  {/* 2. Invoice Icon */}
                   <button
                     onClick={() => onOpenInvoice(b)}
                     className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition active:scale-95"
@@ -415,7 +386,7 @@ export default function BookingList({
                     <Printer size={17} />
                   </button>
 
-                  {/* 4. Edit Icon */}
+                  {/* 3. Edit Icon */}
                   <button
                     onClick={() => onEditBooking(b)}
                     className="p-2 rounded-lg text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
@@ -424,7 +395,7 @@ export default function BookingList({
                     <Edit2 size={16} />
                   </button>
 
-                  {/* 5. Delete Icon */}
+                  {/* 4. Delete Icon */}
                   <button
                     onClick={() => handleDelete(b.id)}
                     disabled={deletingId === b.id}

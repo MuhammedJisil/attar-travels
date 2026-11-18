@@ -42,6 +42,12 @@ export interface ServiceFieldDefinition {
   userDescription?: string;
   customFields?: CustomFieldDefinition[];
   whatsappTemplate?: string;
+  whatsappTemplates?: {
+    reminder?: string;
+    delay?: string;
+    payment?: string;
+    invoice?: string;
+  };
 }
 
 export const DEFAULT_TEMPLATES: Record<ServiceTemplateType, ServiceFieldDefinition> = {
@@ -427,6 +433,7 @@ export function getServiceFieldConfig(service?: ServiceType | null): ServiceFiel
         dateLabel: resolvedDateLabel,
         portalLabel: resolvedPortalLabel,
         whatsappTemplate: parsed.whatsappTemplate || base.whatsappTemplate,
+        whatsappTemplates: parsed.whatsappTemplates || (parsed.whatsappTemplate ? { reminder: parsed.whatsappTemplate } : (base.whatsappTemplate ? { reminder: base.whatsappTemplate } : undefined)),
         customFields: mergedFields,
         title: parsed.title || `${service.name} Details`,
       };
@@ -707,6 +714,10 @@ export function formatCustomWhatsAppMessage(
   const totalAmount = `₹${(booking.totalAmount || 0).toLocaleString()}`;
   const paidAmount = `₹${(booking.paidAmount || 0).toLocaleString()}`;
   const balanceDue = `₹${(booking.balanceAmount || 0).toLocaleString()}`;
+  const alertNotesVal = (booking as any).alertNotes || "Status has been updated.";
+  const dueDateVal = (booking as any).dueDate
+    ? new Date((booking as any).dueDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+    : "Immediate";
 
   return template
     .replace(/{customer_name}/gi, customerName)
@@ -731,5 +742,9 @@ export function formatCustomWhatsAppMessage(
     .replace(/{passport_no}/gi, passportVal)
     .replace(/{total_amount}/gi, totalAmount)
     .replace(/{paid_amount}/gi, paidAmount)
-    .replace(/{balance_due}/gi, balanceDue);
+    .replace(/{balance_due}/gi, balanceDue)
+    .replace(/{notes}/gi, alertNotesVal)
+    .replace(/{alert_notes}/gi, alertNotesVal)
+    .replace(/{delay_reason}/gi, alertNotesVal)
+    .replace(/{due_date}/gi, dueDateVal);
 }
