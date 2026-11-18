@@ -604,12 +604,6 @@ export default function BookingList({
                                 {formatBookingNo(b.bookingNo)}
                               </div>
                             ) : null}
-                            {b.passportNo && (
-                              <div className="text-[10px] font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-800 mt-1 flex items-center gap-1">
-                                <span>🛂</span>
-                                <span>{b.passportNo}</span>
-                              </div>
-                            )}
                             {b.expiryDate && (() => {
                               const exp = getDaysDifference(b.expiryDate);
                               if (exp.days <= 180) {
