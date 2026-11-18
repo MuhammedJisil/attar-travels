@@ -84,6 +84,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 
   /* Hide app navigation, dark mode wrapper backgrounds, and non-printable elements */
   .no-print,
+  .print\:hidden,
   #main-app-content,
   nav,
   header,

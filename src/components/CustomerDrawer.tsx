@@ -68,7 +68,7 @@ export default function CustomerDrawer({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+    <div className="no-print print:hidden fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
       <div className="bg-white w-full max-w-2xl h-full shadow-2xl flex flex-col overflow-hidden animate-slideLeft">
         {/* Drawer Header */}
         <div className="bg-slate-900 text-white p-6 flex items-start justify-between">

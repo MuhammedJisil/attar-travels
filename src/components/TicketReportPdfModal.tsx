@@ -95,7 +95,7 @@ export default function TicketReportPdfModal({
             color: #0f172a !important;
             color-scheme: light !important;
           }
-          #main-app-content, .no-print {
+          #main-app-content, .no-print, .print\:hidden {
             display: none !important;
           }
           .report-modal-overlay {

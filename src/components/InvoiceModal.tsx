@@ -104,7 +104,7 @@ export default function InvoiceModal({
             color: #0f172a !important;
             color-scheme: light !important;
           }
-          #main-app-content, .no-print {
+          #main-app-content, .no-print, .print\:hidden {
             display: none !important;
           }
           .invoice-modal-overlay {
