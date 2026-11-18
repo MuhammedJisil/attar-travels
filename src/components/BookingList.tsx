@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import { Booking, ServiceType, AgencySettings, initialAgencySettings } from "@/lib/types";
 import { getDaysDifference, formatDate } from "@/lib/date-utils";
 import { exportBookingsToCSV } from "@/lib/export-csv";
+import { extractCustomFieldValues } from "@/lib/service-config";
 import TicketQuickViewModal from "./TicketQuickViewModal";
 import TicketReportPdfModal from "./TicketReportPdfModal";
 import {
@@ -36,6 +37,18 @@ interface BookingListProps {
   onDeleteBooking: (bookingId: string) => void;
   onSelectCustomer: (customerId: string) => void;
   onOpenReportPdf?: (bookings: Booking[], filterLabel?: string) => void;
+}
+
+export function getDisplayPortal(b: Booking): string {
+  if (b.portal && b.portal !== "Direct Desk" && b.portal.trim() !== "") return b.portal;
+  const custom = extractCustomFieldValues(b.notes);
+  for (const [k, v] of Object.entries(custom)) {
+    const lk = k.toLowerCase();
+    if ((lk.includes("portal") || lk.includes("supplier") || lk.includes("desk") || lk.includes("booked")) && v && v.trim() !== "") {
+      return v;
+    }
+  }
+  return b.portal || "Direct Desk";
 }
 
 export default function BookingList({
@@ -76,7 +89,7 @@ export default function BookingList({
     }
   };
 
-  // Memoized filter calculation for instant response
+  // Memoized filter calculation for instant response with date searching support
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
       if (selectedService !== "all" && b.serviceTypeId !== selectedService) return false;
@@ -89,8 +102,15 @@ export default function BookingList({
         const pnr = b.pnr?.toLowerCase() || "";
         const flt = b.flightNo?.toLowerCase() || "";
         const sector = b.sector?.toLowerCase() || "";
-        const portal = b.portal?.toLowerCase() || "";
+        const portal = getDisplayPortal(b).toLowerCase();
         const bookingNo = b.bookingNo.toLowerCase();
+        const travelDate = b.travelDate?.toLowerCase() || "";
+        const formattedTravelDate = b.travelDate ? formatDate(b.travelDate).toLowerCase() : "";
+        const returnDate = b.returnDate?.toLowerCase() || "";
+        const formattedReturnDate = b.returnDate ? formatDate(b.returnDate).toLowerCase() : "";
+        const flightTime = b.flightTime?.toLowerCase() || "";
+        const passportNo = b.passportNo?.toLowerCase() || "";
+        const notes = b.notes?.toLowerCase() || "";
 
         return (
           party.includes(q) ||
@@ -99,7 +119,14 @@ export default function BookingList({
           flt.includes(q) ||
           sector.includes(q) ||
           portal.includes(q) ||
-          bookingNo.includes(q)
+          bookingNo.includes(q) ||
+          travelDate.includes(q) ||
+          formattedTravelDate.includes(q) ||
+          returnDate.includes(q) ||
+          formattedReturnDate.includes(q) ||
+          flightTime.includes(q) ||
+          passportNo.includes(q) ||
+          notes.includes(q)
         );
       }
 
@@ -125,19 +152,19 @@ export default function BookingList({
   return (
     <div className="space-y-4">
       {/* Search and Filters Bar */}
-      <div className="p-3 sm:p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-2.5 sm:gap-3 items-stretch md:items-center justify-between">
+      <div className="p-3 sm:p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-2.5 sm:gap-3 items-stretch md:items-center justify-between">
         {/* Search Input */}
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
-            placeholder="Search party name, mobile, PNR, flight, sector, portal..."
+            placeholder="Search party name, mobile, PNR, flight, sector, portal, date (e.g. 14 Nov)..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-sky-500 transition"
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-sky-500 transition placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
         </div>
 
@@ -150,7 +177,7 @@ export default function BookingList({
               setSelectedService(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+            className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200"
           >
             <option value="all">All Services</option>
             {serviceTypes.map((st) => (
@@ -167,7 +194,7 @@ export default function BookingList({
               setSelectedStatus(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+            className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200"
           >
             <option value="all">All Statuses</option>
             <option value="Confirmed">Confirmed</option>
@@ -178,7 +205,7 @@ export default function BookingList({
             <option value="Cancelled">Cancelled</option>
           </select>
 
-          {/* Export to PDF Button (Primary, as requested: "instead of excel i need pdf") */}
+          {/* Export to PDF Button */}
           <button
             onClick={() => {
               const label =
@@ -193,20 +220,20 @@ export default function BookingList({
                 setIsPdfModalOpen(true);
               }
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition shadow-xs active:scale-95"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold transition shadow-xs active:scale-95"
             title="Export & Print Filtered Ledger as PDF"
           >
-            <FileText size={15} className="text-rose-600" />
+            <FileText size={15} className="text-rose-600 dark:text-rose-400" />
             <span>Export PDF</span>
           </button>
 
-          {/* Export to CSV Button (Secondary) */}
+          {/* Export to CSV Button */}
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium transition"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium transition"
             title="Export filtered records to Excel / CSV"
           >
-            <FileSpreadsheet size={14} className="text-emerald-600" />
+            <FileSpreadsheet size={14} className="text-emerald-600 dark:text-emerald-400" />
             <span className="hidden sm:inline">CSV</span>
           </button>
 
@@ -218,7 +245,7 @@ export default function BookingList({
                 setSelectedStatus("all");
                 setCurrentPage(1);
               }}
-              className="text-xs text-sky-600 hover:text-sky-800 font-semibold px-1"
+              className="text-xs text-sky-600 dark:text-sky-400 hover:text-sky-800 font-semibold px-1"
             >
               Reset
             </button>
@@ -227,13 +254,13 @@ export default function BookingList({
       </div>
 
       {/* ========================================================================= */}
-      {/* 1. MOBILE OPTIMIZED VIEW: Customer Name + Icons Only (As requested)      */}
+      {/* 1. MOBILE OPTIMIZED VIEW: Customer Name + Icons Only                      */}
       {/* ========================================================================= */}
       <div className="md:hidden space-y-2">
         {paginatedBookings.length === 0 ? (
-          <div className="py-10 text-center bg-white rounded-2xl border border-slate-200 p-4">
-            <Plane size={28} className="mx-auto mb-2 text-slate-300" />
-            <p className="text-sm font-semibold text-slate-600">No tickets match criteria</p>
+          <div className="py-10 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+            <Plane size={28} className="mx-auto mb-2 text-slate-300 dark:text-slate-600" />
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">No tickets match criteria</p>
           </div>
         ) : (
           paginatedBookings.map((b) => {
@@ -243,14 +270,14 @@ export default function BookingList({
             return (
               <div
                 key={b.id}
-                className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm hover:border-sky-300 transition flex items-center justify-between gap-2"
+                className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm hover:border-sky-300 dark:hover:border-sky-700 transition flex items-center justify-between gap-2"
               >
                 {/* Left: Customer Name + Quick Badge */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span
                       onClick={() => setQuickViewBooking(b)}
-                      className="font-bold text-sm text-slate-900 truncate hover:text-sky-600 cursor-pointer"
+                      className="font-bold text-sm text-slate-900 dark:text-white truncate hover:text-sky-600 dark:hover:text-sky-400 cursor-pointer"
                     >
                       {b.customer?.name}
                     </span>
@@ -259,8 +286,8 @@ export default function BookingList({
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                    <span className={`font-semibold ${diff.days <= 1 ? "text-rose-600 font-bold" : "text-sky-700"}`}>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    <span className={`font-semibold ${diff.days <= 1 ? "text-rose-600 dark:text-rose-400 font-bold" : "text-sky-700 dark:text-sky-400"}`}>
                       {diff.label}
                     </span>
                     <span>•</span>
@@ -268,7 +295,7 @@ export default function BookingList({
                     {b.pnr && (
                       <>
                         <span>•</span>
-                        <span className="font-mono font-bold text-slate-700">{b.pnr}</span>
+                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{b.pnr}</span>
                       </>
                     )}
                   </div>
@@ -279,7 +306,7 @@ export default function BookingList({
                   {/* 1. View Full Details Icon */}
                   <button
                     onClick={() => setQuickViewBooking(b)}
-                    className="p-2 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 transition active:scale-95"
+                    className="p-2 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition active:scale-95"
                     title="View Full Details"
                   >
                     <Eye size={17} />
@@ -297,7 +324,7 @@ export default function BookingList({
                   {/* 3. Invoice Icon */}
                   <button
                     onClick={() => onOpenInvoice(b)}
-                    className="p-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition active:scale-95"
+                    className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition active:scale-95"
                     title="Print / View Invoice"
                   >
                     <Printer size={17} />
@@ -306,7 +333,7 @@ export default function BookingList({
                   {/* 4. Edit Icon */}
                   <button
                     onClick={() => onEditBooking(b)}
-                    className="p-2 rounded-lg text-slate-400 hover:text-sky-600 hover:bg-slate-100 transition"
+                    className="p-2 rounded-lg text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                     title="Edit"
                   >
                     <Edit2 size={16} />
@@ -316,7 +343,7 @@ export default function BookingList({
                   <button
                     onClick={() => handleDelete(b.id)}
                     disabled={deletingId === b.id}
-                    className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Delete"
                   >
                     {deletingId === b.id ? (
@@ -335,11 +362,11 @@ export default function BookingList({
       {/* ========================================================================= */}
       {/* 2. DESKTOP VIEW: Full Detailed Table                                      */}
       {/* ========================================================================= */}
-      <div className="hidden md:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="hidden md:block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase tracking-wider font-semibold text-[11px]">
+              <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 uppercase tracking-wider font-semibold text-[11px]">
                 <th className="py-3 px-4">Days Left</th>
                 <th className="py-3 px-4">Party Name & Mobile</th>
                 <th className="py-3 px-4">Service</th>
@@ -352,13 +379,13 @@ export default function BookingList({
                 <th className="py-3 px-4 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {paginatedBookings.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400">
+                  <td colSpan={10} className="py-12 text-center text-slate-400 dark:text-slate-500">
                     <Plane size={32} className="mx-auto mb-2 opacity-40" />
-                    <p className="font-semibold text-slate-600">No tickets or bookings match your criteria</p>
-                    <p className="text-xs text-slate-400 mt-1">Try adjusting your search or filters</p>
+                    <p className="font-semibold text-slate-600 dark:text-slate-300">No tickets or bookings match your criteria</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Try adjusting your search or filters</p>
                   </td>
                 </tr>
               ) : (
@@ -366,12 +393,13 @@ export default function BookingList({
                   const diff = getDaysDifference(b.travelDate);
                   const isDelay =
                     b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
+                  const portalDisplay = getDisplayPortal(b);
 
                   return (
                     <tr
                       key={b.id}
-                      className={`hover:bg-sky-50/40 transition group ${
-                        isDelay ? "bg-amber-50/20" : ""
+                      className={`hover:bg-sky-50/40 dark:hover:bg-slate-800/50 transition group ${
+                        isDelay ? "bg-amber-50/20 dark:bg-amber-950/20" : ""
                       }`}
                     >
                       {/* 1. Days Left Alert Badge */}
@@ -388,13 +416,13 @@ export default function BookingList({
                       <td className="py-3 px-4">
                         <div
                           onClick={() => onSelectCustomer(b.customerId)}
-                          className="cursor-pointer group-hover:text-sky-600"
+                          className="cursor-pointer group-hover:text-sky-600 dark:group-hover:text-sky-400"
                         >
-                          <div className="font-bold text-slate-900 flex items-center gap-1">
+                          <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1">
                             <span>{b.customer?.name}</span>
                             <ExternalLink size={11} className="opacity-0 group-hover:opacity-100 transition" />
                           </div>
-                          <div className="text-slate-500 font-mono text-[11px]">
+                          <div className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                             {b.customer?.phone}
                           </div>
                         </div>
@@ -402,14 +430,14 @@ export default function BookingList({
 
                       {/* 3. Service Type */}
                       <td className="py-3 px-4 whitespace-nowrap">
-                        <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700">
+                        <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                           {b.serviceType?.name || "Flight"}
                         </span>
-                        <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                        <div className="text-[10px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
                           {b.bookingNo}
                         </div>
                         {b.passportNo && (
-                          <div className="text-[10px] font-mono text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 mt-1 flex items-center gap-1">
+                          <div className="text-[10px] font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-800 mt-1 flex items-center gap-1">
                             <span>🛂</span>
                             <span>{b.passportNo}</span>
                           </div>
@@ -418,7 +446,7 @@ export default function BookingList({
                           const exp = getDaysDifference(b.expiryDate);
                           if (exp.days <= 180) {
                             return (
-                              <div className={`text-[10px] font-bold mt-0.5 ${exp.days <= 30 ? "text-rose-600" : "text-amber-600"}`}>
+                              <div className={`text-[10px] font-bold mt-0.5 ${exp.days <= 30 ? "text-rose-600 dark:text-rose-400" : "text-amber-600 dark:text-amber-400"}`}>
                                 ⚠️ Exp: {formatDate(b.expiryDate)} ({exp.days < 0 ? "Expired" : `${exp.days}d left`})
                               </div>
                             );
@@ -429,11 +457,11 @@ export default function BookingList({
 
                       {/* 4. Sector / Flight No */}
                       <td className="py-3 px-4">
-                        <div className="font-bold text-slate-900 max-w-[180px] truncate" title={b.sector || ""}>
+                        <div className="font-bold text-slate-900 dark:text-white max-w-[180px] truncate" title={b.sector || ""}>
                           {b.sector || "—"}
                         </div>
                         {b.flightNo && (
-                          <div className="text-[11px] text-sky-700 font-semibold">
+                          <div className="text-[11px] text-sky-700 dark:text-sky-400 font-semibold">
                             {b.flightNo}
                           </div>
                         )}
@@ -442,21 +470,21 @@ export default function BookingList({
                       {/* 5. Airline PNR */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         {b.pnr ? (
-                          <span className="inline-block px-2 py-0.5 rounded font-mono font-bold bg-sky-50 text-sky-800 border border-sky-200">
+                          <span className="inline-block px-2 py-0.5 rounded font-mono font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
                             {b.pnr}
                           </span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-slate-400 dark:text-slate-500">—</span>
                         )}
                       </td>
 
                       {/* 6. Travel Date & Flight Time */}
                       <td className="py-3 px-4 whitespace-nowrap">
-                        <div className="font-bold text-slate-900">
+                        <div className="font-bold text-slate-900 dark:text-white">
                           {b.travelDate ? formatDate(b.travelDate) : "—"}
                         </div>
                         {b.flightTime && (
-                          <div className="text-[11px] text-slate-500 font-medium">
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                             🕒 {b.flightTime}
                           </div>
                         )}
@@ -464,15 +492,15 @@ export default function BookingList({
 
                       {/* 7. Issued Portal */}
                       <td className="py-3 px-4 whitespace-nowrap">
-                        <span className="text-slate-700 font-medium">
-                          {b.portal || "Direct Desk"}
+                        <span className="text-slate-700 dark:text-slate-300 font-medium">
+                          {portalDisplay}
                         </span>
                       </td>
 
                       {/* 8. Status */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         {isDelay ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 animate-pulse">
                             <AlertTriangle size={12} />
                             {b.status}
                           </span>
@@ -480,10 +508,10 @@ export default function BookingList({
                           <span
                             className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
                               b.status === "Confirmed"
-                                ? "bg-emerald-100 text-emerald-800"
+                                ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
                                 : b.status === "Completed"
-                                ? "bg-slate-100 text-slate-700"
-                                : "bg-sky-100 text-sky-800"
+                                ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                                : "bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800"
                             }`}
                           >
                             {b.status}
@@ -493,15 +521,15 @@ export default function BookingList({
 
                       {/* 9. Financials / Balance */}
                       <td className="py-3 px-4 text-right whitespace-nowrap">
-                        <div className="font-bold text-slate-900">
+                        <div className="font-bold text-slate-900 dark:text-white">
                           ₹{b.totalAmount.toLocaleString()}
                         </div>
                         {b.balanceAmount > 0 ? (
-                          <div className="text-[11px] font-bold text-rose-600">
+                          <div className="text-[11px] font-bold text-rose-600 dark:text-rose-400">
                             Due: ₹{b.balanceAmount.toLocaleString()}
                           </div>
                         ) : (
-                          <div className="text-[10px] text-emerald-600 font-semibold">
+                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
                             ✓ Paid Full
                           </div>
                         )}
@@ -513,7 +541,7 @@ export default function BookingList({
                           {/* Quick View Button */}
                           <button
                             onClick={() => setQuickViewBooking(b)}
-                            className="p-1.5 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 transition"
+                            className="p-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition"
                             title="Quick View Details"
                           >
                             <Eye size={15} />
@@ -532,7 +560,7 @@ export default function BookingList({
                           {/* Invoice Button */}
                           <button
                             onClick={() => onOpenInvoice(b)}
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition"
                             title="Print / View Invoice"
                           >
                             <Printer size={15} />
@@ -541,7 +569,7 @@ export default function BookingList({
                           {/* Edit Button */}
                           <button
                             onClick={() => onEditBooking(b)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-sky-600 hover:bg-sky-50 transition"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-slate-800 transition"
                             title="Edit Ticket Details"
                           >
                             <Edit2 size={15} />
@@ -551,7 +579,7 @@ export default function BookingList({
                           <button
                             onClick={() => handleDelete(b.id)}
                             disabled={deletingId === b.id}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Delete Ticket"
                           >
                             {deletingId === b.id ? (
@@ -574,26 +602,26 @@ export default function BookingList({
       {/* ========================================================================= */}
       {/* 3. PAGINATION CONTROLS & SUMMARY (Responsive)                             */}
       {/* ========================================================================= */}
-      <div className="p-3 sm:p-4 bg-white rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+      <div className="p-3 sm:p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
         <div className="flex items-center gap-3">
           <span>
             Showing{" "}
-            <strong>
+            <strong className="text-slate-800 dark:text-slate-200">
               {totalItems === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1}
             </strong>{" "}
-            to <strong>{Math.min(safeCurrentPage * pageSize, totalItems)}</strong> of{" "}
-            <strong>{totalItems}</strong> records
+            to <strong className="text-slate-800 dark:text-slate-200">{Math.min(safeCurrentPage * pageSize, totalItems)}</strong> of{" "}
+            <strong className="text-slate-800 dark:text-slate-200">{totalItems}</strong> records
           </span>
 
           <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">Rows:</span>
+            <span className="text-slate-400 dark:text-slate-500">Rows:</span>
             <select
               value={pageSize}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="p-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700"
+              className="p-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200"
             >
               <option value={10}>10</option>
               <option value={25}>25</option>
@@ -608,7 +636,7 @@ export default function BookingList({
           <button
             onClick={() => setCurrentPage(1)}
             disabled={safeCurrentPage === 1}
-            className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300"
             title="First Page"
           >
             <ChevronsLeft size={16} />
@@ -617,20 +645,20 @@ export default function BookingList({
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={safeCurrentPage === 1}
-            className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300"
             title="Previous Page"
           >
             <ChevronLeft size={16} />
           </button>
 
-          <span className="px-3 py-1 font-semibold text-slate-800">
+          <span className="px-3 py-1 font-semibold text-slate-800 dark:text-slate-200">
             Page {safeCurrentPage} of {totalPages}
           </span>
 
           <button
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={safeCurrentPage >= totalPages}
-            className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300"
             title="Next Page"
           >
             <ChevronRight size={16} />
@@ -639,7 +667,7 @@ export default function BookingList({
           <button
             onClick={() => setCurrentPage(totalPages)}
             disabled={safeCurrentPage >= totalPages}
-            className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300"
             title="Last Page"
           >
             <ChevronsRight size={16} />

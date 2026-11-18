@@ -20,6 +20,8 @@ import {
   Calendar,
   Settings2,
   Loader2,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import {
   DEFAULT_TEMPLATES,
@@ -104,6 +106,15 @@ export default function ServiceManagementModal({
 
   const handleRemoveCustomField = (id: string) => {
     setCustomFields((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const handleMoveCustomField = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= customFields.length) return;
+    const updated = [...customFields];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+    setCustomFields(updated);
   };
 
   const applyTemplate = (templateKey: ServiceTemplateType) => {
@@ -518,6 +529,28 @@ export default function ServiceManagementModal({
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
+                          {/* Reordering Up/Down controls */}
+                          <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => handleMoveCustomField(idx, "up")}
+                              className="p-1 text-slate-500 hover:text-sky-600 disabled:opacity-25 disabled:hover:text-slate-500 rounded hover:bg-white transition"
+                              title="Move field up"
+                            >
+                              <ChevronUp size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={idx === customFields.length - 1}
+                              onClick={() => handleMoveCustomField(idx, "down")}
+                              className="p-1 text-slate-500 hover:text-sky-600 disabled:opacity-25 disabled:hover:text-slate-500 rounded hover:bg-white transition"
+                              title="Move field down"
+                            >
+                              <ChevronDown size={13} />
+                            </button>
+                          </div>
+
                           <span className="w-5 h-5 rounded-full bg-sky-100 text-sky-800 font-bold text-[10px] flex items-center justify-center">
                             {idx + 1}
                           </span>

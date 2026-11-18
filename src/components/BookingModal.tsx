@@ -276,28 +276,31 @@ export default function BookingModal({
       let resolvedPassportNo = passportNo.trim();
       let resolvedSubmissionDate = submissionDate;
       let resolvedExpiryDate = expiryDate;
+      let resolvedPortal = portal.trim();
 
       // Automatically map any filled custom fields to core fields:
       for (const [key, rawVal] of Object.entries(customFieldValues)) {
         const val = String(rawVal).trim();
         if (!val) continue;
         const low = key.toLowerCase();
-        if (!resolvedPassportNo && (low.includes("passport number") || low.includes("passport no"))) {
+        if (low.includes("passport number") || low.includes("passport no")) {
           resolvedPassportNo = val;
-        } else if (!resolvedSubmissionDate && (low.includes("submission date") || low.includes("applied date"))) {
+        } else if (low.includes("submission date") || low.includes("applied date")) {
           resolvedSubmissionDate = val;
-        } else if (!resolvedExpiryDate && (low.includes("expiry date") || low.includes("validity date"))) {
+        } else if (low.includes("expiry date") || low.includes("validity date")) {
           resolvedExpiryDate = val;
-        } else if (!resolvedFlightTime && (low.includes("time") || low.includes("reporting") || low.includes("departure time"))) {
+        } else if (low.includes("time") || low.includes("reporting") || low.includes("departure time")) {
           resolvedFlightTime = formatFlightTrainTime(val);
-        } else if (!resolvedTravelDate && (low.includes("date") && !low.includes("expiry") && !low.includes("submission") && !low.includes("return"))) {
+        } else if (low.includes("date") && !low.includes("expiry") && !low.includes("submission") && !low.includes("return")) {
           resolvedTravelDate = val;
-        } else if (!resolvedPnr && (low.includes("pnr") || low.includes("arn") || low.includes("reference") || low.includes("file number") || low.includes("confirmation"))) {
+        } else if (low.includes("pnr") || low.includes("arn") || low.includes("reference") || low.includes("file number") || low.includes("confirmation")) {
           resolvedPnr = val.toUpperCase();
-        } else if (!resolvedFlightNo && (low.includes("flight no") || low.includes("train no") || low.includes("bus no") || low.includes("package code"))) {
+        } else if (low.includes("flight no") || low.includes("train no") || low.includes("bus no") || low.includes("package code") || low.includes("ticket no")) {
           resolvedFlightNo = val;
-        } else if (!resolvedSector && (low.includes("sector") || low.includes("route") || low.includes("destination") || low.includes("hotel") || low.includes("package") || low.includes("country"))) {
+        } else if (low.includes("sector") || low.includes("route") || low.includes("destination") || low.includes("hotel") || low.includes("package") || low.includes("country")) {
           resolvedSector = val;
+        } else if (low.includes("portal") || low.includes("supplier") || low.includes("booked from") || low.includes("issue portal") || low.includes("desk")) {
+          resolvedPortal = val;
         }
       }
 
@@ -305,7 +308,7 @@ export default function BookingModal({
         resolvedSector = activeService?.name || "Travel Service";
       }
       if (!resolvedPnr) {
-        resolvedPnr = `TRV-${Date.now().toString().slice(-6)}`;
+        resolvedPnr = `CCJ-${Date.now().toString().slice(-6)}`;
       }
       if (!resolvedTravelDate) {
         resolvedTravelDate = issueDate || new Date().toISOString().substring(0, 10);
@@ -321,7 +324,7 @@ export default function BookingModal({
         flightNo: resolvedFlightNo || null,
         pnr: resolvedPnr || null,
         flightTime: resolvedFlightTime || null,
-        portal: portal.trim() || null,
+        portal: resolvedPortal || null,
         passengerCount: Number(passengerCount) || 1,
         passengerNames: passengerNames.trim() || null,
         passportNo: resolvedPassportNo || null,
@@ -675,7 +678,14 @@ export default function BookingModal({
                                 onChange={(e) => {
                                   const dateVal = e.target.value;
                                   setCustomFieldValues((prev) => ({ ...prev, [fld.name]: dateVal }));
-                                  if (!travelDate) setTravelDate(dateVal);
+                                  const low = fld.name.toLowerCase();
+                                  if (low.includes("expiry")) {
+                                    setExpiryDate(dateVal);
+                                  } else if (low.includes("submission") || low.includes("applied")) {
+                                    setSubmissionDate(dateVal);
+                                  } else {
+                                    setTravelDate(dateVal);
+                                  }
                                 }}
                                 className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-semibold focus:ring-2 focus:ring-sky-500"
                               />
@@ -693,9 +703,14 @@ export default function BookingModal({
                               <select
                                 required={fld.required}
                                 value={val}
-                                onChange={(e) =>
-                                  setCustomFieldValues((prev) => ({ ...prev, [fld.name]: e.target.value }))
-                                }
+                                onChange={(e) => {
+                                  const selVal = e.target.value;
+                                  setCustomFieldValues((prev) => ({ ...prev, [fld.name]: selVal }));
+                                  const low = fld.name.toLowerCase();
+                                  if (low.includes("portal") || low.includes("supplier") || low.includes("desk") || low.includes("booked")) {
+                                    setPortal(selVal);
+                                  }
+                                }}
                                 className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium focus:ring-2 focus:ring-sky-500"
                               >
                                 <option value="">-- Select {fld.name} --</option>
@@ -746,11 +761,17 @@ export default function BookingModal({
                                 const textVal = e.target.value;
                                 setCustomFieldValues((prev) => ({ ...prev, [fld.name]: textVal }));
                                 const low = fld.name.toLowerCase();
-                                if (!pnr && (low.includes("pnr") || low.includes("arn") || low.includes("reference"))) {
+                                if (low.includes("pnr") || low.includes("arn") || low.includes("reference") || low.includes("file number")) {
                                   setPnr(textVal.toUpperCase());
                                 }
-                                if (!sector && (low.includes("sector") || low.includes("route") || low.includes("destination"))) {
+                                if (low.includes("sector") || low.includes("route") || low.includes("destination") || low.includes("hotel") || low.includes("package")) {
                                   setSector(textVal);
+                                }
+                                if (low.includes("flight no") || low.includes("train no") || low.includes("bus no") || low.includes("package code") || low.includes("ticket no")) {
+                                  setFlightNo(textVal);
+                                }
+                                if (low.includes("portal") || low.includes("supplier") || low.includes("booked from") || low.includes("issue portal") || low.includes("desk")) {
+                                  setPortal(textVal);
                                 }
                               }}
                               className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs font-medium focus:ring-2 focus:ring-sky-500"

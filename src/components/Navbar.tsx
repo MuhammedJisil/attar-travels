@@ -43,7 +43,7 @@ export default function Navbar({
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-xs">
       <div className="max-w-7xl mx-auto px-3 sm:px-6">
-        <div className="flex items-center justify-between h-17 sm:h-18 gap-2 sm:gap-4 pb-0.5 sm:pb-1">
+        <div className="flex items-center justify-between py-3.5 sm:py-5 min-h-[76px] sm:min-h-[84px] gap-2 sm:gap-4">
           {/* Brand Logo & Name */}
           <div
             className="flex items-center gap-2.5 cursor-pointer group shrink-0"
@@ -163,11 +163,11 @@ export default function Navbar({
         </div>
 
         {/* Mobile Submenu Bar */}
-        <div className="md:hidden flex items-center justify-around border-t border-slate-100 py-2 text-xs">
+        <div className="md:hidden flex items-center justify-around border-t border-slate-100 dark:border-slate-800 py-2.5 text-xs">
           <button
             onClick={() => setActiveTab("dashboard")}
             className={`flex flex-col items-center py-1 px-2 rounded ${
-              activeTab === "dashboard" ? "text-sky-600 font-bold" : "text-slate-600"
+              activeTab === "dashboard" ? "text-sky-600 dark:text-sky-400 font-bold" : "text-slate-600 dark:text-slate-400"
             }`}
           >
             <div className="relative">
@@ -183,7 +183,7 @@ export default function Navbar({
           <button
             onClick={() => setActiveTab("bookings")}
             className={`flex flex-col items-center py-1 px-2 rounded ${
-              activeTab === "bookings" ? "text-sky-600 font-bold" : "text-slate-600"
+              activeTab === "bookings" ? "text-sky-600 dark:text-sky-400 font-bold" : "text-slate-600 dark:text-slate-400"
             }`}
           >
             <PlaneTakeoff size={18} />
@@ -192,7 +192,7 @@ export default function Navbar({
           <button
             onClick={() => setActiveTab("customers")}
             className={`flex flex-col items-center py-1 px-2 rounded ${
-              activeTab === "customers" ? "text-sky-600 font-bold" : "text-slate-600"
+              activeTab === "customers" ? "text-sky-600 dark:text-sky-400 font-bold" : "text-slate-600 dark:text-slate-400"
             }`}
           >
             <Users size={18} />
@@ -201,7 +201,7 @@ export default function Navbar({
           <button
             onClick={() => setActiveTab("services")}
             className={`flex flex-col items-center py-1 px-2 rounded ${
-              activeTab === "services" ? "text-sky-600 font-bold" : "text-slate-600"
+              activeTab === "services" ? "text-sky-600 dark:text-sky-400 font-bold" : "text-slate-600 dark:text-slate-400"
             }`}
           >
             <Layers size={18} />
@@ -210,7 +210,7 @@ export default function Navbar({
           <button
             onClick={() => setActiveTab("settings")}
             className={`flex flex-col items-center py-1 px-2 rounded ${
-              activeTab === "settings" ? "text-sky-600 font-bold" : "text-slate-600"
+              activeTab === "settings" ? "text-sky-600 dark:text-sky-400 font-bold" : "text-slate-600 dark:text-slate-400"
             }`}
           >
             <Settings size={18} />

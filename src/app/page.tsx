@@ -345,11 +345,11 @@ export default function HomePage() {
             {/* Header Title & Refresh */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <CalendarDays className="text-sky-600 shrink-0" size={24} />
+                <h2 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                  <CalendarDays className="text-sky-600 dark:text-sky-400 shrink-0" size={24} />
                   <span>Due Date Alerts & Travel Radar</span>
                 </h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                   Monitor upcoming passenger flights, schedule changes, and due dates before departure
                 </p>
               </div>
@@ -358,7 +358,7 @@ export default function HomePage() {
                 <button
                   onClick={fetchData}
                   disabled={loading}
-                  className="p-2 text-slate-600 hover:text-sky-600 bg-white border border-slate-200 rounded-xl transition hover:shadow-xs"
+                  className="p-2 text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl transition hover:shadow-xs"
                   title="Refresh Data"
                 >
                   <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
@@ -384,7 +384,7 @@ export default function HomePage() {
             {/* Filtered Bookings Table & Mobile Cards */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
                   {activeFilter === "today"
                     ? "🚨 Flights Departing Today"
                     : activeFilter === "tomorrow"
@@ -401,7 +401,7 @@ export default function HomePage() {
                     ? "🛂 Passport Alerts (Expiry < 6 Mos & Submissions)"
                     : "All Travel Tickets & Bookings"}
                 </h3>
-                <span className="text-xs text-slate-500 font-medium">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                   Showing {filteredBookings.length} records
                 </span>
               </div>
@@ -426,11 +426,11 @@ export default function HomePage() {
           <div className="space-y-5 sm:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <PlaneTakeoff className="text-sky-600 shrink-0" size={24} />
+                <h2 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                  <PlaneTakeoff className="text-sky-600 dark:text-sky-400 shrink-0" size={24} />
                   <span>All Tickets & Bookings</span>
                 </h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                   Complete ledger of flight tickets, passenger manifests, and travel documents
                 </p>
               </div>
@@ -463,11 +463,11 @@ export default function HomePage() {
           <div className="space-y-5 sm:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <Users className="text-sky-600 shrink-0" size={24} />
+                <h2 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                  <Users className="text-sky-600 dark:text-sky-400 shrink-0" size={24} />
                   <span>Customers & Parties</span>
                 </h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                   Click any customer to inspect all their booked services, flights, and payments
                 </p>
               </div>
@@ -495,11 +495,11 @@ export default function HomePage() {
           <div className="space-y-5 sm:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <Layers className="text-sky-600 shrink-0" size={24} />
+                <h2 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                  <Layers className="text-sky-600 dark:text-sky-400 shrink-0" size={24} />
                   <span>Services Configuration</span>
                 </h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                   Manage the service dropdown options (Flight Ticket, Passport, Visa, Tour Packages, etc.)
                 </p>
               </div>
@@ -520,27 +520,27 @@ export default function HomePage() {
                 return (
                   <div
                     key={service.id}
-                    className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-sky-300 transition"
+                    className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between hover:border-sky-300 dark:hover:border-sky-700 transition"
                   >
                     <div>
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-base text-slate-900">{service.name}</span>
-                        <span className="text-xs font-mono font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded">
+                        <span className="font-bold text-base text-slate-900 dark:text-white">{service.name}</span>
+                        <span className="text-xs font-mono font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/60 px-2 py-0.5 rounded">
                           {service.code || "SRV"}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
                         {getServiceDisplayDescription(service)}
                       </p>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                      <span className="text-slate-500">
-                        Total bookings: <strong className="text-slate-800">{count}</strong>
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Total bookings: <strong className="text-slate-800 dark:text-slate-200">{count}</strong>
                       </span>
                       <button
                         onClick={() => setIsServicesModalOpen(true)}
-                        className="font-bold text-sky-600 hover:underline"
+                        className="font-bold text-sky-600 dark:text-sky-400 hover:underline"
                       >
                         Edit →
                       </button>

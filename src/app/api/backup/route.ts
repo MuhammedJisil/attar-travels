@@ -177,7 +177,7 @@ export async function POST(request: Request) {
 
         if (!targetCustomerId || !targetServiceId) continue;
 
-        const bookingNo = bk.bookingNo || `TRV-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+        const bookingNo = bk.bookingNo || `CCJ-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
 
         if (hasDb) {
           await prisma.booking.upsert({

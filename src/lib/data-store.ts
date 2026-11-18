@@ -652,7 +652,7 @@ export async function createBooking(data: Partial<Booking>): Promise<Booking> {
   const balanceAmount = Math.max(0, totalAmount - paidAmount);
   const paymentStatus = balanceAmount === 0 ? "Paid" : paidAmount > 0 ? "Partial" : "Pending";
 
-  const bookingNo = data.bookingNo || `TRV-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+  const bookingNo = data.bookingNo || `CCJ-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
 
   if (hasDatabase()) {
     try {
