@@ -84,6 +84,35 @@ export function getAgentName(b: Booking): string | null {
   return null;
 }
 
+function toSingleTitle(text: string): string {
+  if (!text) return "";
+  const t = text.trim();
+  const low = t.toLowerCase();
+
+  if (low.includes("destination")) return "DESTINATION";
+  if (low.includes("tracking") || low.includes("consignment") || low.includes("waybill") || low.includes("awb")) return "TRACKING NO";
+  if (low.includes("dispatch date") || low.includes("booking date")) return "BOOKING DATE";
+  if (low.includes("travel date") || low.includes("departure date")) return "TRAVEL DATE";
+  if (low.includes("journey date")) return "JOURNEY DATE";
+  if (low.includes("appointment date")) return "APPOINTMENT DATE";
+  if (low.includes("courier") || low.includes("carrier")) return "COURIER COMPANY";
+  if (low.includes("sector")) return "SECTOR";
+  if (low.includes("flight no") || low.includes("flight number")) return "FLIGHT NO";
+  if (low.includes("irctc")) return "IRCTC PNR";
+  if (low.includes("airline pnr") || low.includes("pnr")) return "PNR";
+  if (low.includes("portal") || low.includes("supplier") || low.includes("provider")) return "PORTAL";
+  if (low.includes("party name") || low.includes("customer")) return "PARTY NAME";
+  if (low.includes("days left") || low.includes("timeline")) return "TIMELINE";
+  if (low.includes("fare") || low.includes("dues")) return "FARE & DUES";
+  if (low.includes("status")) return "STATUS";
+  if (low.includes("action")) return "ACTIONS";
+
+  if (t.includes("/")) {
+    return t.split("/")[0].trim().toUpperCase();
+  }
+  return t.toUpperCase();
+}
+
 export default function BookingList({
   bookings,
   serviceTypes,
@@ -340,12 +369,12 @@ export default function BookingList({
                         <span>•</span>
                         <span className="font-semibold text-sky-700 dark:text-sky-300">👤 {getAgentName(b)}</span>
                       </>
-                    ) : (
+                    ) : isFlight ? (
                       <>
                         <span>•</span>
                         <span className="font-mono text-slate-400">{formatBookingNo(b.bookingNo)}</span>
                       </>
-                    )}
+                    ) : null}
                     {displayPnr && (
                       <>
                         <span>•</span>
@@ -455,16 +484,16 @@ export default function BookingList({
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 uppercase tracking-wider font-semibold text-[11px]">
-                    <th className="py-3 px-4">{col1Header}</th>
-                    <th className="py-3 px-4">Party Name & Mobile</th>
-                    <th className="py-3 px-4">Service</th>
-                    <th className="py-3 px-4">{col4Header}</th>
-                    <th className="py-3 px-4">{col5Header}</th>
-                    <th className="py-3 px-4">{col6Header}</th>
-                    <th className="py-3 px-4">{col7Header}</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Fare & Dues</th>
-                    <th className="py-3 px-4 text-center">Actions</th>
+                    <th className="py-3 px-4">{toSingleTitle(col1Header)}</th>
+                    <th className="py-3 px-4">{toSingleTitle("Party Name")}</th>
+                    <th className="py-3 px-4">SERVICE</th>
+                    <th className="py-3 px-4">{toSingleTitle(col4Header)}</th>
+                    <th className="py-3 px-4">{toSingleTitle(col5Header)}</th>
+                    <th className="py-3 px-4">{toSingleTitle(col6Header)}</th>
+                    <th className="py-3 px-4">{toSingleTitle(col7Header)}</th>
+                    <th className="py-3 px-4">STATUS</th>
+                    <th className="py-3 px-4 text-right">FARE & DUES</th>
+                    <th className="py-3 px-4 text-center">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -570,11 +599,11 @@ export default function BookingList({
                                   {getAgentName(b)}
                                 </span>
                               </div>
-                            ) : (
+                            ) : isFlight ? (
                               <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
                                 {formatBookingNo(b.bookingNo)}
                               </div>
-                            )}
+                            ) : null}
                             {b.passportNo && (
                               <div className="text-[10px] font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-800 mt-1 flex items-center gap-1">
                                 <span>🛂</span>

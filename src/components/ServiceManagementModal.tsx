@@ -22,6 +22,7 @@ import {
   Loader2,
   ChevronUp,
   ChevronDown,
+  MessageCircle,
 } from "lucide-react";
 import {
   DEFAULT_TEMPLATES,
@@ -67,6 +68,7 @@ export default function ServiceManagementModal({
   const [hasPax, setHasPax] = useState(true);
   const [customDesc, setCustomDesc] = useState("");
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
+  const [whatsappTemplate, setWhatsappTemplate] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +82,7 @@ export default function ServiceManagementModal({
     applyTemplate("flight");
     setCustomDesc("");
     setCustomFields([]);
+    setWhatsappTemplate(DEFAULT_TEMPLATES.flight.whatsappTemplate || "");
     setEditingId(null);
     setError(null);
   };
@@ -129,6 +132,7 @@ export default function ServiceManagementModal({
     setDateLabel(tmpl.dateLabel);
     setHasReturnDate(tmpl.hasReturnDate);
     setHasPax(tmpl.hasPax);
+    setWhatsappTemplate(tmpl.whatsappTemplate || "");
     setCustomFields(tmpl.customFields ? JSON.parse(JSON.stringify(tmpl.customFields)) : []);
   };
 
@@ -152,6 +156,7 @@ export default function ServiceManagementModal({
     setDateLabel(config.dateLabel);
     setHasReturnDate(config.hasReturnDate);
     setHasPax(config.hasPax);
+    setWhatsappTemplate(config.whatsappTemplate || DEFAULT_TEMPLATES[config.template]?.whatsappTemplate || "");
     setCustomFields(config.customFields || []);
 
     // Extract human description if present
@@ -218,6 +223,7 @@ export default function ServiceManagementModal({
       hasTime,
       dateLabel: dFld?.name || dateLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].dateLabel,
       portalLabel: supFld?.name || DEFAULT_TEMPLATES[serviceTemplate].portalLabel,
+      whatsappTemplate: whatsappTemplate.trim() || undefined,
       hasReturnDate,
       hasPax,
       userDescription: customDesc.trim() || undefined,
@@ -626,26 +632,16 @@ export default function ServiceManagementModal({
                         </div>
                       </div>
 
-                      {/* Display in Dashboard & Required Toggles */}
+                      {/* Required Toggle */}
                       <div className="flex flex-wrap items-center gap-3 pt-1">
-                        <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-300">
+                        <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
                           <input
                             type="checkbox"
                             checked={!!field.required}
                             onChange={(e) => handleUpdateCustomField(field.id, { required: e.target.checked })}
                             className="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"
                           />
-                          <span>Mandatory Field</span>
-                        </label>
-
-                        <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 px-2.5 py-1 rounded-lg border border-sky-200 dark:border-sky-800">
-                          <input
-                            type="checkbox"
-                            checked={field.showInTable ?? true}
-                            onChange={(e) => handleUpdateCustomField(field.id, { showInTable: e.target.checked })}
-                            className="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"
-                          />
-                          <span>📊 Show in Main Dashboard Table</span>
+                          <span>Mandatory Field (Used as Dashboard Column)</span>
                         </label>
                       </div>
 
@@ -722,6 +718,67 @@ export default function ServiceManagementModal({
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Step 3: WhatsApp Notification Message Template */}
+            <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span className="font-bold text-emerald-950 dark:text-emerald-200 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                    <MessageCircle size={15} className="text-emerald-600 dark:text-emerald-400" />
+                    3. WhatsApp Message Template for this Service
+                  </span>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Customize the exact message text sent to customers on WhatsApp for this service
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWhatsappTemplate(DEFAULT_TEMPLATES[serviceTemplate]?.whatsappTemplate || "")}
+                  className="text-[11px] text-emerald-700 dark:text-emerald-400 hover:underline font-bold self-start sm:self-auto"
+                >
+                  Reset Template
+                </button>
+              </div>
+
+              <textarea
+                rows={7}
+                value={whatsappTemplate}
+                onChange={(e) => setWhatsappTemplate(e.target.value)}
+                placeholder="Enter customized WhatsApp message for this service..."
+                className="w-full p-3 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 leading-relaxed"
+              />
+
+              {/* Dynamic tag chips */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                  Available Tag Placeholders (Click to insert):
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    "{customer_name}",
+                    "{service_name}",
+                    "{route}",
+                    "{pnr}",
+                    "{date}",
+                    "{time}",
+                    "{portal}",
+                    "{status}",
+                    "{booking_no}",
+                    "{agency_name}",
+                    "{agency_phone}",
+                  ].map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setWhatsappTemplate((prev) => prev ? `${prev} ${tag}` : tag)}
+                      className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-800 text-[10px] font-mono text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition"
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Form Action Buttons */}

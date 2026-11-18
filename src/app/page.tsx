@@ -210,14 +210,24 @@ export default function HomePage() {
     if (activeFilter === "passports") {
       const isPassport =
         b.serviceType?.code === "PASSPORT" ||
-        (b.serviceType?.name || "").toLowerCase().includes("passport") ||
-        Boolean(b.passportNo);
+        (b.serviceType?.name || "").toLowerCase().includes("passport");
 
       if (!isPassport) return false;
       const expDiff = b.expiryDate ? getDaysDifference(b.expiryDate) : null;
       const isExpiringSoon = expDiff ? expDiff.days <= 180 : false;
       const isSubmissionPending = Boolean(b.submissionDate && b.status !== "Completed");
       return isExpiringSoon || isSubmissionPending || Boolean(b.expiryDate) || Boolean(b.submissionDate);
+    }
+    if (activeFilter === "visas") {
+      const isVisa =
+        b.serviceType?.code === "VISA" ||
+        (b.serviceType?.name || "").toLowerCase().includes("visa");
+
+      if (!isVisa) return false;
+      const expDiff = b.expiryDate ? getDaysDifference(b.expiryDate) : null;
+      const isExpiringSoon = expDiff ? expDiff.days <= 60 : false;
+      const isProcessing = b.status !== "Completed" && b.status !== "Cancelled";
+      return isProcessing || isExpiringSoon || Boolean(b.submissionDate);
     }
     return true;
   });
@@ -399,6 +409,8 @@ export default function HomePage() {
                     ? "💳 Bookings with Pending Dues"
                     : activeFilter === "passports"
                     ? "🛂 Passport Alerts (Expiry < 6 Mos & Submissions)"
+                    : activeFilter === "visas"
+                    ? "🌐 Visa Processing & Expiry Alerts"
                     : "All Travel Tickets & Bookings"}
                 </h3>
                 <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">

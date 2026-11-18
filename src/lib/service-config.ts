@@ -41,6 +41,7 @@ export interface ServiceFieldDefinition {
   notesPlaceholder: string;
   userDescription?: string;
   customFields?: CustomFieldDefinition[];
+  whatsappTemplate?: string;
 }
 
 export const DEFAULT_TEMPLATES: Record<ServiceTemplateType, ServiceFieldDefinition> = {
@@ -62,6 +63,24 @@ export const DEFAULT_TEMPLATES: Record<ServiceTemplateType, ServiceFieldDefiniti
     hasSubmissionDates: false,
     portalLabel: "Issued From Portal / Supplier",
     notesPlaceholder: "Luggage allowance, terminal info, meal preferences...",
+    whatsappTemplate: `✈️ *FLIGHT TRAVEL REMINDER*
+━━━━━━━━━━━━━━━━━━
+Dear *{customer_name}*,
+
+Greetings from *{agency_name}*! Here are the details for your upcoming travel:
+
+📋 *Booking Ref:* {booking_no}
+🛫 *Flight:* {number}
+📍 *Sector:* {route}
+📅 *Travel Date:* {date}
+⏰ *Flight Time:* {time}
+⏳ *Airport Reporting:* Please arrive at the airport at least 3 hours prior to departure for international flights, and 2 hours for domestic flights. Don't forget your original Passport/ID and Visa.
+🎫 *PNR:* {pnr}
+👥 *Passengers:* {passengers}
+📌 *Status:* {status}
+
+Wishing you a safe and pleasant journey! 🌟
+📞 For queries, reach us at: {agency_phone}`,
     customFields: [
       { id: "f_fdate", name: "Travel / Departure Date", type: "date", required: true },
       { id: "f_ftime", name: "Flight Departure Time", type: "time" },
@@ -144,6 +163,21 @@ export const DEFAULT_TEMPLATES: Record<ServiceTemplateType, ServiceFieldDefiniti
     hasSubmissionDates: true,
     portalLabel: "Passport Seva Portal User",
     notesPlaceholder: "Police verification status, Tatkal notes...",
+    whatsappTemplate: `🛂 *PASSPORT SERVICE APPOINTMENT DETAILS*
+━━━━━━━━━━━━━━━━━━
+Dear *{customer_name}*,
+
+Greetings from *{agency_name}*! Here are your passport appointment details:
+
+📋 *Booking Ref:* {booking_no}
+🏢 *Passport Office / PSK:* {route}
+📄 *File / ARN Number:* {pnr}
+📅 *Appointment Date:* {date}
+🕒 *Reporting Time:* {time}
+📌 *Status:* {status}
+
+⚠️ *Notice:* Please report at the PSK center 15 minutes before your appointment time. Carry all original documents, photocopies, and payment receipt.
+📞 For queries, reach us at: {agency_phone}`,
     customFields: [
       { id: "f_pnum", name: "Passport Number", type: "text", placeholder: "e.g. Z1234567" },
       { id: "f_parn", name: "ARN / File Number", type: "text", placeholder: "e.g. 24-0001234567" },
@@ -171,6 +205,20 @@ export const DEFAULT_TEMPLATES: Record<ServiceTemplateType, ServiceFieldDefiniti
     hasSubmissionDates: true,
     portalLabel: "Embassy / Portal Applied",
     notesPlaceholder: "Sponsor details, stamping status...",
+    whatsappTemplate: `🌐 *VISA APPLICATION STATUS UPDATE*
+━━━━━━━━━━━━━━━━━━
+Dear *{customer_name}*,
+
+Greetings from *{agency_name}*! Here is the status of your visa application:
+
+📋 *Booking Ref:* {booking_no}
+🌍 *Country / Category:* {route}
+📄 *Passport / App No:* {passport_no}
+📅 *Submission Date:* {date}
+📌 *Status:* {status}
+
+We are tracking your visa processing and will notify you immediately once approved.
+📞 For queries, reach us at: {agency_phone}`,
     customFields: [
       { id: "f_vcountry", name: "Destination Country & Category", type: "text", required: true, placeholder: "e.g. UAE 60 Days Tourist" },
       { id: "f_vpass", name: "Passport Number", type: "text", required: true, placeholder: "e.g. V9876543" },
@@ -252,6 +300,22 @@ export const DEFAULT_TEMPLATES: Record<ServiceTemplateType, ServiceFieldDefiniti
     hasSubmissionDates: false,
     portalLabel: "Courier Company / Network (e.g. DHL, FedEx, BlueDart)",
     notesPlaceholder: "Weight, parcel contents, receiver address, contact...",
+    whatsappTemplate: `📦 *COURIER & SHIPMENT BOOKING UPDATE*
+━━━━━━━━━━━━━━━━━━
+Dear *{customer_name}*,
+
+Greetings from *{agency_name}*! Here are the details for your courier shipment:
+
+📋 *Booking Ref:* {booking_no}
+📦 *Service:* {service_name}
+📍 *Destination:* {route}
+🚚 *Tracking No:* {pnr}
+🏢 *Courier Partner:* {portal}
+📅 *Booking / Dispatch Date:* {date}
+📌 *Status:* {status}
+
+Track your shipment with your tracking number or contact us for delivery updates.
+📞 For queries, reach us at: {agency_phone}`,
     customFields: [
       { id: "c_date", name: "Booking / Dispatch Date", type: "date", required: true, showInTable: true },
       { id: "c_route", name: "Destination / Delivery City", type: "text", required: true, placeholder: "e.g. Dubai, UAE", showInTable: true },
@@ -279,6 +343,21 @@ export const DEFAULT_TEMPLATES: Record<ServiceTemplateType, ServiceFieldDefiniti
     hasSubmissionDates: false,
     portalLabel: "Provider / Supplier",
     notesPlaceholder: "Additional details or notes...",
+    whatsappTemplate: `📋 *{service_name} BOOKING DETAILS*
+━━━━━━━━━━━━━━━━━━
+Dear *{customer_name}*,
+
+Greetings from *{agency_name}*! Here are the details of your booking:
+
+📋 *Booking Ref:* {booking_no}
+💼 *Service:* {service_name}
+📍 *Details:* {route}
+🎫 *Ref / Tracking No:* {pnr}
+📅 *Date:* {date}
+📌 *Status:* {status}
+
+Thank you for choosing *{agency_name}*!
+📞 For queries, reach us at: {agency_phone}`,
     customFields: [],
   },
 };
@@ -347,6 +426,7 @@ export function getServiceFieldConfig(service?: ServiceType | null): ServiceFiel
         pnrLabel: resolvedPnrLabel,
         dateLabel: resolvedDateLabel,
         portalLabel: resolvedPortalLabel,
+        whatsappTemplate: parsed.whatsappTemplate || base.whatsappTemplate,
         customFields: mergedFields,
         title: parsed.title || `${service.name} Details`,
       };
@@ -564,4 +644,92 @@ export function serializeCustomFieldValues(
     return `${CUSTOM_MARKER}\n${jsonStr}`;
   }
   return `${trimmed}\n\n${CUSTOM_MARKER}\n${jsonStr}`;
+}
+
+/**
+ * Format customized WhatsApp message template using booking data and agency settings
+ */
+export function formatCustomWhatsAppMessage(
+  template: string,
+  booking: {
+    bookingNo?: string | number | null;
+    sector?: string | null;
+    pnr?: string | null;
+    flightNo?: string | null;
+    travelDate?: string | null;
+    flightTime?: string | null;
+    portal?: string | null;
+    passengerCount?: number | null;
+    passengerNames?: string | null;
+    passportNo?: string | null;
+    totalAmount?: number | null;
+    paidAmount?: number | null;
+    balanceAmount?: number | null;
+    status?: string | null;
+    notes?: string | null;
+    customer?: { name?: string | null; phone?: string | null } | null;
+    serviceType?: { name?: string | null; code?: string | null } | null;
+  },
+  agency?: { agencyName?: string | null; phone?: string | null } | null
+): string {
+  if (!template) return "";
+  const customerName = booking.customer?.name || "Valued Customer";
+  const agencyName = agency?.agencyName || "Travel Desk";
+  const agencyPhone = agency?.phone || "";
+  const bookingNo = booking.bookingNo ? `CCJ-2026-${String(booking.bookingNo).padStart(3, "0")}` : "N/A";
+  const serviceName = booking.serviceType?.name || "Service";
+  const custom = extractCustomFieldValues(booking.notes);
+
+  const isFlight = isFlightOrTravelService(booking.serviceType as any);
+  const isFakeAutoPnr = !isFlight && booking.pnr && /^CCJ-\d+$/i.test(booking.pnr);
+  const customRef = Object.entries(custom).find(([k]) => /tracking|consignment|awb|waybill|arn|file|pnr|ref/i.test(k))?.[1];
+  const pnrVal = (!isFakeAutoPnr && booking.pnr) ? booking.pnr : (customRef || "—");
+
+  const customRoute = Object.entries(custom).find(([k]) => /route|destination|delivery|city|hotel|package|item/i.test(k))?.[1];
+  const isSectorSameAsService = booking.sector && booking.serviceType?.name && booking.sector.toLowerCase().trim() === booking.serviceType.name.toLowerCase().trim();
+  const routeVal = (!isSectorSameAsService && booking.sector) ? booking.sector : (customRoute || (!isSectorSameAsService ? booking.sector : null) || "—");
+
+  const dateVal = booking.travelDate
+    ? new Date(booking.travelDate).toLocaleDateString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : "—";
+
+  const timeVal = booking.flightTime ? formatFlightTrainTime(booking.flightTime) : "—";
+  const portalVal = booking.portal || "—";
+  const statusVal = booking.status || "Confirmed";
+  const paxVal = booking.passengerNames || `${booking.passengerCount || 1} Pax`;
+  const numberVal = booking.flightNo || "—";
+  const passportVal = booking.passportNo || "—";
+  const totalAmount = `₹${(booking.totalAmount || 0).toLocaleString()}`;
+  const paidAmount = `₹${(booking.paidAmount || 0).toLocaleString()}`;
+  const balanceDue = `₹${(booking.balanceAmount || 0).toLocaleString()}`;
+
+  return template
+    .replace(/{customer_name}/gi, customerName)
+    .replace(/{agency_name}/gi, agencyName)
+    .replace(/{agency_phone}/gi, agencyPhone)
+    .replace(/{booking_no}/gi, bookingNo)
+    .replace(/{service_name}/gi, serviceName)
+    .replace(/{route}/gi, routeVal)
+    .replace(/{destination}/gi, routeVal)
+    .replace(/{sector}/gi, routeVal)
+    .replace(/{pnr}/gi, pnrVal)
+    .replace(/{tracking_no}/gi, pnrVal)
+    .replace(/{date}/gi, dateVal)
+    .replace(/{time}/gi, timeVal)
+    .replace(/{portal}/gi, portalVal)
+    .replace(/{supplier}/gi, portalVal)
+    .replace(/{status}/gi, statusVal)
+    .replace(/{passengers}/gi, paxVal)
+    .replace(/{pax}/gi, paxVal)
+    .replace(/{number}/gi, numberVal)
+    .replace(/{flight_no}/gi, numberVal)
+    .replace(/{passport_no}/gi, passportVal)
+    .replace(/{total_amount}/gi, totalAmount)
+    .replace(/{paid_amount}/gi, paidAmount)
+    .replace(/{balance_due}/gi, balanceDue);
 }

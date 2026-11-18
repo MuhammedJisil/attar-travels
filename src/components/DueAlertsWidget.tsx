@@ -34,6 +34,7 @@ export default function DueAlertsWidget({
   let delayedCount = 0;
   let paymentPendingCount = 0;
   let passportAlertCount = 0;
+  let visaAlertCount = 0;
 
   bookings.forEach((b) => {
     const diff = getDaysDifference(b.travelDate);
@@ -50,28 +51,39 @@ export default function DueAlertsWidget({
       paymentPendingCount++;
     }
 
-    // Passport Alerts calculation:
+    // Passport Alerts calculation (ONLY for actual Passport service):
     const isPassport =
       b.serviceType?.code === "PASSPORT" ||
-      (b.serviceType?.name || "").toLowerCase().includes("passport") ||
-      Boolean(b.passportNo);
+      (b.serviceType?.name || "").toLowerCase().includes("passport");
 
     if (isPassport) {
       const expDiff = b.expiryDate ? getDaysDifference(b.expiryDate) : null;
-      // Alert if passport expires within 6 months (180 days) or already expired
       const isExpiringSoon = expDiff ? expDiff.days <= 180 : false;
-      // Alert if submitted and still In Process / pending collection
       const isSubmissionPending = Boolean(b.submissionDate && b.status !== "Completed");
       if (isExpiringSoon || isSubmissionPending) {
         passportAlertCount++;
+      }
+    }
+
+    // Visa Alerts calculation (ONLY for Visa processing service):
+    const isVisa =
+      b.serviceType?.code === "VISA" ||
+      (b.serviceType?.name || "").toLowerCase().includes("visa");
+
+    if (isVisa) {
+      const expDiff = b.expiryDate ? getDaysDifference(b.expiryDate) : null;
+      const isExpiringSoon = expDiff ? expDiff.days <= 60 : false;
+      const isProcessing = b.status !== "Completed" && b.status !== "Cancelled";
+      if (isProcessing || isExpiringSoon || Boolean(b.submissionDate)) {
+        visaAlertCount++;
       }
     }
   });
 
   return (
     <div className="space-y-3">
-      {/* Overview Stat Cards (Clean 5-Card Layout) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+      {/* Overview Stat Cards (Clean 6-Card Responsive Layout) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         {/* Today Alert Card */}
         <button
           type="button"
@@ -166,6 +178,27 @@ export default function DueAlertsWidget({
           </div>
           <div className="text-2xl font-black text-indigo-800 dark:text-indigo-300 mt-1">{passportAlertCount}</div>
           <div className="text-[11px] text-indigo-700 dark:text-indigo-400 font-medium truncate">Expiry & Renewal</div>
+        </button>
+
+        {/* Visa Alerts Card */}
+        <button
+          type="button"
+          onClick={() => onSelectFilter(activeFilter === "visas" ? "all" : "visas")}
+          className={`p-3.5 rounded-2xl border text-left transition-all ${
+            activeFilter === "visas"
+              ? "bg-purple-50 dark:bg-purple-950/40 border-purple-300 dark:border-purple-800 ring-2 ring-purple-400 shadow-sm"
+              : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-purple-200 hover:bg-purple-50/30 dark:hover:bg-slate-800/60"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400 flex items-center gap-1">
+              {visaAlertCount > 0 && <span className="w-2 h-2 rounded-full bg-purple-500 animate-ping"></span>}
+              Visa Alerts
+            </span>
+            <ShieldAlert size={16} className="text-purple-500" />
+          </div>
+          <div className="text-2xl font-black text-purple-800 dark:text-purple-300 mt-1">{visaAlertCount}</div>
+          <div className="text-[11px] text-purple-700 dark:text-purple-400 font-medium truncate">Processing & Expiry</div>
         </button>
       </div>
     </div>

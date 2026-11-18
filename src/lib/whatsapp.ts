@@ -1,5 +1,6 @@
 import { Booking, AgencySettings } from "./types";
 import { formatBookingNo, formatFlightTimeDisplay } from "./date-utils";
+import { getServiceFieldConfig, formatCustomWhatsAppMessage, isFlightOrTravelService } from "./service-config";
 
 export function formatPhoneNumber(phone: string): string {
   // Strip non-digits
@@ -56,6 +57,12 @@ export function createServiceReminderMessage(
   booking: Booking,
   agency?: Partial<AgencySettings>
 ): string {
+  // If service has a configured custom WhatsApp template, use it!
+  const serviceConfig = getServiceFieldConfig(booking.serviceType);
+  if (serviceConfig.whatsappTemplate && serviceConfig.whatsappTemplate.trim() !== "") {
+    return formatCustomWhatsAppMessage(serviceConfig.whatsappTemplate, booking, agency);
+  }
+
   const serviceName = booking.serviceType?.name || "Travel Service";
   const n = serviceName.toLowerCase();
 
@@ -182,8 +189,27 @@ export function createFlightDelayMessage(
   booking: Booking,
   agency?: Partial<AgencySettings>
 ): string {
+  const isFlight = isFlightOrTravelService(booking.serviceType);
   const customerName = booking.customer?.name || "Valued Customer";
   const agencyName = agency?.agencyName || "Travel Desk";
+
+  if (!isFlight) {
+    const serviceName = booking.serviceType?.name || "Service";
+    return `⚠️ *${serviceName.toUpperCase()} STATUS UPDATE ALERT*
+━━━━━━━━━━━━━━━━━━
+Dear *${customerName}*,
+
+This is an update notification from *${agencyName}* regarding your ${serviceName} booking.
+
+📋 *Booking Ref:* ${formatBookingNo(booking.bookingNo)}
+📦 *Service:* ${serviceName}
+📍 *Details:* ${booking.sector || "As booked"}
+🚨 *Updated Status:* *${booking.status.toUpperCase()}*
+📝 *Notes:* ${booking.alertNotes || "Status has been updated."}
+
+Please contact our desk if you require any assistance:
+📞 *Call/WhatsApp:* ${agency?.phone || ""}`;
+  }
 
   return `⚠️ *FLIGHT STATUS UPDATE ALERT*
 ━━━━━━━━━━━━━━━━━━
@@ -238,25 +264,23 @@ export function createInvoiceShareMessage(
   booking: Booking,
   agency?: Partial<AgencySettings>
 ): string {
+  const isFlight = isFlightOrTravelService(booking.serviceType);
   const customerName = booking.customer?.name || "Valued Customer";
   const agencyName = agency?.agencyName || "Travel Desk";
 
-  return `📄 *TRAVEL INVOICE / BOOKING CONFIRMATION*
+  return `📄 *BOOKING INVOICE & CONFIRMATION*
 ━━━━━━━━━━━━━━━━━━
 Dear *${customerName}*,
 
-Thank you for choosing *${agencyName}*. Here is your booking confirmation:
+Thank you for choosing *${agencyName}*. Here are your booking details:
 
-🧾 *Invoice/Booking No:* ${formatBookingNo(booking.bookingNo)}
-💼 *Service:* ${booking.serviceType?.name || "Flight Ticket"}
-📍 *Sector/Details:* ${booking.sector || "N/A"}
-🎫 *PNR / Ref:* ${booking.pnr || "N/A"}
-🛫 *Flight No:* ${booking.flightNo || "N/A"}
-💰 *Total Fare:* ₹${booking.totalAmount.toLocaleString()}
+🧾 *Booking Ref:* ${formatBookingNo(booking.bookingNo)}
+💼 *Service:* ${booking.serviceType?.name || "Travel Service"}
+📍 *Details:* ${booking.sector || "N/A"}
+${booking.pnr ? `🎫 *Reference / Tracking:* ${booking.pnr}\n` : ""}${isFlight && booking.flightNo ? `🛫 *Flight No:* ${booking.flightNo}\n` : ""}💰 *Total Amount:* ₹${booking.totalAmount.toLocaleString()}
 💳 *Paid:* ₹${booking.paidAmount.toLocaleString()}
 ⚖️ *Balance:* ₹${booking.balanceAmount.toLocaleString()}
 
-Official invoice is attached / available on request. Have a wonderful trip!
-Contact: ${agency?.phone || ""}`;
+${agency?.bankDetails ? `🏦 *Payment Details:*\n${agency.bankDetails}\n` : ""}📞 For queries, contact: ${agency?.phone || ""}`;
 }
 

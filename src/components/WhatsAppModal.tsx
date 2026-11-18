@@ -20,7 +20,9 @@ import {
   AlertTriangle,
   CreditCard,
   FileText,
+  Package,
 } from "lucide-react";
+import { isFlightOrTravelService } from "@/lib/service-config";
 
 interface WhatsAppModalProps {
   booking: Booking | null;
@@ -70,6 +72,7 @@ export default function WhatsAppModal({
 
   const phone = booking.customer?.phone || "";
   const waUrl = generateWhatsAppUrl(phone, message);
+  const isFlight = isFlightOrTravelService(booking.serviceType);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message);
@@ -122,8 +125,8 @@ export default function WhatsAppModal({
                     : "border-slate-200 hover:bg-slate-50 text-slate-700"
                 }`}
               >
-                <Plane size={18} className="text-sky-600" />
-                <span>Flight Reminder</span>
+                {isFlight ? <Plane size={18} className="text-sky-600" /> : <Package size={18} className="text-sky-600" />}
+                <span>{isFlight ? "Flight Reminder" : "Booking Details"}</span>
               </button>
 
               <button
@@ -136,7 +139,7 @@ export default function WhatsAppModal({
                 }`}
               >
                 <AlertTriangle size={18} className="text-amber-600" />
-                <span>Delay Alert</span>
+                <span>{isFlight ? "Delay Alert" : "Status Alert"}</span>
               </button>
 
               <button
