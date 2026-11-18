@@ -882,19 +882,20 @@ export async function getAgencySettings(): Promise<AgencySettings> {
 }
 
 export async function updateAgencySettings(data: Partial<AgencySettings>): Promise<AgencySettings> {
+  const { id: _id, createdAt: _c, updatedAt: _u, ...cleanData } = (data as Record<string, unknown>);
   if (hasDatabase()) {
     try {
       return await prisma.agencySettings.upsert({
         where: { id: "default" },
-        update: data,
-        create: { ...initialAgencySettings, ...data },
+        update: cleanData,
+        create: { ...initialAgencySettings, ...cleanData },
       });
     } catch (e) {
       console.error("Prisma error in updateAgencySettings:", e);
       throw e;
     }
   }
-  memorySettings = { ...memorySettings, ...data };
+  memorySettings = { ...memorySettings, ...cleanData };
   return memorySettings;
 }
 

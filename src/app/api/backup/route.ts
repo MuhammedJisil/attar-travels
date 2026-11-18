@@ -5,6 +5,7 @@ import {
   getBookings,
   getServiceTypes,
   getAgencySettings,
+  getAdminUser,
   createCustomer,
   createBooking,
   createServiceType,
@@ -23,27 +24,37 @@ export async function GET() {
   try {
     await ensureDatabaseTables();
 
-    const [customers, bookings, serviceTypes, settings] = await Promise.all([
+    const [customers, bookings, serviceTypes, settings, adminUser] = await Promise.all([
       getCustomers(),
       getBookings(),
       getServiceTypes(),
       getAgencySettings(),
+      getAdminUser(),
     ]);
 
     const backupData = {
-      version: "2.0",
+      version: "2.1",
       app: "Attar Travels Management Desk",
       exportedAt: new Date().toISOString(),
       metadata: {
         totalCustomers: customers.length,
         totalBookings: bookings.length,
         totalServiceTypes: serviceTypes.length,
+        hasAdminCredentials: Boolean(adminUser),
       },
       data: {
         agencySettings: settings,
         serviceTypes,
         customers,
         bookings,
+        adminUser: adminUser
+          ? {
+              username: adminUser.username,
+              password: adminUser.password,
+              salt: adminUser.salt,
+              name: adminUser.name || "Administrator",
+            }
+          : undefined,
       },
     };
 
@@ -74,12 +85,40 @@ export async function POST(request: Request) {
 
     await ensureDatabaseTables();
 
-    const { agencySettings, serviceTypes, customers, bookings } = payload.data;
+    const { agencySettings, serviceTypes, customers, bookings, adminUser } = payload.data;
     const hasDb = !!getDatabaseUrl();
 
     let restoredServicesCount = 0;
     let restoredCustomersCount = 0;
     let restoredBookingsCount = 0;
+
+    // 0. Restore Admin User Credentials if present in backup
+    if (adminUser && adminUser.username && adminUser.password && adminUser.salt) {
+      if (hasDb) {
+        const existingAdmin = await prisma.user.findFirst();
+        if (existingAdmin) {
+          await prisma.user.update({
+            where: { id: existingAdmin.id },
+            data: {
+              username: adminUser.username,
+              password: adminUser.password,
+              salt: adminUser.salt,
+              name: adminUser.name || existingAdmin.name,
+            },
+          });
+        } else {
+          await prisma.user.create({
+            data: {
+              username: adminUser.username,
+              password: adminUser.password,
+              salt: adminUser.salt,
+              name: adminUser.name || "Administrator",
+              role: "admin",
+            },
+          });
+        }
+      }
+    }
 
     // 1. Restore Agency Settings if present
     if (agencySettings) {
