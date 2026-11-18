@@ -180,29 +180,48 @@ export default function ServiceManagementModal({
     setLoading(true);
     setError(null);
 
+    const validCustomFields = customFields
+      .filter((f) => f.name.trim() !== "")
+      .map((f) => ({
+        ...f,
+        name: f.name.trim(),
+        placeholder: f.placeholder?.trim() || undefined,
+        options:
+          f.type === "select"
+            ? (f.options || []).map((o) => o.trim()).filter(Boolean)
+            : undefined,
+      }));
+
+    // Derive column labels directly from mandatory fields if configured
+    const mandatoryFields = validCustomFields.filter((f) => f.required);
+    const rFld = mandatoryFields.find((f) => /route|sector|destination|delivery|city|location|station|from|to/i.test(f.name))
+      || mandatoryFields.find((f) => f.type === "text" && !/pnr|track|ref|awb|arn|file|no|num|code/i.test(f.name))
+      || validCustomFields.find((f) => /route|sector|destination|delivery|city/i.test(f.name));
+
+    const pFld = mandatoryFields.find((f) => /pnr|track|consignment|awb|waybill|arn|file|ref|ticket/i.test(f.name))
+      || mandatoryFields.find((f) => /code|id|number|no/i.test(f.name) && !/flight|train|bus/i.test(f.name))
+      || validCustomFields.find((f) => /pnr|track|consignment|awb|waybill|arn|file|ref/i.test(f.name));
+
+    const dFld = mandatoryFields.find((f) => f.type === "date" && !/expiry|return|birth/i.test(f.name))
+      || mandatoryFields.find((f) => f.type === "date")
+      || validCustomFields.find((f) => f.type === "date" && !/expiry|return|birth/i.test(f.name));
+
+    const supFld = validCustomFields.find((f) => /portal|supplier|carrier|partner|company|network|desk|vendor/i.test(f.name));
+
     const configPayload: Partial<ServiceFieldDefinition> = {
       template: serviceTemplate,
       title: title || `${serviceName.trim()} Details`,
-      routeLabel: routeLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].routeLabel,
+      routeLabel: rFld?.name || routeLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].routeLabel,
       numberLabel: numberLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].numberLabel,
-      pnrLabel: pnrLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].pnrLabel,
+      pnrLabel: pFld?.name || pnrLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].pnrLabel,
       timeLabel: timeLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].timeLabel,
       hasTime,
-      dateLabel: dateLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].dateLabel,
+      dateLabel: dFld?.name || dateLabel.trim() || DEFAULT_TEMPLATES[serviceTemplate].dateLabel,
+      portalLabel: supFld?.name || DEFAULT_TEMPLATES[serviceTemplate].portalLabel,
       hasReturnDate,
       hasPax,
       userDescription: customDesc.trim() || undefined,
-      customFields: customFields
-        .filter((f) => f.name.trim() !== "")
-        .map((f) => ({
-          ...f,
-          name: f.name.trim(),
-          placeholder: f.placeholder?.trim() || undefined,
-          options:
-            f.type === "select"
-              ? (f.options || []).map((o) => o.trim()).filter(Boolean)
-              : undefined,
-        })),
+      customFields: validCustomFields,
     };
 
     const finalDescription = JSON.stringify(configPayload);

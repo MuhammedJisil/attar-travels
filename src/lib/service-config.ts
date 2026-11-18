@@ -264,20 +264,20 @@ export const DEFAULT_TEMPLATES: Record<ServiceTemplateType, ServiceFieldDefiniti
   custom: {
     template: "custom",
     title: "Service Details",
-    routeLabel: "Route / Sector / Narration",
-    routePlaceholder: "Enter route or narration",
-    numberLabel: "Service / Document Number",
+    routeLabel: "Destination / Route",
+    routePlaceholder: "Enter destination or route",
+    numberLabel: "Reference Number",
     numberPlaceholder: "Enter reference number",
-    pnrLabel: "Reference / PNR No",
+    pnrLabel: "Ref / Tracking No",
     pnrPlaceholder: "Enter PNR or Ref",
-    timeLabel: "Service Time",
-    hasTime: true,
-    dateLabel: "Service / Travel Date",
-    hasReturnDate: true,
-    hasPax: true,
+    timeLabel: "Time",
+    hasTime: false,
+    dateLabel: "Booking Date",
+    hasReturnDate: false,
+    hasPax: false,
     hasPassportField: false,
     hasSubmissionDates: false,
-    portalLabel: "Portal / Supplier",
+    portalLabel: "Provider / Supplier",
     notesPlaceholder: "Additional details or notes...",
     customFields: [],
   },
@@ -314,9 +314,39 @@ export function getServiceFieldConfig(service?: ServiceType | null): ServiceFiel
         }
       }
 
+      // If custom fields exist, dynamically bind routeLabel, pnrLabel, dateLabel, portalLabel to mandatory/configured field titles
+      const mandatoryFields = mergedFields.filter((f) => f.required);
+      const rFld = mandatoryFields.find((f) => /route|sector|destination|delivery|city|location|station|from|to/i.test(f.name))
+        || mandatoryFields.find((f) => f.type === "text" && !/pnr|track|ref|awb|arn|file|no|num|code/i.test(f.name))
+        || mergedFields.find((f) => /route|sector|destination|delivery|city/i.test(f.name));
+
+      const pFld = mandatoryFields.find((f) => /pnr|track|consignment|awb|waybill|arn|file|ref|ticket/i.test(f.name))
+        || mandatoryFields.find((f) => /code|id|number|no/i.test(f.name) && !/flight|train|bus/i.test(f.name))
+        || mergedFields.find((f) => /pnr|track|consignment|awb|waybill|arn|file|ref/i.test(f.name));
+
+      const dFld = mandatoryFields.find((f) => f.type === "date" && !/expiry|return|birth/i.test(f.name))
+        || mandatoryFields.find((f) => f.type === "date")
+        || mergedFields.find((f) => f.type === "date" && !/expiry|return|birth/i.test(f.name));
+
+      const supFld = mergedFields.find((f) => /portal|supplier|carrier|partner|company|network|desk|vendor/i.test(f.name));
+
+      const isOldGenericRoute = !parsed.routeLabel || parsed.routeLabel.includes("Route / Sector / Narration");
+      const isOldGenericPnr = !parsed.pnrLabel || parsed.pnrLabel.includes("Reference / PNR No");
+      const isOldGenericDate = !parsed.dateLabel || parsed.dateLabel.includes("Service / Travel Date");
+      const isOldGenericPortal = !parsed.portalLabel || parsed.portalLabel.includes("Portal / Supplier");
+
+      const resolvedRouteLabel = rFld?.name || (!isOldGenericRoute ? parsed.routeLabel : undefined) || base.routeLabel;
+      const resolvedPnrLabel = pFld?.name || (!isOldGenericPnr ? parsed.pnrLabel : undefined) || base.pnrLabel;
+      const resolvedDateLabel = dFld?.name || (!isOldGenericDate ? parsed.dateLabel : undefined) || base.dateLabel;
+      const resolvedPortalLabel = supFld?.name || (!isOldGenericPortal ? parsed.portalLabel : undefined) || base.portalLabel;
+
       return {
         ...base,
         ...parsed,
+        routeLabel: resolvedRouteLabel,
+        pnrLabel: resolvedPnrLabel,
+        dateLabel: resolvedDateLabel,
+        portalLabel: resolvedPortalLabel,
         customFields: mergedFields,
         title: parsed.title || `${service.name} Details`,
       };
