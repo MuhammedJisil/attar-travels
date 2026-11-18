@@ -139,7 +139,7 @@ export function formatFlightTimeDisplay(timeStr?: string | null): string {
   const trimmed = timeStr.trim();
   if (trimmed.includes("-") || trimmed.includes("–") || trimmed.includes("—")) {
     const parts = trimmed.split(/[-–—]/).map((s) => s.trim());
-    return `🛫 ${parts[0]}  🛬 ${parts[1]}`;
+    return `🕒 ${parts[0]} - ${parts[1]}`;
   }
   return `🕒 ${trimmed}`;
 }
