@@ -14,6 +14,7 @@ import {
   CreditCard,
   Edit2,
   Trash2,
+  Loader2,
 } from "lucide-react";
 
 interface CustomerListProps {
@@ -34,6 +35,17 @@ export default function CustomerList({
   onEditCustomer,
 }: CustomerListProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string) => {
+    if (deletingId) return;
+    setDeletingId(id);
+    try {
+      await onDeleteCustomer(id);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const filteredCustomers = customers.filter((c) => {
     if (!searchTerm.trim()) return true;
@@ -188,11 +200,16 @@ export default function CustomerList({
                     </button>
 
                     <button
-                      onClick={() => onDeleteCustomer(cust.id)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                      onClick={() => handleDelete(cust.id)}
+                      disabled={deletingId === cust.id}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Delete Customer"
                     >
-                      <Trash2 size={13} />
+                      {deletingId === cust.id ? (
+                        <Loader2 size={13} className="animate-spin text-rose-500" />
+                      ) : (
+                        <Trash2 size={13} />
+                      )}
                     </button>
                   </div>
                 </div>

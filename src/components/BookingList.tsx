@@ -23,6 +23,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Loader2,
 } from "lucide-react";
 
 interface BookingListProps {
@@ -61,6 +62,19 @@ export default function BookingList({
 
   // Quick View modal state
   const [quickViewBooking, setQuickViewBooking] = useState<Booking | null>(null);
+
+  // Deleting booking state
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string) => {
+    if (deletingId) return;
+    setDeletingId(id);
+    try {
+      await onDeleteBooking(id);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // Memoized filter calculation for instant response
   const filteredBookings = useMemo(() => {
@@ -300,11 +314,16 @@ export default function BookingList({
 
                   {/* 5. Delete Icon */}
                   <button
-                    onClick={() => onDeleteBooking(b.id)}
-                    className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                    onClick={() => handleDelete(b.id)}
+                    disabled={deletingId === b.id}
+                    className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Delete"
                   >
-                    <Trash2 size={16} />
+                    {deletingId === b.id ? (
+                      <Loader2 size={16} className="animate-spin text-rose-500" />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
                   </button>
                 </div>
               </div>
@@ -530,11 +549,16 @@ export default function BookingList({
 
                           {/* Delete Button */}
                           <button
-                            onClick={() => onDeleteBooking(b.id)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                            onClick={() => handleDelete(b.id)}
+                            disabled={deletingId === b.id}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Delete Ticket"
                           >
-                            <Trash2 size={15} />
+                            {deletingId === b.id ? (
+                              <Loader2 size={15} className="animate-spin text-rose-500" />
+                            ) : (
+                              <Trash2 size={15} />
+                            )}
                           </button>
                         </div>
                       </td>

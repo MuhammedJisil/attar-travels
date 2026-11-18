@@ -19,6 +19,7 @@ import {
   Clock,
   Calendar,
   Settings2,
+  Loader2,
 } from "lucide-react";
 import {
   DEFAULT_TEMPLATES,
@@ -45,6 +46,7 @@ export default function ServiceManagementModal({
   // Mode: "list" | "create" | "edit"
   const [viewMode, setViewMode] = useState<"list" | "create" | "edit">("list");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingServiceId, setDeletingServiceId] = useState<string | null>(null);
 
   // Form fields
   const [serviceName, setServiceName] = useState("");
@@ -234,7 +236,7 @@ export default function ServiceManagementModal({
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to remove "${name}" from the services list?`)) return;
-    setLoading(true);
+    setDeletingServiceId(id);
     try {
       const res = await fetch(`/api/services/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete service");
@@ -242,7 +244,7 @@ export default function ServiceManagementModal({
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error deleting service");
     } finally {
-      setLoading(false);
+      setDeletingServiceId(null);
     }
   };
 
@@ -355,17 +357,23 @@ export default function ServiceManagementModal({
                     <div className="flex items-center gap-2 self-end sm:self-center">
                       <button
                         onClick={() => handleStartEdit(st)}
-                        className="p-2 text-slate-600 hover:text-sky-700 hover:bg-sky-50 rounded-lg transition"
+                        disabled={deletingServiceId === st.id}
+                        className="p-2 text-slate-600 hover:text-sky-700 hover:bg-sky-50 rounded-lg transition disabled:opacity-50"
                         title="Configure form fields"
                       >
                         <Settings2 size={16} />
                       </button>
                       <button
                         onClick={() => handleDelete(st.id, st.name)}
-                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                        disabled={deletingServiceId === st.id}
+                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Delete service"
                       >
-                        <Trash2 size={16} />
+                        {deletingServiceId === st.id ? (
+                          <Loader2 size={16} className="animate-spin text-rose-500" />
+                        ) : (
+                          <Trash2 size={16} />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -653,9 +661,18 @@ export default function ServiceManagementModal({
               <button
                 type="submit"
                 disabled={loading}
-                className="px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-sm transition active:scale-95 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-xs transition active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none"
               >
-                {loading ? "Saving Service..." : viewMode === "edit" ? "Update Service" : "Create Service"}
+                {loading ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>Saving Service...</span>
+                  </>
+                ) : viewMode === "edit" ? (
+                  "Update Service"
+                ) : (
+                  "Create Service"
+                )}
               </button>
             </div>
           </form>

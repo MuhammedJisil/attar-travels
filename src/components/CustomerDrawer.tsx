@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Customer, Booking, AgencySettings } from "@/lib/types";
 import { getDaysDifference, formatDate } from "@/lib/date-utils";
 import {
@@ -20,6 +20,7 @@ import {
   Trash2,
   Clock,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 
 interface CustomerDrawerProps {
@@ -53,6 +54,18 @@ export default function CustomerDrawer({
   const totalBilled = bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
   const totalPaid = bookings.reduce((sum, b) => sum + (b.paidAmount || 0), 0);
   const totalBalance = Math.max(0, totalBilled - totalPaid);
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string) => {
+    if (deletingId) return;
+    setDeletingId(id);
+    try {
+      await onDeleteBooking(id);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
@@ -279,11 +292,16 @@ export default function CustomerDrawer({
                         </button>
 
                         <button
-                          onClick={() => onDeleteBooking(booking.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                          onClick={() => handleDelete(booking.id)}
+                          disabled={deletingId === booking.id}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Delete Service"
                         >
-                          <Trash2 size={15} />
+                          {deletingId === booking.id ? (
+                            <Loader2 size={15} className="animate-spin text-rose-500" />
+                          ) : (
+                            <Trash2 size={15} />
+                          )}
                         </button>
                       </div>
                     </div>

@@ -19,6 +19,7 @@ import {
   Plus,
   Compass,
   Check,
+  Loader2,
 } from "lucide-react";
 import {
   getServiceFieldConfig,
@@ -1156,7 +1157,8 @@ export default function BookingModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition font-medium"
+            disabled={loading}
+            className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
@@ -1165,9 +1167,18 @@ export default function BookingModal({
             type="button"
             onClick={handleSubmit}
             disabled={loading}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-sm shadow-md hover:shadow-lg transition active:scale-95 disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-sm shadow-md hover:shadow-lg transition active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none"
           >
-            {loading ? "Saving..." : booking ? "Update Booking" : "Create Ticket / Booking"}
+            {loading ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                <span>{booking ? "Updating..." : "Creating..."}</span>
+              </>
+            ) : booking ? (
+              "Update Booking"
+            ) : (
+              "Create Ticket / Booking"
+            )}
           </button>
         </div>
       </div>

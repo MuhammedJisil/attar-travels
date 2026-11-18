@@ -14,6 +14,7 @@ import ServiceManagementModal from "@/components/ServiceManagementModal";
 import AgencySettingsView from "@/components/AgencySettingsView";
 import CustomerModal from "@/components/CustomerModal";
 import LoginScreen from "@/components/LoginScreen";
+import DashboardSkeleton from "@/components/DashboardSkeleton";
 import { Booking, Customer, ServiceType, AgencySettings, initialAgencySettings } from "@/lib/types";
 import { getDaysDifference } from "@/lib/date-utils";
 import { getServiceDisplayDescription } from "@/lib/service-config";
@@ -284,16 +285,9 @@ export default function HomePage() {
     setIsWhatsAppModalOpen(true);
   };
 
-  // 1. Initial Auth Loading screen
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white p-4">
-        <div className="w-12 h-12 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center border border-sky-500/30 animate-bounce mb-3">
-          <Plane size={24} className="transform -rotate-45" />
-        </div>
-        <div className="text-sm font-semibold text-slate-300">Checking secure session...</div>
-      </div>
-    );
+  // 1. Initial Skeleton Loading screen (Modern skeleton while verifying session or fetching initial records)
+  if (authLoading || (loading && bookings.length === 0 && !user)) {
+    return <DashboardSkeleton />;
   }
 
   // 2. Unauthenticated Screen (Login)

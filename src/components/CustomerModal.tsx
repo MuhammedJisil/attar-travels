@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Customer } from "@/lib/types";
 import PhoneInput from "./PhoneInput";
-import { User, Phone, Mail, MapPin, X, AlertCircle, Edit2, PlusCircle, FileText } from "lucide-react";
+import { User, Phone, Mail, MapPin, X, AlertCircle, Edit2, PlusCircle, FileText, Loader2 } from "lucide-react";
 
 interface CustomerModalProps {
   isOpen: boolean;
@@ -232,17 +232,20 @@ export default function CustomerModal({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl font-medium transition"
+              className="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+              className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none"
             >
               {loading ? (
-                <span>Saving...</span>
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>{isEdit ? "Updating..." : "Creating..."}</span>
+                </>
               ) : isEdit ? (
                 <>
                   <Edit2 size={16} />
