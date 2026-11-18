@@ -87,11 +87,12 @@ export async function POST(request: Request) {
     }
 
     // 2. Restore Service Types
+    const serviceIdMap = new Map<string, string>();
     if (Array.isArray(serviceTypes)) {
       for (const st of serviceTypes) {
         if (!st.name) continue;
         if (hasDb) {
-          await prisma.serviceType.upsert({
+          const upserted = await prisma.serviceType.upsert({
             where: { name: st.name },
             update: {
               code: st.code || null,
@@ -99,15 +100,17 @@ export async function POST(request: Request) {
               isActive: st.isActive ?? true,
             },
             create: {
-              id: st.id,
+              ...(st.id ? { id: st.id } : {}),
               name: st.name,
               code: st.code || null,
               description: st.description || null,
               isActive: st.isActive ?? true,
             },
           });
+          if (st.id) serviceIdMap.set(st.id, upserted.id);
         } else {
-          await createServiceType(st);
+          const created = await createServiceType(st);
+          if (st.id) serviceIdMap.set(st.id, created.id);
         }
         restoredServicesCount++;
       }
@@ -121,9 +124,14 @@ export async function POST(request: Request) {
         if (!cust.name || !cust.phone) continue;
 
         if (hasDb) {
-          // Check if customer with same phone exists
+          // Check if customer with same ID or phone exists
           const existing = await prisma.customer.findFirst({
-            where: { phone: cust.phone.trim() },
+            where: {
+              OR: [
+                ...(cust.id ? [{ id: cust.id }] : []),
+                { phone: cust.phone.trim() },
+              ],
+            },
           });
 
           if (existing) {
@@ -132,6 +140,7 @@ export async function POST(request: Request) {
               where: { id: existing.id },
               data: {
                 name: cust.name.trim(),
+                phone: cust.phone.trim(),
                 email: cust.email?.trim() || null,
                 city: cust.city?.trim() || null,
                 address: cust.address?.trim() || null,
@@ -141,6 +150,7 @@ export async function POST(request: Request) {
           } else {
             const created = await prisma.customer.create({
               data: {
+                ...(cust.id ? { id: cust.id } : {}),
                 name: cust.name.trim(),
                 phone: cust.phone.trim(),
                 email: cust.email?.trim() || null,
@@ -163,16 +173,16 @@ export async function POST(request: Request) {
     if (Array.isArray(bookings)) {
       // Refresh service map
       const allServices = await getServiceTypes();
-      const serviceMap = new Map(allServices.map((s) => [s.name.toLowerCase(), s.id]));
+      const serviceNameMap = new Map(allServices.map((s) => [s.name.toLowerCase(), s.id]));
       const serviceIdSet = new Set(allServices.map((s) => s.id));
 
       for (const bk of bookings) {
         const targetCustomerId = customerIdMap.get(bk.customerId) || bk.customerId;
-        let targetServiceId = bk.serviceTypeId;
+        let targetServiceId = serviceIdMap.get(bk.serviceTypeId) || bk.serviceTypeId;
 
         // If serviceTypeId doesn't exist directly, try matching by name
         if (!serviceIdSet.has(targetServiceId) && bk.serviceType?.name) {
-          targetServiceId = serviceMap.get(bk.serviceType.name.toLowerCase()) || targetServiceId;
+          targetServiceId = serviceNameMap.get(bk.serviceType.name.toLowerCase()) || targetServiceId;
         }
 
         if (!targetCustomerId || !targetServiceId) continue;
@@ -180,60 +190,58 @@ export async function POST(request: Request) {
         const bookingNo = bk.bookingNo || `CCJ-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
 
         if (hasDb) {
-          await prisma.booking.upsert({
-            where: { bookingNo },
-            update: {
-              customerId: targetCustomerId,
-              serviceTypeId: targetServiceId,
-              issueDate: bk.issueDate ? new Date(bk.issueDate) : null,
-              travelDate: bk.travelDate ? new Date(bk.travelDate) : null,
-              returnDate: bk.returnDate ? new Date(bk.returnDate) : null,
-              sector: bk.sector || null,
-              flightNo: bk.flightNo || null,
-              pnr: bk.pnr || null,
-              flightTime: bk.flightTime || null,
-              portal: bk.portal || null,
-              passengerCount: Number(bk.passengerCount) || 1,
-              passengerNames: bk.passengerNames || null,
-              passportNo: bk.passportNo || null,
-              submissionDate: bk.submissionDate ? new Date(bk.submissionDate) : null,
-              expiryDate: bk.expiryDate ? new Date(bk.expiryDate) : null,
-              status: bk.status || "Confirmed",
-              alertNotes: bk.alertNotes || null,
-              totalAmount: Number(bk.totalAmount) || 0,
-              paidAmount: Number(bk.paidAmount) || 0,
-              balanceAmount: Math.max(0, (Number(bk.totalAmount) || 0) - (Number(bk.paidAmount) || 0)),
-              dueDate: bk.dueDate ? new Date(bk.dueDate) : null,
-              paymentStatus: bk.paymentStatus || "Pending",
-              notes: bk.notes || null,
-            },
-            create: {
-              bookingNo,
-              customerId: targetCustomerId,
-              serviceTypeId: targetServiceId,
-              issueDate: bk.issueDate ? new Date(bk.issueDate) : null,
-              travelDate: bk.travelDate ? new Date(bk.travelDate) : null,
-              returnDate: bk.returnDate ? new Date(bk.returnDate) : null,
-              sector: bk.sector || null,
-              flightNo: bk.flightNo || null,
-              pnr: bk.pnr || null,
-              flightTime: bk.flightTime || null,
-              portal: bk.portal || null,
-              passengerCount: Number(bk.passengerCount) || 1,
-              passengerNames: bk.passengerNames || null,
-              passportNo: bk.passportNo || null,
-              submissionDate: bk.submissionDate ? new Date(bk.submissionDate) : null,
-              expiryDate: bk.expiryDate ? new Date(bk.expiryDate) : null,
-              status: bk.status || "Confirmed",
-              alertNotes: bk.alertNotes || null,
-              totalAmount: Number(bk.totalAmount) || 0,
-              paidAmount: Number(bk.paidAmount) || 0,
-              balanceAmount: Math.max(0, (Number(bk.totalAmount) || 0) - (Number(bk.paidAmount) || 0)),
-              dueDate: bk.dueDate ? new Date(bk.dueDate) : null,
-              paymentStatus: bk.paymentStatus || "Pending",
-              notes: bk.notes || null,
+          const existingBooking = await prisma.booking.findFirst({
+            where: {
+              OR: [
+                { bookingNo },
+                ...(bk.id ? [{ id: bk.id }] : []),
+              ],
             },
           });
+
+          const bookingData = {
+            customerId: targetCustomerId,
+            serviceTypeId: targetServiceId,
+            issueDate: bk.issueDate ? new Date(bk.issueDate) : null,
+            travelDate: bk.travelDate ? new Date(bk.travelDate) : null,
+            returnDate: bk.returnDate ? new Date(bk.returnDate) : null,
+            sector: bk.sector || null,
+            flightNo: bk.flightNo || null,
+            pnr: bk.pnr || null,
+            flightTime: bk.flightTime || null,
+            portal: bk.portal || null,
+            passengerCount: Number(bk.passengerCount) || 1,
+            passengerNames: bk.passengerNames || null,
+            passportNo: bk.passportNo || null,
+            submissionDate: bk.submissionDate ? new Date(bk.submissionDate) : null,
+            expiryDate: bk.expiryDate ? new Date(bk.expiryDate) : null,
+            status: bk.status || "Confirmed",
+            alertNotes: bk.alertNotes || null,
+            totalAmount: Number(bk.totalAmount) || 0,
+            paidAmount: Number(bk.paidAmount) || 0,
+            balanceAmount: Math.max(0, (Number(bk.totalAmount) || 0) - (Number(bk.paidAmount) || 0)),
+            dueDate: bk.dueDate ? new Date(bk.dueDate) : null,
+            paymentStatus: bk.paymentStatus || "Pending",
+            notes: bk.notes || null,
+          };
+
+          if (existingBooking) {
+            await prisma.booking.update({
+              where: { id: existingBooking.id },
+              data: {
+                bookingNo,
+                ...bookingData,
+              },
+            });
+          } else {
+            await prisma.booking.create({
+              data: {
+                ...(bk.id ? { id: bk.id } : {}),
+                bookingNo,
+                ...bookingData,
+              },
+            });
+          }
         } else {
           await createBooking({
             ...bk,
