@@ -85,7 +85,7 @@ export const initialAgencySettings: AgencySettings = {
   whatsapp: "+91 98765 43210",
   email: "booking@almadinatravels.com",
   address: "Shop No. 12, Ground Floor, Skyline Commercial Complex, Calicut, Kerala - 673001",
-  logoUrl: "",
+  logoUrl: "/logo.png",
   taxNumber: "GSTIN: 32AAAAA0000A1Z5",
   bankDetails: "A/C: 50200012345678 | HDFC Bank, Calicut Branch | IFSC: HDFC0001234 | UPI: almadinatravels@hdfcbank",
   termsConditions: "1. Please report at airport 3 hours prior to international departure and 2 hours for domestic.\n2. Date change & cancellation charges are applicable as per airline fare rules.\n3. Verify passport validity (minimum 6 months from travel date required).",

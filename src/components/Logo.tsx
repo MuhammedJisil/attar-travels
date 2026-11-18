@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Plane } from "lucide-react";
 
 interface LogoProps {
@@ -12,14 +12,16 @@ interface LogoProps {
 
 export default function Logo({
   logoUrl,
-  agencyName = "Travels Office",
+  agencyName = "Attar Tour & Travels",
   size = "md",
   className = "",
 }: LogoProps) {
+  const [loadFailed, setLoadFailed] = useState(false);
+
   const sizeClasses = {
-    sm: "w-8 h-8 text-xs",
-    md: "w-10 h-10 text-sm",
-    lg: "w-14 h-14 text-base",
+    sm: "w-8 h-8 rounded-lg",
+    md: "w-10 h-10 rounded-xl",
+    lg: "w-14 h-14 rounded-2xl",
   };
 
   const iconSizes = {
@@ -28,27 +30,29 @@ export default function Logo({
     lg: 28,
   };
 
-  if (logoUrl && logoUrl.trim() !== "") {
+  const imageSrc = logoUrl && logoUrl.trim() !== "" ? logoUrl : "/logo.png";
+
+  if (!loadFailed) {
     return (
-      <div className={`relative inline-flex items-center justify-center overflow-hidden rounded-xl border border-sky-200 bg-white shadow-sm ${className}`}>
+      <div
+        className={`relative inline-flex items-center justify-center overflow-hidden shrink-0 shadow-sm border border-slate-700/20 bg-[#013b3d] ${sizeClasses[size]} ${className}`}
+        title={agencyName}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={logoUrl}
+          src={imageSrc}
           alt={agencyName}
-          className={`${sizeClasses[size]} object-contain p-1`}
-          onError={(e) => {
-            // Fallback if image path fails
-            e.currentTarget.style.display = "none";
-          }}
+          className="w-full h-full object-cover rounded-[inherit]"
+          onError={() => setLoadFailed(true)}
         />
       </div>
     );
   }
 
-  // Modern travels agency branding placeholder icon
+  // Modern travels agency branding placeholder fallback
   return (
     <div
-      className={`inline-flex items-center justify-center rounded-xl bg-gradient-to-tr from-sky-600 via-blue-600 to-indigo-700 text-white shadow-md shadow-sky-500/20 ${sizeClasses[size]} ${className}`}
+      className={`inline-flex items-center justify-center bg-gradient-to-tr from-sky-600 via-blue-600 to-indigo-700 text-white shadow-md shadow-sky-500/20 shrink-0 ${sizeClasses[size]} ${className}`}
       title={agencyName}
     >
       <Plane size={iconSizes[size]} className="transform -rotate-45" />
