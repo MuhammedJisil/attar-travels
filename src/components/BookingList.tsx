@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import { Booking, ServiceType, AgencySettings, initialAgencySettings } from "@/lib/types";
 import { getDaysDifference, getServiceTimeline, formatDate, formatBookingNo, formatFlightTimeDisplay } from "@/lib/date-utils";
 import { exportBookingsToCSV } from "@/lib/export-csv";
-import { extractCustomFieldValues, getServiceFieldConfig, isFlightOrTravelService } from "@/lib/service-config";
+import { extractCustomFieldValues, getServiceFieldConfig, isFlightOrTravelService, resolveBookingDates } from "@/lib/service-config";
 import TicketQuickViewModal from "./TicketQuickViewModal";
 import TicketReportPdfModal from "./TicketReportPdfModal";
 import {
@@ -200,19 +200,23 @@ export default function BookingList({
         if (!ag || ag.toLowerCase() !== selectedAgent.toLowerCase()) return false;
       }
 
-      // Dedicated calendar date filter (matches travel date, return date, booking date, or custom dates)
+      // Dedicated calendar date filter: Filter by TICKET / SERVICE ISSUE DATE
       if (selectedDate) {
         const customVals = extractCustomFieldValues(b.notes);
-        const matchesDate =
-          (b.travelDate && b.travelDate.substring(0, 10) === selectedDate) ||
-          (b.returnDate && b.returnDate.substring(0, 10) === selectedDate) ||
-          (b.issueDate && b.issueDate.substring(0, 10) === selectedDate) ||
-          (b.submissionDate && b.submissionDate.substring(0, 10) === selectedDate) ||
-          (b.expiryDate && b.expiryDate.substring(0, 10) === selectedDate) ||
-          Object.values(customVals).some(
-            (v) => typeof v === "string" && v.substring(0, 10) === selectedDate
-          );
-        if (!matchesDate) return false;
+        const customIssueDate = Object.entries(customVals).find(([k]) =>
+          /issue\s*date|booking\s*date|dispatch\s*date|applied\s*date/i.test(k)
+        )?.[1];
+
+        const issueIso = b.issueDate ? String(b.issueDate).substring(0, 10) : null;
+        const createdIso = b.createdAt ? String(b.createdAt).substring(0, 10) : null;
+        const customIssueIso = (customIssueDate && typeof customIssueDate === "string") ? customIssueDate.substring(0, 10) : null;
+
+        const matchesIssuedDate =
+          issueIso === selectedDate ||
+          customIssueIso === selectedDate ||
+          (!issueIso && !customIssueIso && createdIso === selectedDate);
+
+        if (!matchesIssuedDate) return false;
       }
 
       // Text search without date matching interference
@@ -287,8 +291,12 @@ export default function BookingList({
 
         {/* Filter Controls & Export */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Calendar Date Filter */}
-          <div className="relative flex items-center">
+          {/* Calendar Date Filter (Issued Date) */}
+          <div className="relative flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1 sm:py-1.5">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap flex items-center gap-1">
+              <Calendar size={13} className="text-sky-500 shrink-0" />
+              <span className="hidden sm:inline">Issued:</span>
+            </span>
             <input
               type="date"
               value={selectedDate}
@@ -296,8 +304,8 @@ export default function BookingList({
                 setSelectedDate(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-sky-500"
-              title="Filter by Specific Date"
+              className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-100 focus:outline-none"
+              title="Filter records by Issue / Booking Date"
             />
             {selectedDate && (
               <button
@@ -306,8 +314,8 @@ export default function BookingList({
                   setSelectedDate("");
                   setCurrentPage(1);
                 }}
-                className="ml-1 p-1 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                title="Clear date filter"
+                className="p-0.5 rounded text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition"
+                title="Clear issue date filter"
               >
                 <X size={14} />
               </button>
@@ -431,7 +439,8 @@ export default function BookingList({
           </div>
         ) : (
           paginatedBookings.map((b) => {
-            const diff = getServiceTimeline(b.travelDate, b.serviceType?.name, b.returnDate);
+            const { travelDate: effectiveTravelDate, returnDate: effectiveReturnDate } = resolveBookingDates(b);
+            const diff = getServiceTimeline(effectiveTravelDate, b.serviceType?.name, effectiveReturnDate);
             const isDelay = b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
             const isFlight = isFlightOrTravelService(b.serviceType);
             const custom = extractCustomFieldValues(b.notes);
@@ -460,9 +469,9 @@ export default function BookingList({
                     <span className={`font-semibold ${diff.days <= 1 ? "text-rose-600 dark:text-rose-400 font-bold" : "text-sky-700 dark:text-sky-400"}`}>
                       {diff.label}
                     </span>
-                    {b.returnDate && (
+                    {effectiveReturnDate && (
                       <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
-                        ↩ Ret: {formatDate(b.returnDate)}
+                        ↩ Ret: {formatDate(effectiveReturnDate)}
                       </span>
                     )}
                   </div>
@@ -596,7 +605,8 @@ export default function BookingList({
                     </tr>
                   ) : (
                     paginatedBookings.map((b) => {
-                      const diff = getServiceTimeline(b.travelDate, b.serviceType?.name, b.returnDate);
+                      const { travelDate: effectiveTravelDate, returnDate: effectiveReturnDate } = resolveBookingDates(b);
+                      const diff = getServiceTimeline(effectiveTravelDate, b.serviceType?.name, effectiveReturnDate);
                       const isDelay =
                         b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
                       const portalDisplay = getDisplayPortal(b);
@@ -630,7 +640,7 @@ export default function BookingList({
                       }
 
                       // Date resolution
-                      let displayDateVal = b.travelDate ? formatDate(b.travelDate) : (b.issueDate ? formatDate(b.issueDate) : "—");
+                      let displayDateVal = effectiveTravelDate ? formatDate(effectiveTravelDate) : (b.issueDate ? formatDate(b.issueDate) : "—");
                       if (dateField && custom[dateField.name]) {
                         displayDateVal = /\d{4}-\d{2}-\d{2}/.test(custom[dateField.name])
                           ? formatDate(custom[dateField.name])
@@ -834,10 +844,10 @@ export default function BookingList({
                                     </div>
                                   ) : null;
                                 })()}
-                                {b.returnDate && (
+                                {effectiveReturnDate && (
                                   <div className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 flex items-center gap-1">
                                     <span>↩</span>
-                                    <span>Ret: {formatDate(b.returnDate)}</span>
+                                    <span>Ret: {formatDate(effectiveReturnDate)}</span>
                                   </div>
                                 )}
                               </td>

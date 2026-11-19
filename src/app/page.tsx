@@ -17,7 +17,7 @@ import LoginScreen from "@/components/LoginScreen";
 import DashboardSkeleton from "@/components/DashboardSkeleton";
 import { Booking, Customer, ServiceType, AgencySettings, initialAgencySettings } from "@/lib/types";
 import { getDaysDifference } from "@/lib/date-utils";
-import { getServiceDisplayDescription, isFlightOrTravelService } from "@/lib/service-config";
+import { getServiceDisplayDescription, isFlightOrTravelService, resolveBookingDates } from "@/lib/service-config";
 import {
   CalendarDays,
   PlaneTakeoff,
@@ -208,8 +208,9 @@ export default function HomePage() {
   const urgentCount = bookings.filter((b) => {
     const isTravel = isFlightOrTravelService(b.serviceType);
     if (!isTravel) return false;
-    const diff = getDaysDifference(b.travelDate);
-    const retDiff = b.returnDate ? getDaysDifference(b.returnDate) : null;
+    const { travelDate: effTravel, returnDate: effReturn } = resolveBookingDates(b);
+    const diff = getDaysDifference(effTravel);
+    const retDiff = effReturn ? getDaysDifference(effReturn) : null;
     const activeDiff = (diff.isPast && retDiff && retDiff.days !== 999) ? retDiff : diff;
     const isDelay = b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
     return activeDiff.isToday || isDelay;
@@ -219,14 +220,15 @@ export default function HomePage() {
   const filteredBookings = bookings.filter((b) => {
     if (activeFilter === "all") return true;
     const isTravel = isFlightOrTravelService(b.serviceType);
-    const diff = getDaysDifference(b.travelDate);
-    const retDiff = b.returnDate ? getDaysDifference(b.returnDate) : null;
+    const { travelDate: effTravel, returnDate: effReturn } = resolveBookingDates(b);
+    const diff = getDaysDifference(effTravel);
+    const retDiff = effReturn ? getDaysDifference(effReturn) : null;
     const activeDiff = (diff.isPast && retDiff && retDiff.days !== 999) ? retDiff : diff;
 
-    if (activeFilter === "today") return isTravel && (b.travelDate || b.returnDate) && activeDiff.isToday;
-    if (activeFilter === "tomorrow") return isTravel && (b.travelDate || b.returnDate) && activeDiff.isTomorrow;
-    if (activeFilter === "3days") return isTravel && (b.travelDate || b.returnDate) && activeDiff.days >= 0 && activeDiff.days <= 3;
-    if (activeFilter === "7days") return isTravel && (b.travelDate || b.returnDate) && activeDiff.days >= 0 && activeDiff.days <= 7;
+    if (activeFilter === "today") return isTravel && (effTravel || effReturn) && activeDiff.isToday;
+    if (activeFilter === "tomorrow") return isTravel && (effTravel || effReturn) && activeDiff.isTomorrow;
+    if (activeFilter === "3days") return isTravel && (effTravel || effReturn) && activeDiff.days >= 0 && activeDiff.days <= 3;
+    if (activeFilter === "7days") return isTravel && (effTravel || effReturn) && activeDiff.days >= 0 && activeDiff.days <= 7;
     if (activeFilter === "delayed") {
       return isTravel && (b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed");
     }

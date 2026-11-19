@@ -31,6 +31,7 @@ import {
   extractCustomFieldValues,
   getCleanNotes,
   serializeCustomFieldValues,
+  resolveBookingDates,
 } from "@/lib/service-config";
 import { formatBookingNo } from "@/lib/date-utils";
 import PhoneInput from "./PhoneInput";
@@ -108,9 +109,10 @@ export default function BookingModal({
       setCustomerMode("existing");
       setSelectedCustomerId(booking.customerId);
       setSelectedServiceId(booking.serviceTypeId);
+      const { travelDate: effTravel, returnDate: effReturn } = resolveBookingDates(booking);
       setIssueDate(booking.issueDate ? booking.issueDate.substring(0, 10) : "");
-      setTravelDate(booking.travelDate ? booking.travelDate.substring(0, 10) : "");
-      setReturnDate(booking.returnDate ? booking.returnDate.substring(0, 10) : "");
+      setTravelDate(effTravel ? effTravel.substring(0, 10) : "");
+      setReturnDate(effReturn ? effReturn.substring(0, 10) : "");
       setSector(booking.sector || "");
       setFlightNo(booking.flightNo || "");
       setPnr(booking.pnr || "");

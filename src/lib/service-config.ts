@@ -730,6 +730,54 @@ export function serializeCustomFieldValues(
 }
 
 /**
+ * Resolves the true travel / departure date and return date from booking record & custom fields
+ * Prevents corrupted or swapped return dates from overriding travel date
+ */
+export function resolveBookingDates(b?: {
+  travelDate?: Date | string | null;
+  returnDate?: Date | string | null;
+  notes?: string | null;
+} | null): {
+  travelDate: string | null;
+  returnDate: string | null;
+} {
+  if (!b) return { travelDate: null, returnDate: null };
+
+  const custom = extractCustomFieldValues(b.notes);
+
+  // Search custom fields for departure / travel date
+  const customTravel = Object.entries(custom).find(([k]) =>
+    /^(travel|departure|journey)\s*(\/\s*departure\s*)?date/i.test(k) && !/return/i.test(k)
+  )?.[1];
+
+  // Search custom fields for return date
+  const customReturn = Object.entries(custom).find(([k]) =>
+    /return\s*date/i.test(k)
+  )?.[1];
+
+  let travelDate: string | null = null;
+  if (customTravel && customTravel.trim()) {
+    travelDate = customTravel.trim();
+  } else if (b.travelDate) {
+    travelDate = typeof b.travelDate === "string" ? b.travelDate : b.travelDate.toISOString();
+  }
+
+  let returnDate: string | null = null;
+  if (customReturn && customReturn.trim()) {
+    returnDate = customReturn.trim();
+  } else if (b.returnDate) {
+    returnDate = typeof b.returnDate === "string" ? b.returnDate : b.returnDate.toISOString();
+  }
+
+  // If travelDate and returnDate are identical (e.g. from previous form overwrite bug), and custom has the actual travel date
+  if (travelDate && returnDate && travelDate.substring(0, 10) === returnDate.substring(0, 10) && customTravel) {
+    travelDate = customTravel.trim();
+  }
+
+  return { travelDate, returnDate };
+}
+
+/**
  * Format customized WhatsApp message template using booking data and agency settings
  */
 export function formatCustomWhatsAppMessage(

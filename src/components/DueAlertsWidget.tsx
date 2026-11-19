@@ -3,7 +3,7 @@
 import React from "react";
 import { Booking } from "@/lib/types";
 import { getDaysDifference } from "@/lib/date-utils";
-import { isFlightOrTravelService } from "@/lib/service-config";
+import { isFlightOrTravelService, resolveBookingDates } from "@/lib/service-config";
 import {
   AlertTriangle,
   Clock,
@@ -39,13 +39,14 @@ export default function DueAlertsWidget({
 
   bookings.forEach((b) => {
     const isTravel = isFlightOrTravelService(b.serviceType);
-    const diff = getDaysDifference(b.travelDate);
-    const retDiff = b.returnDate ? getDaysDifference(b.returnDate) : null;
+    const { travelDate: effectiveTravelDate, returnDate: effectiveReturnDate } = resolveBookingDates(b);
+    const diff = getDaysDifference(effectiveTravelDate);
+    const retDiff = effectiveReturnDate ? getDaysDifference(effectiveReturnDate) : null;
     // Active difference: if travel date has passed and return date exists, count return countdown
     const activeDiff = (diff.isPast && retDiff && retDiff.days !== 999) ? retDiff : diff;
 
     // Only count actual travel/flight services for departure & return alerts
-    if (isTravel && (b.travelDate || b.returnDate)) {
+    if (isTravel && (effectiveTravelDate || effectiveReturnDate)) {
       if (activeDiff.isToday) todayCount++;
       if (activeDiff.isTomorrow) tomorrowCount++;
       if (activeDiff.days >= 0 && activeDiff.days <= 3) next3DaysCount++;

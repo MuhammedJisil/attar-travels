@@ -3,7 +3,7 @@
 import React from "react";
 import { Booking } from "@/lib/types";
 import { getDaysDifference, getServiceTimeline, formatDate, formatBookingNo, formatFlightTimeDisplay } from "@/lib/date-utils";
-import { getServiceFieldConfig, extractCustomFieldValues } from "@/lib/service-config";
+import { getServiceFieldConfig, extractCustomFieldValues, resolveBookingDates } from "@/lib/service-config";
 import {
   X,
   Plane,
@@ -41,7 +41,8 @@ export default function TicketQuickViewModal({
 }: TicketQuickViewModalProps) {
   if (!isOpen || !booking) return null;
 
-  const diff = getServiceTimeline(booking.travelDate, booking.serviceType?.name, booking.returnDate);
+  const { travelDate: effectiveTravelDate, returnDate: effectiveReturnDate } = resolveBookingDates(booking);
+  const diff = getServiceTimeline(effectiveTravelDate, booking.serviceType?.name, effectiveReturnDate);
   const isDelay = booking.status === "Flight Delayed" || booking.status === "Rescheduled / Postponed";
 
   return (
@@ -160,9 +161,9 @@ export default function TicketQuickViewModal({
                         } else if (low.includes("submission")) {
                           displayVal = booking.submissionDate ? formatDate(booking.submissionDate) : "";
                         } else if (low.includes("return") || low.includes("check-out") || low.includes("end date")) {
-                          displayVal = booking.returnDate ? formatDate(booking.returnDate) : "";
-                        } else if (low.includes("date") && !low.includes("return") && booking.travelDate) {
-                          displayVal = formatDate(booking.travelDate);
+                          displayVal = effectiveReturnDate ? formatDate(effectiveReturnDate) : "";
+                        } else if (low.includes("date") && !low.includes("return")) {
+                          displayVal = effectiveTravelDate ? formatDate(effectiveTravelDate) : "";
                         } else if (low.includes("route") || low.includes("sector") || low.includes("destination")) {
                           displayVal = booking.sector || "";
                         }
@@ -172,9 +173,9 @@ export default function TicketQuickViewModal({
                         if (val) {
                           displayVal = formatDate(val);
                         } else if (low.includes("return") || low.includes("check-out") || low.includes("end date")) {
-                          displayVal = booking.returnDate ? formatDate(booking.returnDate) : "";
-                        } else if (!low.includes("return") && booking.travelDate) {
-                          displayVal = formatDate(booking.travelDate);
+                          displayVal = effectiveReturnDate ? formatDate(effectiveReturnDate) : "";
+                        } else if (!low.includes("return")) {
+                          displayVal = effectiveTravelDate ? formatDate(effectiveTravelDate) : "";
                         }
                       }
 
@@ -216,7 +217,7 @@ export default function TicketQuickViewModal({
                     <div>
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">{config.dateLabel}</span>
                       <span className="font-bold text-slate-900 dark:text-white">
-                        {booking.travelDate ? formatDate(booking.travelDate) : "N/A"}
+                        {effectiveTravelDate ? formatDate(effectiveTravelDate) : "N/A"}
                       </span>
                     </div>
 
