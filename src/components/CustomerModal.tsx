@@ -8,7 +8,7 @@ import { User, Phone, Mail, MapPin, X, AlertCircle, Edit2, PlusCircle, FileText,
 interface CustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCustomerSaved: () => void;
+  onCustomerSaved: (customer?: Customer) => void;
   customer?: Customer | null;
 }
 
@@ -89,7 +89,7 @@ export default function CustomerModal({
         throw new Error(data.error || "Failed to save customer");
       }
 
-      onCustomerSaved();
+      onCustomerSaved(data);
       onClose();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error saving customer");

@@ -538,6 +538,27 @@ export function getServiceFieldConfig(service?: ServiceType | null): ServiceFiel
   };
 }
 
+export function isTrainService(service?: ServiceType | null): boolean {
+  if (!service) return false;
+  const n = (service.name + " " + (service.code || "")).toLowerCase();
+  return n.includes("train") || n.includes("rail") || n.includes("irctc");
+}
+
+export function isBusService(service?: ServiceType | null): boolean {
+  if (!service) return false;
+  const n = (service.name + " " + (service.code || "")).toLowerCase();
+  return n.includes("bus") || n.includes("coach") || n.includes("transport");
+}
+
+export function isFlightService(service?: ServiceType | null): boolean {
+  if (!service) return true;
+  const n = (service.name + " " + (service.code || "")).toLowerCase();
+  if (isTrainService(service) || isBusService(service)) return false;
+  const isNonFlight = /courier|coriur|cargo|parcel|shipment|delivery|passport|visa|attest|certificate|document|hotel|stay|resort|insurance/i.test(n);
+  if (isNonFlight) return false;
+  return /flight|airline|air\s*ticket|air/i.test(n) || n === "ticket";
+}
+
 /**
  * Check if a service is a flight or passenger transport service (where departure times & flight/bus/train terminology apply)
  */

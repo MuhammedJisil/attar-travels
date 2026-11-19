@@ -3,6 +3,7 @@
 import React from "react";
 import { Booking } from "@/lib/types";
 import { getDaysDifference } from "@/lib/date-utils";
+import { isFlightOrTravelService } from "@/lib/service-config";
 import {
   AlertTriangle,
   Clock,
@@ -37,14 +38,19 @@ export default function DueAlertsWidget({
   let visaAlertCount = 0;
 
   bookings.forEach((b) => {
+    const isTravel = isFlightOrTravelService(b.serviceType);
     const diff = getDaysDifference(b.travelDate);
-    if (diff.isToday) todayCount++;
-    if (diff.isTomorrow) tomorrowCount++;
-    if (diff.days >= 0 && diff.days <= 3) next3DaysCount++;
-    if (diff.days >= 0 && diff.days <= 7) next7DaysCount++;
 
-    if (b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed") {
-      delayedCount++;
+    // Only count actual travel/flight services for departure alerts
+    if (isTravel && b.travelDate) {
+      if (diff.isToday) todayCount++;
+      if (diff.isTomorrow) tomorrowCount++;
+      if (diff.days >= 0 && diff.days <= 3) next3DaysCount++;
+      if (diff.days >= 0 && diff.days <= 7) next7DaysCount++;
+
+      if (b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed") {
+        delayedCount++;
+      }
     }
 
     if (b.balanceAmount > 0) {

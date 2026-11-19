@@ -17,7 +17,7 @@ import LoginScreen from "@/components/LoginScreen";
 import DashboardSkeleton from "@/components/DashboardSkeleton";
 import { Booking, Customer, ServiceType, AgencySettings, initialAgencySettings } from "@/lib/types";
 import { getDaysDifference } from "@/lib/date-utils";
-import { getServiceDisplayDescription } from "@/lib/service-config";
+import { getServiceDisplayDescription, isFlightOrTravelService } from "@/lib/service-config";
 import {
   CalendarDays,
   PlaneTakeoff,
@@ -129,17 +129,19 @@ export default function HomePage() {
   }, []);
 
   // Fetch all core travels data
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       setError(null);
 
+      const reqHeaders = { "Cache-Control": "no-cache, no-store, must-revalidate", Pragma: "no-cache" };
+
       const [resBookings, resCustomers, resServices, resSettings, resDb] = await Promise.all([
-        fetch("/api/bookings"),
-        fetch("/api/customers"),
-        fetch("/api/services"),
-        fetch("/api/settings"),
-        fetch("/api/db-status").catch(() => null),
+        fetch("/api/bookings", { cache: "no-store", headers: reqHeaders }),
+        fetch("/api/customers", { cache: "no-store", headers: reqHeaders }),
+        fetch("/api/services", { cache: "no-store", headers: reqHeaders }),
+        fetch("/api/settings", { cache: "no-store", headers: reqHeaders }),
+        fetch("/api/db-status", { cache: "no-store", headers: reqHeaders }).catch(() => null),
       ]);
 
       if (resDb && resDb.ok) {
@@ -187,7 +189,7 @@ export default function HomePage() {
     fetchSettings();
     checkSession().then((isAuthed) => {
       if (isAuthed) {
-        fetchData();
+        fetchData(true);
       }
     });
   }, [fetchSettings, checkSession, fetchData]);
@@ -204,6 +206,8 @@ export default function HomePage() {
 
   // Urgent alerts count for header badge (Today departures + delays)
   const urgentCount = bookings.filter((b) => {
+    const isTravel = isFlightOrTravelService(b.serviceType);
+    if (!isTravel || !b.travelDate) return false;
     const diff = getDaysDifference(b.travelDate);
     const isDelay = b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
     return diff.isToday || isDelay;
@@ -212,14 +216,15 @@ export default function HomePage() {
   // Filter bookings based on activeFilter
   const filteredBookings = bookings.filter((b) => {
     if (activeFilter === "all") return true;
+    const isTravel = isFlightOrTravelService(b.serviceType);
     const diff = getDaysDifference(b.travelDate);
 
-    if (activeFilter === "today") return diff.isToday;
-    if (activeFilter === "tomorrow") return diff.isTomorrow;
-    if (activeFilter === "3days") return diff.days >= 0 && diff.days <= 3;
-    if (activeFilter === "7days") return diff.days >= 0 && diff.days <= 7;
+    if (activeFilter === "today") return isTravel && Boolean(b.travelDate) && diff.isToday;
+    if (activeFilter === "tomorrow") return isTravel && Boolean(b.travelDate) && diff.isTomorrow;
+    if (activeFilter === "3days") return isTravel && Boolean(b.travelDate) && diff.days >= 0 && diff.days <= 3;
+    if (activeFilter === "7days") return isTravel && Boolean(b.travelDate) && diff.days >= 0 && diff.days <= 7;
     if (activeFilter === "delayed") {
-      return b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
+      return isTravel && (b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed");
     }
     if (activeFilter === "pending_balance") {
       return b.balanceAmount > 0;
@@ -367,7 +372,7 @@ export default function HomePage() {
               <span>{error}</span>
             </div>
             <button
-              onClick={fetchData}
+              onClick={() => fetchData()}
               className="font-bold underline text-rose-800 hover:text-rose-950"
             >
               Retry
@@ -392,7 +397,7 @@ export default function HomePage() {
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={fetchData}
+                  onClick={() => fetchData()}
                   disabled={loading}
                   className="p-2 text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl transition hover:shadow-xs"
                   title="Refresh Data"
@@ -630,7 +635,7 @@ export default function HomePage() {
           setEditingBooking(null);
           setPreselectedCustomerId(undefined);
         }}
-        onSaved={fetchData}
+        onSaved={() => fetchData()}
         booking={editingBooking}
         customers={customers}
         serviceTypes={serviceTypes}
@@ -707,7 +712,7 @@ export default function HomePage() {
           setEditingServiceId(null);
         }}
         serviceTypes={serviceTypes}
-        onRefresh={fetchData}
+        onRefresh={() => fetchData()}
         initialServiceId={editingServiceId}
       />
 
@@ -719,7 +724,20 @@ export default function HomePage() {
           setIsCustomerModalOpen(false);
           setEditingCustomer(null);
         }}
-        onCustomerSaved={fetchData}
+        onCustomerSaved={(savedCust) => {
+          if (savedCust) {
+            setCustomers((prev) => {
+              const idx = prev.findIndex((c) => c.id === savedCust.id);
+              if (idx !== -1) {
+                const next = [...prev];
+                next[idx] = savedCust;
+                return next;
+              }
+              return [savedCust, ...prev];
+            });
+          }
+          fetchData();
+        }}
       />
     </div>
   );
