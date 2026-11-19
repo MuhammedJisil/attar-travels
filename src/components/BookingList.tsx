@@ -100,7 +100,8 @@ function toSingleTitle(text: string): string {
   if (low.includes("flight no") || low.includes("flight number")) return "FLIGHT NO";
   if (low.includes("irctc")) return "IRCTC PNR";
   if (low.includes("airline pnr") || low.includes("pnr")) return "PNR";
-  if (low.includes("portal") || low.includes("supplier") || low.includes("provider")) return "PORTAL";
+  if (low.includes("portal")) return "PORTAL";
+  if (low.includes("supplier") || low.includes("provider")) return "SUPPLIER";
   if (low.includes("party name") || low.includes("customer")) return "PARTY NAME";
   if (low.includes("days left") || low.includes("timeline")) return "TIMELINE";
   if (low.includes("fare") || low.includes("dues")) return "FARE & DUES";
@@ -423,9 +424,12 @@ export default function BookingList({
         const filteredConfig = activeFilteredService ? getServiceFieldConfig(activeFilteredService) : null;
         const isFilteredFlight = !activeFilteredService || isFlightOrTravelService(activeFilteredService);
 
-        // Bind table column headers directly to mandatory / configured field titles
+        // When a non-flight service is selected, show ONLY the configured mandatory fields as columns
         const serviceCustomFields = filteredConfig?.customFields || [];
         const mandatoryFields = serviceCustomFields.filter((f) => f.required);
+        const nonFlightColumns = mandatoryFields.length > 0 ? mandatoryFields : serviceCustomFields;
+        const isDynamicServiceView = !isFilteredFlight && nonFlightColumns.length > 0;
+
         const tableFields = serviceCustomFields.filter((f) => f.showInTable && !f.required);
         const allPrimaryFields = [...mandatoryFields, ...tableFields];
 
@@ -458,10 +462,20 @@ export default function BookingList({
                     <th className="py-3 px-4">{toSingleTitle(col1Header)}</th>
                     <th className="py-3 px-4">{toSingleTitle("Party Name")}</th>
                     <th className="py-3 px-4">SERVICE</th>
-                    <th className="py-3 px-4">{toSingleTitle(col4Header)}</th>
-                    <th className="py-3 px-4">{toSingleTitle(col5Header)}</th>
-                    <th className="py-3 px-4">{toSingleTitle(col6Header)}</th>
-                    <th className="py-3 px-4">{toSingleTitle(col7Header)}</th>
+                    {isDynamicServiceView ? (
+                      nonFlightColumns.map((fld) => (
+                        <th key={fld.id || fld.name} className="py-3 px-4 whitespace-nowrap">
+                          {fld.name.trim().toUpperCase()}
+                        </th>
+                      ))
+                    ) : (
+                      <>
+                        <th className="py-3 px-4">{toSingleTitle(col4Header)}</th>
+                        <th className="py-3 px-4">{toSingleTitle(col5Header)}</th>
+                        <th className="py-3 px-4">{toSingleTitle(col6Header)}</th>
+                        <th className="py-3 px-4">{toSingleTitle(col7Header)}</th>
+                      </>
+                    )}
                     <th className="py-3 px-4">STATUS</th>
                     <th className="py-3 px-4 text-right">FARE & DUES</th>
                     <th className="py-3 px-4 text-center">ACTIONS</th>
@@ -470,7 +484,7 @@ export default function BookingList({
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {paginatedBookings.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                      <td colSpan={isDynamicServiceView ? (6 + nonFlightColumns.length) : 10} className="py-12 text-center text-slate-400 dark:text-slate-500">
                         <Plane size={32} className="mx-auto mb-2 opacity-40" />
                         <p className="font-semibold text-slate-600 dark:text-slate-300">No tickets or bookings match your criteria</p>
                         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Try adjusting your search or filters</p>
@@ -588,77 +602,150 @@ export default function BookingList({
                             })()}
                           </td>
 
-                          {/* 4. Route / Destination / Mandatory Field 1 */}
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-slate-900 dark:text-white max-w-[180px] truncate" title={displayRoute || ""}>
-                              {displayRoute}
-                            </div>
-                            {(() => {
-                              const customFlightNo = custom["Flight Number"] || custom["Flight No"] || custom["Flight"] || "";
-                              const displayFlightNo = b.flightNo || customFlightNo;
-                              return displayFlightNo ? (
-                                <div className="text-[11px] text-sky-700 dark:text-sky-400 font-semibold font-mono">
-                                  {isFlight ? `✈️ ${displayFlightNo}` : displayFlightNo}
-                                </div>
-                              ) : null;
-                            })()}
-                            {/* Display user-selected custom fields */}
-                            {tableCustomFields
-                              .filter((f) => f.id !== routeField?.id && f.id !== pnrField?.id && f.id !== dateField?.id && f.id !== portalField?.id)
-                              .map((fld) => (
-                                <div key={fld.id} className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-[180px] mt-0.5">
-                                  <span className="font-semibold text-slate-700 dark:text-slate-300">{fld.name}:</span> {custom[fld.name]}
-                                </div>
-                              ))}
-                          </td>
-
-                          {/* 5. PNR / Tracking / Mandatory Field 2 */}
-                          <td className="py-3 px-4 whitespace-nowrap">
-                            {displayPnr ? (
-                              <span className="inline-block px-2 py-0.5 rounded font-mono font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                                {isFlight ? displayPnr : `📦 ${displayPnr}`}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 dark:text-slate-500">—</span>
-                            )}
-                          </td>
-
-                          {/* 6. Date / Timing / Mandatory Field 3 */}
-                          <td className="py-3 px-4 whitespace-nowrap">
-                            <div className="font-bold text-slate-900 dark:text-white">
-                              {displayDateVal}
-                            </div>
-                            {(() => {
-                              const depVal = custom["Flight Departure Time"] || custom["Flight Time"] || "";
-                              const arrVal = custom["Flight Arrivel Time"] || custom["Flight Arrival Time"] || "";
-                              let timeDisplay = "";
-                              if (depVal && arrVal) {
-                                timeDisplay = `🕒 ${depVal} - ${arrVal} hrs`;
-                              } else if (depVal) {
-                                timeDisplay = `🕒 ${depVal} hrs`;
-                              } else if (b.flightTime) {
-                                timeDisplay = isFlight ? formatFlightTimeDisplay(b.flightTime) : `🕒 ${b.flightTime}`;
+                          {isDynamicServiceView ? (
+                            nonFlightColumns.map((fld) => {
+                              let val: any = custom[fld.name];
+                              if (val === undefined || val === null || String(val).trim() === "") {
+                                const matchKey = Object.keys(custom).find(
+                                  (k) => k.toLowerCase().trim() === fld.name.toLowerCase().trim()
+                                );
+                                if (matchKey) val = custom[matchKey];
                               }
-                              return timeDisplay ? (
-                                <div className="text-[11px] text-slate-600 dark:text-slate-300 font-medium font-mono">
-                                  {timeDisplay}
-                                </div>
-                              ) : null;
-                            })()}
-                            {serviceConfig.hasReturnDate && b.returnDate && (
-                              <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
-                                <span>↩</span>
-                                <span>Ret: {formatDate(b.returnDate)}</span>
-                              </div>
-                            )}
-                          </td>
+                              if ((val === undefined || val === null || String(val).trim() === "") && fld.name) {
+                                const fn = fld.name.toLowerCase();
+                                if (/portal|supplier|carrier|network|provider/i.test(fn)) val = portalDisplay;
+                                else if (/sector|route|destination|city/i.test(fn)) val = b.sector;
+                                else if (/pnr|tracking|ref|consignment|awb|waybill/i.test(fn)) val = b.pnr;
+                                else if (/date/i.test(fn)) val = b.travelDate || b.issueDate;
+                              }
 
-                          {/* 7. Portal / Supplier / Carrier */}
-                          <td className="py-3 px-4 whitespace-nowrap">
-                            <span className="text-slate-700 dark:text-slate-300 font-medium">
-                              {displayPortalVal}
-                            </span>
-                          </td>
+                              const strVal = val !== undefined && val !== null ? String(val).trim() : "";
+                              if (!strVal || strVal === "—") {
+                                return (
+                                  <td key={fld.id || fld.name} className="py-3 px-4 whitespace-nowrap text-slate-400 dark:text-slate-500">
+                                    —
+                                  </td>
+                                );
+                              }
+
+                              // Date format
+                              if (/^\d{4}-\d{2}-\d{2}$/.test(strVal)) {
+                                return (
+                                  <td key={fld.id || fld.name} className="py-3 px-4 whitespace-nowrap">
+                                    <span className="font-bold text-slate-900 dark:text-white">
+                                      {formatDate(strVal)}
+                                    </span>
+                                  </td>
+                                );
+                              }
+
+                              // Tracking / PNR / Ref / Consignment / Code format
+                              if (/tracking|consignment|awb|waybill|arn|file|pnr|ref|code|id|number|no/i.test(fld.name) && !/name|type|status/i.test(fld.name)) {
+                                return (
+                                  <td key={fld.id || fld.name} className="py-3 px-4 whitespace-nowrap">
+                                    <span className="inline-block px-2 py-0.5 rounded font-mono font-bold text-xs bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                                      📦 {strVal}
+                                    </span>
+                                  </td>
+                                );
+                              }
+
+                              // Category / Type / Attestation dropdown values
+                              if (fld.type === "select" || /type|category|attestaion|service|embassy/i.test(fld.name)) {
+                                return (
+                                  <td key={fld.id || fld.name} className="py-3 px-4 whitespace-nowrap">
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                                      {/attestaion|embassy/i.test(fld.name) ? "📦 " : ""}
+                                      {strVal}
+                                    </span>
+                                  </td>
+                                );
+                              }
+
+                              // Default text column (e.g. Supplier Name)
+                              return (
+                                <td key={fld.id || fld.name} className="py-3 px-4">
+                                  <div className="font-bold text-slate-900 dark:text-white max-w-[200px] truncate" title={strVal}>
+                                    {strVal}
+                                  </div>
+                                </td>
+                              );
+                            })
+                          ) : (
+                            <>
+                              {/* 4. Route / Destination / Mandatory Field 1 */}
+                              <td className="py-3 px-4">
+                                <div className="font-bold text-slate-900 dark:text-white max-w-[180px] truncate" title={displayRoute || ""}>
+                                  {displayRoute}
+                                </div>
+                                {(() => {
+                                  const customFlightNo = custom["Flight Number"] || custom["Flight No"] || custom["Flight"] || "";
+                                  const displayFlightNo = b.flightNo || customFlightNo;
+                                  return displayFlightNo ? (
+                                    <div className="text-[11px] text-sky-700 dark:text-sky-400 font-semibold font-mono">
+                                      {isFlight ? `✈️ ${displayFlightNo}` : displayFlightNo}
+                                    </div>
+                                  ) : null;
+                                })()}
+                                {/* Display user-selected custom fields */}
+                                {tableCustomFields
+                                  .filter((f) => f.id !== routeField?.id && f.id !== pnrField?.id && f.id !== dateField?.id && f.id !== portalField?.id)
+                                  .map((fld) => (
+                                    <div key={fld.id} className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-[180px] mt-0.5">
+                                      <span className="font-semibold text-slate-700 dark:text-slate-300">{fld.name}:</span> {custom[fld.name]}
+                                    </div>
+                                  ))}
+                              </td>
+
+                              {/* 5. PNR / Tracking / Mandatory Field 2 */}
+                              <td className="py-3 px-4 whitespace-nowrap">
+                                {displayPnr ? (
+                                  <span className="inline-block px-2 py-0.5 rounded font-mono font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                                    {isFlight ? displayPnr : `📦 ${displayPnr}`}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 dark:text-slate-500">—</span>
+                                )}
+                              </td>
+
+                              {/* 6. Date / Timing / Mandatory Field 3 */}
+                              <td className="py-3 px-4 whitespace-nowrap">
+                                <div className="font-bold text-slate-900 dark:text-white">
+                                  {displayDateVal}
+                                </div>
+                                {(() => {
+                                  const depVal = custom["Flight Departure Time"] || custom["Flight Time"] || "";
+                                  const arrVal = custom["Flight Arrivel Time"] || custom["Flight Arrival Time"] || "";
+                                  let timeDisplay = "";
+                                  if (depVal && arrVal) {
+                                    timeDisplay = `🕒 ${depVal} - ${arrVal} hrs`;
+                                  } else if (depVal) {
+                                    timeDisplay = `🕒 ${depVal} hrs`;
+                                  } else if (b.flightTime) {
+                                    timeDisplay = isFlight ? formatFlightTimeDisplay(b.flightTime) : `🕒 ${b.flightTime}`;
+                                  }
+                                  return timeDisplay ? (
+                                    <div className="text-[11px] text-slate-600 dark:text-slate-300 font-medium font-mono">
+                                      {timeDisplay}
+                                    </div>
+                                  ) : null;
+                                })()}
+                                {serviceConfig.hasReturnDate && b.returnDate && (
+                                  <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                                    <span>↩</span>
+                                    <span>Ret: {formatDate(b.returnDate)}</span>
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* 7. Portal / Supplier / Carrier */}
+                              <td className="py-3 px-4 whitespace-nowrap">
+                                <span className="text-slate-700 dark:text-slate-300 font-medium">
+                                  {displayPortalVal}
+                                </span>
+                              </td>
+                            </>
+                          )}
 
                           {/* 8. Status */}
                           <td className="py-3 px-4 whitespace-nowrap">
