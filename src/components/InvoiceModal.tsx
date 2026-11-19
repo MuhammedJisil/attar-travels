@@ -6,6 +6,12 @@ import { Booking, AgencySettings } from "@/lib/types";
 import { formatDate, formatBookingNo } from "@/lib/date-utils";
 import { generateWhatsAppUrl, createInvoiceShareMessage } from "@/lib/whatsapp";
 import {
+  getServiceFieldConfig,
+  isFlightOrTravelService,
+  extractCustomFieldValues,
+  DEFAULT_INVOICE_TERMS,
+} from "@/lib/service-config";
+import {
   Printer,
   Download,
   X,
@@ -36,6 +42,55 @@ export default function InvoiceModal({
   };
 
   const handleDownloadTextVoucher = () => {
+    const serviceConfig = getServiceFieldConfig(booking.serviceType);
+    const isFlight = isFlightOrTravelService(booking.serviceType);
+    const custom = extractCustomFieldValues(booking.notes);
+
+    const isFakeAutoPnr = booking.pnr && /^(CCJ|ATT|TRV)-\d+$/i.test(booking.pnr);
+    const realPnr = !isFakeAutoPnr ? booking.pnr : null;
+    const customRef = Object.entries(custom).find(([k]) => /tracking|consignment|awb|waybill|arn|file|pnr|ref/i.test(k))?.[1];
+    const displayTrackingOrRef = realPnr || customRef || null;
+
+    const tmplKey = (serviceConfig.template || (isFlight ? "flight" : "custom")) as keyof typeof DEFAULT_INVOICE_TERMS;
+    const fallbackTerms = DEFAULT_INVOICE_TERMS[tmplKey] || DEFAULT_INVOICE_TERMS.custom || settings.termsConditions;
+    const termsToDisplay = serviceConfig.invoiceTerms?.trim() || (isFlight ? (settings.termsConditions || fallbackTerms) : fallbackTerms);
+
+    const detailLines: string[] = [];
+    if (isFlight) {
+      if (booking.sector) detailLines.push(`Sector / Route: ${booking.sector}`);
+      if (booking.flightNo) detailLines.push(`Flight No: ${booking.flightNo}`);
+      if (realPnr) detailLines.push(`PNR: ${realPnr}`);
+      if (booking.travelDate) detailLines.push(`Travel Date: ${formatDate(booking.travelDate)}`);
+      if (booking.flightTime) detailLines.push(`Departure Time: ${booking.flightTime}`);
+      if (booking.passengerNames) detailLines.push(`Passengers: ${booking.passengerNames}`);
+      if (booking.portal) detailLines.push(`Issued Through: ${booking.portal}`);
+    } else {
+      if (booking.issueDate || booking.travelDate) {
+        detailLines.push(`${serviceConfig.dateLabel || "Booking Date"}: ${formatDate(booking.issueDate || booking.travelDate!)}`);
+      }
+      if (displayTrackingOrRef) {
+        detailLines.push(`Tracking / Ref: ${displayTrackingOrRef}`);
+      }
+      for (const fld of serviceConfig.customFields || []) {
+        let val = custom[fld.name];
+        if (!val) {
+          const matchKey = Object.keys(custom).find(
+            (k) => k.toLowerCase().trim() === fld.name.toLowerCase().trim()
+          );
+          if (matchKey) val = custom[matchKey];
+        }
+        if (val && val.trim()) {
+          detailLines.push(`${fld.name}: ${val.trim()}`);
+        }
+      }
+      if (serviceConfig.hasPax && booking.passengerNames) {
+        detailLines.push(`Passengers: ${booking.passengerNames}`);
+      }
+      if (booking.portal) {
+        detailLines.push(`Supplier / Portal: ${booking.portal}`);
+      }
+    }
+
     const lines = [
       "===========================================================",
       `            ${settings.agencyName.toUpperCase()}`,
@@ -45,20 +100,14 @@ export default function InvoiceModal({
       `DATE: ${booking.issueDate ? formatDate(booking.issueDate) : formatDate(new Date().toISOString())}`,
       `STATUS: ${booking.status.toUpperCase()}`,
       "-----------------------------------------------------------",
-      "CUSTOMER / PASSENGER DETAILS:",
+      "CUSTOMER DETAILS:",
       `Name: ${booking.customer?.name || "N/A"}`,
       `Mobile: ${booking.customer?.phone || "N/A"}`,
       booking.customer?.city ? `City: ${booking.customer.city}` : "",
       "-----------------------------------------------------------",
-      "SERVICE & JOURNEY DETAILS:",
-      `Service: ${booking.serviceType?.name || "Travel Service"}`,
-      booking.sector ? `Sector / Route: ${booking.sector}` : "",
-      booking.flightNo ? `Flight / Train No: ${booking.flightNo}` : "",
-      booking.pnr ? `PNR / Reference: ${booking.pnr}` : "",
-      booking.travelDate ? `Travel Date: ${formatDate(booking.travelDate)}` : "",
-      booking.flightTime ? `Departure Time: ${booking.flightTime}` : "",
-      booking.passengerNames ? `Passengers: ${booking.passengerNames}` : "",
-      booking.portal ? `Issued Through: ${booking.portal}` : "",
+      `${(serviceConfig.title || booking.serviceType?.name || "SERVICE").toUpperCase()}:`,
+      `Service: ${booking.serviceType?.name || "Service"}`,
+      ...detailLines,
       "-----------------------------------------------------------",
       "PAYMENT & BILLING SUMMARY:",
       `Total Amount: Rs. ${booking.totalAmount.toLocaleString()}`,
@@ -68,6 +117,9 @@ export default function InvoiceModal({
       "===========================================================",
       `Agency Contact: ${settings.phone || ""} | ${settings.email || ""}`,
       `${settings.address || ""}`,
+      "-----------------------------------------------------------",
+      "NOTICE & GUIDELINES:",
+      termsToDisplay || "",
       "===========================================================",
     ].filter(Boolean).join("\n");
 
@@ -88,6 +140,15 @@ export default function InvoiceModal({
   };
 
   const invoiceDate = booking.issueDate ? formatDate(booking.issueDate) : formatDate(new Date().toISOString());
+
+  const serviceConfig = getServiceFieldConfig(booking.serviceType);
+  const isFlight = isFlightOrTravelService(booking.serviceType);
+  const custom = extractCustomFieldValues(booking.notes);
+
+  const isFakeAutoPnr = booking.pnr && /^(CCJ|ATT|TRV)-\d+$/i.test(booking.pnr);
+  const realPnr = !isFakeAutoPnr ? booking.pnr : null;
+  const customRef = Object.entries(custom).find(([k]) => /tracking|consignment|awb|waybill|arn|file|pnr|ref/i.test(k))?.[1];
+  const displayTrackingOrRef = realPnr || customRef || null;
 
   return (
     <div className="invoice-modal-overlay fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-2 sm:p-6 flex justify-center items-start">
@@ -266,59 +327,125 @@ export default function InvoiceModal({
             </div>
           </div>
 
-          {/* Flight / Travel Details Section */}
+          {/* Service Details Section */}
           <div className="mb-4 border border-slate-200 rounded-xl overflow-hidden">
             <div className="bg-sky-50 px-3.5 py-1.5 border-b border-sky-100 flex items-center justify-between text-xs font-bold text-sky-900 uppercase tracking-wide">
-              <span>Service & Travel Itinerary</span>
-              {booking.pnr && (
+              <span>{isFlight ? "Service & Travel Itinerary" : (serviceConfig.title || `${booking.serviceType?.name || "Service"} Details`)}</span>
+              {isFlight && realPnr && (
                 <span className="bg-sky-200/80 text-sky-900 px-2 py-0.5 rounded text-[11px]">
-                  PNR: {booking.pnr}
+                  PNR: {realPnr}
+                </span>
+              )}
+              {!isFlight && displayTrackingOrRef && (
+                <span className="bg-sky-200/80 text-sky-900 px-2 py-0.5 rounded text-[11px] font-mono">
+                  REF / TRACKING: {displayTrackingOrRef}
                 </span>
               )}
             </div>
 
-            <div className="p-3.5 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div>
-                <span className="block text-slate-400 uppercase text-[10px] font-bold">Sector / Route</span>
-                <span className="text-xs sm:text-sm font-bold text-slate-900">{booking.sector || "N/A"}</span>
-              </div>
+            {isFlight ? (
+              <div className="p-3.5 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <span className="block text-slate-400 uppercase text-[10px] font-bold">Sector / Route</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-900">{booking.sector || "N/A"}</span>
+                </div>
 
-              <div>
-                <span className="block text-slate-400 uppercase text-[10px] font-bold">Flight No</span>
-                <span className="text-xs sm:text-sm font-bold text-slate-900">{booking.flightNo || "N/A"}</span>
-              </div>
-
-              <div>
-                <span className="block text-slate-400 uppercase text-[10px] font-bold">Travel Date & Time</span>
-                <span className="text-xs sm:text-sm font-bold text-slate-900">
-                  {booking.travelDate ? formatDate(booking.travelDate) : "N/A"}
-                </span>
-                {booking.flightTime && <span className="block text-slate-600 text-[11px]">{booking.flightTime}</span>}
-              </div>
-
-              <div>
-                <span className="block text-slate-400 uppercase text-[10px] font-bold">Return Date</span>
-                <span className="text-xs sm:text-sm font-semibold text-slate-700">
-                  {booking.returnDate ? formatDate(booking.returnDate) : "One-Way"}
-                </span>
-              </div>
-
-              {booking.passengerNames && (
-                <div className="col-span-2 sm:col-span-4 pt-2 border-t border-slate-100">
-                  <span className="block text-slate-400 uppercase text-[10px] font-bold">
-                    Passenger Names ({booking.passengerCount} Pax)
+                <div>
+                  <span className="block text-slate-400 uppercase text-[10px] font-bold">Flight No</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-900">
+                    {booking.flightNo || custom["Flight Number"] || custom["Flight No"] || "N/A"}
                   </span>
-                  <span className="font-semibold text-slate-800">{booking.passengerNames}</span>
                 </div>
-              )}
 
-              {booking.passportNo && (
-                <div className="col-span-2 pt-2 border-t border-slate-100">
-                  <span className="block text-slate-400 uppercase text-[10px] font-bold">Passport No</span>
-                  <span className="font-semibold text-slate-800">{booking.passportNo}</span>
+                <div>
+                  <span className="block text-slate-400 uppercase text-[10px] font-bold">Travel Date & Time</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-900">
+                    {booking.travelDate ? formatDate(booking.travelDate) : "N/A"}
+                  </span>
+                  {booking.flightTime && <span className="block text-slate-600 text-[11px]">{booking.flightTime}</span>}
                 </div>
-              )}
-            </div>
+
+                <div>
+                  <span className="block text-slate-400 uppercase text-[10px] font-bold">Return Date</span>
+                  <span className="text-xs sm:text-sm font-semibold text-slate-700">
+                    {booking.returnDate ? formatDate(booking.returnDate) : "One-Way"}
+                  </span>
+                </div>
+
+                {booking.passengerNames && (
+                  <div className="col-span-2 sm:col-span-4 pt-2 border-t border-slate-100">
+                    <span className="block text-slate-400 uppercase text-[10px] font-bold">
+                      Passenger Names ({booking.passengerCount} Pax)
+                    </span>
+                    <span className="font-semibold text-slate-800">{booking.passengerNames}</span>
+                  </div>
+                )}
+
+                {booking.passportNo && (
+                  <div className="col-span-2 pt-2 border-t border-slate-100">
+                    <span className="block text-slate-400 uppercase text-[10px] font-bold">Passport No</span>
+                    <span className="font-semibold text-slate-800">{booking.passportNo}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-3.5 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                {/* 1. Booking / Issue Date */}
+                {(booking.issueDate || booking.travelDate) && (
+                  <div className="bg-slate-50/70 p-2.5 rounded-lg border border-slate-100">
+                    <span className="block text-slate-400 uppercase text-[10px] font-bold">
+                      {serviceConfig.dateLabel || "Booking / Issue Date"}
+                    </span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-900">
+                      {formatDate(booking.issueDate || booking.travelDate!)}
+                    </span>
+                  </div>
+                )}
+
+                {/* 2. Custom Fields configured for this service */}
+                {serviceConfig.customFields?.map((fld) => {
+                  let val: string | null | undefined = custom[fld.name];
+                  if (!val) {
+                    const matchKey = Object.keys(custom).find(
+                      (k) => k.toLowerCase().trim() === fld.name.toLowerCase().trim()
+                    );
+                    if (matchKey) val = custom[matchKey];
+                  }
+                  if (!val && fld.name) {
+                    const fn = fld.name.toLowerCase();
+                    if (/portal|supplier|provider|carrier/i.test(fn)) val = booking.portal;
+                    else if (/sector|route|destination|city/i.test(fn)) val = booking.sector;
+                    else if (/pnr|tracking|ref|consignment|awb/i.test(fn)) val = realPnr;
+                  }
+
+                  const strVal = val ? String(val).trim() : "";
+                  if (!strVal || strVal === "—") return null;
+
+                  const displayVal = /^\d{4}-\d{2}-\d{2}$/.test(strVal) ? formatDate(strVal) : strVal;
+
+                  return (
+                    <div key={fld.id || fld.name} className="bg-slate-50/70 p-2.5 rounded-lg border border-slate-100">
+                      <span className="block text-slate-400 uppercase text-[10px] font-bold">
+                        {fld.name}
+                      </span>
+                      <span className="text-xs sm:text-sm font-bold text-slate-900 break-words">
+                        {displayVal}
+                      </span>
+                    </div>
+                  );
+                })}
+
+                {/* 3. Passenger details ONLY if service specifically hasPax */}
+                {serviceConfig.hasPax && booking.passengerNames && (
+                  <div className="col-span-2 sm:col-span-3 pt-2 border-t border-slate-100">
+                    <span className="block text-slate-400 uppercase text-[10px] font-bold">
+                      Passenger Names ({booking.passengerCount} Pax)
+                    </span>
+                    <span className="font-semibold text-slate-800">{booking.passengerNames}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Pricing & Billing Table */}
@@ -335,13 +462,40 @@ export default function InvoiceModal({
                 <tr>
                   <td className="py-2.5 px-3">
                     <div className="font-bold text-slate-900">
-                      {booking.serviceType?.name || "Air Ticket"} - {booking.sector || booking.flightNo || "Travel Service"}
+                      {booking.serviceType?.name || "Service"}
+                      {isFlight && (booking.sector ? ` - ${booking.sector}` : "")}
+                      {!isFlight && (() => {
+                        const firstCustom = serviceConfig.customFields?.[0]?.name ? custom[serviceConfig.customFields[0].name] : "";
+                        return firstCustom ? ` - ${firstCustom}` : "";
+                      })()}
                     </div>
                     <div className="text-slate-500 text-[11px]">
-                      PNR: {booking.pnr || "N/A"} | Portal: {booking.portal || "Desk"}
+                      {isFlight ? (
+                        <>
+                          {realPnr && `PNR: ${realPnr} | `}
+                          {booking.flightNo && `Flight: ${booking.flightNo} | `}
+                          Portal: {booking.portal || "Desk"}
+                        </>
+                      ) : (
+                        (() => {
+                          const details: string[] = [];
+                          for (const fld of serviceConfig.customFields || []) {
+                            const v = custom[fld.name];
+                            if (v && v.trim()) {
+                              details.push(`${fld.name}: ${v}`);
+                            }
+                          }
+                          if (details.length > 0) {
+                            return details.slice(0, 3).join(" | ");
+                          }
+                          return booking.portal ? `Supplier: ${booking.portal}` : "Standard Service";
+                        })()
+                      )}
                     </div>
                   </td>
-                  <td className="py-2.5 px-3 text-center font-medium">{booking.passengerCount}</td>
+                  <td className="py-2.5 px-3 text-center font-medium">
+                    {serviceConfig.hasPax ? booking.passengerCount : 1}
+                  </td>
                   <td className="py-2.5 px-3 text-right font-bold text-slate-900">
                     ₹{booking.totalAmount.toLocaleString()}
                   </td>
@@ -386,15 +540,23 @@ export default function InvoiceModal({
             </div>
           )}
 
-          {/* Terms & Conditions */}
-          {settings.termsConditions && (
-            <div className="mt-3 pt-3 border-t border-slate-200 text-[10px] text-slate-500 whitespace-pre-line leading-relaxed">
-              <span className="font-bold uppercase tracking-wider text-slate-400 block mb-0.5 text-[9px]">
-                Notice & Guidelines:
-              </span>
-              {settings.termsConditions}
-            </div>
-          )}
+          {/* Terms & Conditions / Notice & Guidelines */}
+          {(() => {
+            const tmplKey = (serviceConfig.template || (isFlight ? "flight" : "custom")) as keyof typeof DEFAULT_INVOICE_TERMS;
+            const fallbackTerms = DEFAULT_INVOICE_TERMS[tmplKey] || DEFAULT_INVOICE_TERMS.custom || settings.termsConditions;
+            const termsToDisplay = serviceConfig.invoiceTerms?.trim() || (isFlight ? (settings.termsConditions || fallbackTerms) : fallbackTerms);
+
+            if (!termsToDisplay) return null;
+
+            return (
+              <div className="mt-3 pt-3 border-t border-slate-200 text-[10px] text-slate-500 whitespace-pre-line leading-relaxed">
+                <span className="font-bold uppercase tracking-wider text-slate-400 block mb-0.5 text-[9px]">
+                  Notice & Guidelines:
+                </span>
+                {termsToDisplay}
+              </div>
+            );
+          })()}
 
           {/* Signature Stamp Footer */}
           <div className="mt-6 pt-3 flex justify-between items-end text-xs text-slate-400">

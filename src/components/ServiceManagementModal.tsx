@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import {
   DEFAULT_TEMPLATES,
+  DEFAULT_INVOICE_TERMS,
   ServiceTemplateType,
   getServiceFieldConfig,
   getServiceDisplayDescription,
@@ -119,6 +120,7 @@ export default function ServiceManagementModal({
   const [dateLabel, setDateLabel] = useState("Travel / Departure Date");
   const [hasReturnDate, setHasReturnDate] = useState(true);
   const [hasPax, setHasPax] = useState(true);
+  const [invoiceTerms, setInvoiceTerms] = useState(DEFAULT_INVOICE_TERMS.flight);
   const [customDesc, setCustomDesc] = useState("");
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
   const [activeWaTab, setActiveWaTab] = useState<"reminder" | "delay" | "payment" | "invoice">("reminder");
@@ -142,6 +144,7 @@ export default function ServiceManagementModal({
     setServiceCode("");
     setServiceTemplate("flight");
     applyTemplate("flight");
+    setInvoiceTerms(DEFAULT_INVOICE_TERMS.flight);
     setCustomDesc("");
     setCustomFields([]);
     setWaTemplates({
@@ -200,6 +203,7 @@ export default function ServiceManagementModal({
     setDateLabel(tmpl.dateLabel);
     setHasReturnDate(tmpl.hasReturnDate);
     setHasPax(tmpl.hasPax);
+    setInvoiceTerms(DEFAULT_INVOICE_TERMS[templateKey] || DEFAULT_INVOICE_TERMS.custom);
     setWaTemplates((prev) => ({
       ...prev,
       reminder: tmpl.whatsappTemplate || "",
@@ -228,6 +232,7 @@ export default function ServiceManagementModal({
     setDateLabel(config.dateLabel);
     setHasReturnDate(config.hasReturnDate);
     setHasPax(config.hasPax);
+    setInvoiceTerms(config.invoiceTerms || DEFAULT_INVOICE_TERMS[config.template] || DEFAULT_INVOICE_TERMS.custom);
     setWaTemplates({
       reminder: rawTemplates.reminder || config.whatsappTemplate || DEFAULT_TEMPLATES[config.template]?.whatsappTemplate || "",
       delay: rawTemplates.delay || DEFAULT_DELAY_TEMPLATE,
@@ -324,6 +329,8 @@ export default function ServiceManagementModal({
       },
       hasReturnDate,
       hasPax,
+      hasPaxExplicit: true,
+      invoiceTerms: invoiceTerms.trim() || undefined,
       userDescription: customDesc.trim() || undefined,
       customFields: validCustomFields,
     };
@@ -603,6 +610,24 @@ export default function ServiceManagementModal({
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Passenger Details Toggle */}
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-700/60">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={hasPax}
+                    onChange={(e) => setHasPax(e.target.checked)}
+                    className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500"
+                  />
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    Enable Passenger / Traveler Details (No. of Pax & Passenger Names)
+                  </span>
+                </label>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 ml-6 mt-0.5">
+                  Keep enabled for passenger travel (Flights, Trains, Buses, Holiday Tours). Disable for non-passenger services (Courier, Certificates, Attestation, Visa, etc.) so passenger fields don&apos;t appear in the booking form or invoice.
+                </p>
               </div>
             </div>
 
@@ -966,6 +991,43 @@ export default function ServiceManagementModal({
                     </button>
                   ))}
                 </div>
+              </div>
+            </div>
+
+            {/* Step 4: Invoice / Voucher Notice & Guidelines */}
+            <div className="p-4 rounded-xl bg-sky-50/60 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-900 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span className="font-bold text-sky-950 dark:text-sky-200 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                    <FileText size={15} className="text-sky-600 dark:text-sky-400" />
+                    4. Invoice / Voucher Notice & Guidelines for this Service
+                  </span>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Customize the specific rules, guidelines, or notice printed at the bottom of the invoice/voucher for this service
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInvoiceTerms(DEFAULT_INVOICE_TERMS[serviceTemplate] || DEFAULT_INVOICE_TERMS.custom);
+                  }}
+                  className="text-[11px] text-sky-700 dark:text-sky-400 hover:underline font-bold self-start sm:self-auto"
+                >
+                  Reset to Template Defaults
+                </button>
+              </div>
+
+              <div className="space-y-1">
+                <textarea
+                  rows={5}
+                  value={invoiceTerms}
+                  onChange={(e) => setInvoiceTerms(e.target.value)}
+                  placeholder="e.g. 1. Verify all documents before dispatch... 2. Tracking takes 12-24 hours..."
+                  className="w-full p-3 bg-white dark:bg-slate-900 border border-sky-200 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 leading-relaxed"
+                />
+                <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                  This replaces generic airport departure guidelines on the customer invoice with instructions relevant to this specific service.
+                </p>
               </div>
             </div>
 

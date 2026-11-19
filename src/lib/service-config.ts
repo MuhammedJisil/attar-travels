@@ -35,6 +35,7 @@ export interface ServiceFieldDefinition {
   dateLabel: string;
   hasReturnDate: boolean;
   hasPax: boolean;
+  hasPaxExplicit?: boolean;
   hasPassportField: boolean;
   hasSubmissionDates: boolean;
   portalLabel: string;
@@ -48,7 +49,49 @@ export interface ServiceFieldDefinition {
     payment?: string;
     invoice?: string;
   };
+  invoiceTitle?: string;
+  invoiceTerms?: string;
 }
+
+export const DEFAULT_INVOICE_TERMS: Record<ServiceTemplateType, string> = {
+  flight: `1. Please report at airport 3 hours prior to international departure and 2 hours for domestic.
+2. Date change & cancellation charges are applicable as per airline fare rules.
+3. Verify passport validity (minimum 6 months from travel date required).
+4. Carry valid Visa, Passport, and travel insurance documents.`,
+
+  train: `1. Please arrive at the railway station at least 30 minutes before departure.
+2. Carry valid Government-issued original Photo ID proof for all passengers.
+3. Cancellation & refund rules are applicable as per IRCTC / Indian Railways guidelines.`,
+
+  bus: `1. Please report at the boarding point 15 minutes before scheduled departure.
+2. Carry booking confirmation SMS / WhatsApp message and valid photo ID.
+3. Luggage allowance and cancellation policies are subject to the bus operator's rules.`,
+
+  passport: `1. Please report at the PSK / Passport Office 15 minutes before your scheduled appointment.
+2. Carry all original documents, 2 sets of self-attested photocopies, and payment receipts.
+3. Police verification must be attended promptly upon notification from the local police station.`,
+
+  visa: `1. Visa approval, processing time, and issuance are at the sole discretion of the Embassy / Consulate.
+2. Visa processing fees are non-refundable once submitted to the embassy.
+3. Ensure your passport is valid for at least 6 months with sufficient blank pages.`,
+
+  hotel: `1. Standard check-in time is 2:00 PM and check-out is 12:00 PM (subject to hotel policy).
+2. Carry original photo ID and booking confirmation voucher at the time of check-in.
+3. Incidental charges, taxes, and security deposits must be settled directly with the property.`,
+
+  tour: `1. Itinerary schedule and sightseeing are subject to local weather and traffic conditions.
+2. Please follow the instructions of the tour guide/representative during excursions.
+3. Cancellation and refund terms apply as per the holiday package agreement.`,
+
+  courier: `1. Please verify recipient address, postal code, and contact number before dispatch.
+2. Tracking updates may take 12 to 24 hours to reflect on the carrier tracking network.
+3. Fragile, liquid, or high-value items must be declared prior to booking.
+4. Delivery timelines are subject to courier network operations, weather, and customs clearance.`,
+
+  custom: `1. Please verify all details, names, and dates printed on this invoice/voucher.
+2. Any discrepancy must be reported to the agency within 24 hours of issue.
+3. Service charges and booking payments are subject to our agency terms and cancellation policy.`,
+};
 
 export const DEFAULT_TEMPLATES: Record<ServiceTemplateType, ServiceFieldDefinition> = {
   flight: {
@@ -425,9 +468,27 @@ export function getServiceFieldConfig(service?: ServiceType | null): ServiceFiel
       const resolvedDateLabel = dFld?.name || (!isOldGenericDate ? parsed.dateLabel : undefined) || base.dateLabel;
       const resolvedPortalLabel = supFld?.name || (!isOldGenericPortal ? parsed.portalLabel : undefined) || base.portalLabel;
 
+      const isCourierOrAttestation = service?.name && /courier|coriur|cargo|attest|certificate/i.test(service.name);
+      const isPassportOrVisa = service?.name && /passport|visa/i.test(service.name);
+
+      // Determine hasPax:
+      // If service is courier/cargo/attestation/certificate/visa/passport, default hasPax to false unless explicitly enabled
+      let finalHasPax = parsed.hasPax !== undefined ? Boolean(parsed.hasPax) : base.hasPax;
+      if ((isCourierOrAttestation || isPassportOrVisa) && !mergedFields.some((f) => /passenger|pax/i.test(f.name))) {
+        finalHasPax = parsed.hasPaxExplicit ? Boolean(parsed.hasPax) : false;
+      }
+
+      const tmplKey = (parsed.template as ServiceTemplateType) || (isCourierOrAttestation ? "courier" : isPassportOrVisa ? (service?.name.toLowerCase().includes("passport") ? "passport" : "visa") : "custom");
+      const defaultTerms = DEFAULT_INVOICE_TERMS[tmplKey] || DEFAULT_INVOICE_TERMS.custom;
+      const resolvedInvoiceTerms = parsed.invoiceTerms || defaultTerms;
+      const resolvedInvoiceTitle = parsed.invoiceTitle || parsed.title || `${service.name} Details`;
+
       return {
         ...base,
         ...parsed,
+        hasPax: finalHasPax,
+        invoiceTitle: resolvedInvoiceTitle,
+        invoiceTerms: resolvedInvoiceTerms,
         routeLabel: resolvedRouteLabel,
         pnrLabel: resolvedPnrLabel,
         dateLabel: resolvedDateLabel,
@@ -483,15 +544,9 @@ export function getServiceFieldConfig(service?: ServiceType | null): ServiceFiel
 export function isFlightOrTravelService(service?: ServiceType | null): boolean {
   if (!service) return true;
   const n = (service.name + " " + (service.code || "")).toLowerCase();
-  return (
-    n.includes("flight") ||
-    n.includes("airline") ||
-    n.includes("ticket") ||
-    n.includes("train") ||
-    n.includes("rail") ||
-    n.includes("bus") ||
-    n.includes("travel")
-  ) && !n.includes("courier") && !n.includes("coriur") && !n.includes("cargo") && !n.includes("parcel") && !n.includes("passport") && !n.includes("visa");
+  const isNonTravel = /courier|coriur|cargo|parcel|shipment|delivery|passport|visa|attest|certificate|document|insurance/i.test(n);
+  if (isNonTravel) return false;
+  return /flight|airline|air\s*ticket|train|rail|irctc|bus|coach|tour|package|holiday|umrah|hajj/i.test(n) || n === "ticket";
 }
 
 /**
