@@ -204,13 +204,15 @@ export default function HomePage() {
     }
   };
 
-  // Urgent alerts count for header badge (Today departures + delays)
+  // Urgent alerts count for header badge (Today departures/returns + delays)
   const urgentCount = bookings.filter((b) => {
     const isTravel = isFlightOrTravelService(b.serviceType);
-    if (!isTravel || !b.travelDate) return false;
+    if (!isTravel) return false;
     const diff = getDaysDifference(b.travelDate);
+    const retDiff = b.returnDate ? getDaysDifference(b.returnDate) : null;
+    const activeDiff = (diff.isPast && retDiff && retDiff.days !== 999) ? retDiff : diff;
     const isDelay = b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
-    return diff.isToday || isDelay;
+    return activeDiff.isToday || isDelay;
   }).length;
 
   // Filter bookings based on activeFilter
@@ -218,11 +220,13 @@ export default function HomePage() {
     if (activeFilter === "all") return true;
     const isTravel = isFlightOrTravelService(b.serviceType);
     const diff = getDaysDifference(b.travelDate);
+    const retDiff = b.returnDate ? getDaysDifference(b.returnDate) : null;
+    const activeDiff = (diff.isPast && retDiff && retDiff.days !== 999) ? retDiff : diff;
 
-    if (activeFilter === "today") return isTravel && Boolean(b.travelDate) && diff.isToday;
-    if (activeFilter === "tomorrow") return isTravel && Boolean(b.travelDate) && diff.isTomorrow;
-    if (activeFilter === "3days") return isTravel && Boolean(b.travelDate) && diff.days >= 0 && diff.days <= 3;
-    if (activeFilter === "7days") return isTravel && Boolean(b.travelDate) && diff.days >= 0 && diff.days <= 7;
+    if (activeFilter === "today") return isTravel && (b.travelDate || b.returnDate) && activeDiff.isToday;
+    if (activeFilter === "tomorrow") return isTravel && (b.travelDate || b.returnDate) && activeDiff.isTomorrow;
+    if (activeFilter === "3days") return isTravel && (b.travelDate || b.returnDate) && activeDiff.days >= 0 && activeDiff.days <= 3;
+    if (activeFilter === "7days") return isTravel && (b.travelDate || b.returnDate) && activeDiff.days >= 0 && activeDiff.days <= 7;
     if (activeFilter === "delayed") {
       return isTravel && (b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed");
     }

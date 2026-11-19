@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Booking } from "@/lib/types";
-import { getDaysDifference, formatDate, formatBookingNo, formatFlightTimeDisplay } from "@/lib/date-utils";
+import { getDaysDifference, getServiceTimeline, formatDate, formatBookingNo, formatFlightTimeDisplay } from "@/lib/date-utils";
 import { getServiceFieldConfig, extractCustomFieldValues } from "@/lib/service-config";
 import {
   X,
@@ -41,7 +41,7 @@ export default function TicketQuickViewModal({
 }: TicketQuickViewModalProps) {
   if (!isOpen || !booking) return null;
 
-  const diff = getDaysDifference(booking.travelDate);
+  const diff = getServiceTimeline(booking.travelDate, booking.serviceType?.name, booking.returnDate);
   const isDelay = booking.status === "Flight Delayed" || booking.status === "Rescheduled / Postponed";
 
   return (
@@ -138,9 +138,9 @@ export default function TicketQuickViewModal({
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     {config.customFields!.map((fld) => {
                       const val = custom[fld.name] || "";
+                      const low = fld.name.toLowerCase();
                       let displayVal = val;
                       if (!displayVal) {
-                        const low = fld.name.toLowerCase();
                         if (low.includes("flight no") || low.includes("train no") || low.includes("number")) {
                           displayVal = booking.flightNo || "";
                         } else if (low.includes("pnr") || low.includes("reference") || low.includes("arn")) {
@@ -159,15 +159,23 @@ export default function TicketQuickViewModal({
                           displayVal = booking.expiryDate ? formatDate(booking.expiryDate) : "";
                         } else if (low.includes("submission")) {
                           displayVal = booking.submissionDate ? formatDate(booking.submissionDate) : "";
-                        } else if (low.includes("date") && booking.travelDate) {
+                        } else if (low.includes("return") || low.includes("check-out") || low.includes("end date")) {
+                          displayVal = booking.returnDate ? formatDate(booking.returnDate) : "";
+                        } else if (low.includes("date") && !low.includes("return") && booking.travelDate) {
                           displayVal = formatDate(booking.travelDate);
                         } else if (low.includes("route") || low.includes("sector") || low.includes("destination")) {
                           displayVal = booking.sector || "";
                         }
                       } else if (fld.type === "time") {
-                        displayVal = `🕒 ${val} hrs`;
-                      } else if (fld.type === "date" && val) {
-                        displayVal = formatDate(val);
+                        displayVal = val ? `🕒 ${val} hrs` : "";
+                      } else if (fld.type === "date") {
+                        if (val) {
+                          displayVal = formatDate(val);
+                        } else if (low.includes("return") || low.includes("check-out") || low.includes("end date")) {
+                          displayVal = booking.returnDate ? formatDate(booking.returnDate) : "";
+                        } else if (!low.includes("return") && booking.travelDate) {
+                          displayVal = formatDate(booking.travelDate);
+                        }
                       }
 
                       return (

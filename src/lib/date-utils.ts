@@ -95,14 +95,15 @@ export function getDaysDifference(dateString?: string | null): {
 
 /**
  * Service-aware timeline label:
- * Flight / Train / Bus -> "Departed Xd ago", "Today! 🚨", "In X days"
+ * Flight / Train / Bus -> "Departed Xd ago", "Today! 🚨", "In X days", or if departed & return date exists: "Return in Xd ↩"
  * Courier / Cargo -> "Dispatched Xd ago", "Dispatch Today 📦", "In Xd"
  * Passport / Visa -> "Appt Xd ago", "Appointment Today! 🚨", "Appt in Xd"
  * General -> "Booked Xd ago", "Scheduled Today 📌", "In X days"
  */
 export function getServiceTimeline(
   dateString?: string | null,
-  serviceName?: string | null
+  serviceName?: string | null,
+  returnDateString?: string | null
 ): {
   days: number;
   isPast: boolean;
@@ -112,8 +113,6 @@ export function getServiceTimeline(
   badgeClass: string;
 } {
   const base = getDaysDifference(dateString);
-  if (!dateString || base.days === 999) return base;
-
   const n = (serviceName || "").toLowerCase();
   const isFlight =
     (n.includes("flight") || n.includes("airline") || n.includes("ticket") || n.includes("train") || n.includes("bus")) &&
@@ -122,6 +121,56 @@ export function getServiceTimeline(
     !n.includes("cargo");
   const isCourier = n.includes("courier") || n.includes("coriur") || n.includes("cargo") || n.includes("parcel") || n.includes("shipment");
   const isDoc = n.includes("passport") || n.includes("visa");
+
+  // If travel date has passed and a return date exists: provide countdown / reminder for the return date!
+  if ((base.isPast || !dateString) && returnDateString) {
+    const retDiff = getDaysDifference(returnDateString);
+    if (retDiff.days !== 999) {
+      if (retDiff.isToday) {
+        return {
+          days: 0,
+          isPast: false,
+          isToday: true,
+          isTomorrow: false,
+          label: "Return Today ↩",
+          badgeClass: "bg-rose-50 text-rose-700 border-rose-300 font-bold animate-pulse",
+        };
+      }
+      if (retDiff.isTomorrow) {
+        return {
+          days: 1,
+          isPast: false,
+          isToday: false,
+          isTomorrow: true,
+          label: "Return Tomorrow (1d) ↩",
+          badgeClass: "bg-amber-50 text-amber-700 border-amber-300 font-semibold",
+        };
+      }
+      if (retDiff.days > 0) {
+        return {
+          days: retDiff.days,
+          isPast: false,
+          isToday: false,
+          isTomorrow: false,
+          label: `Return in ${retDiff.days}d ↩`,
+          badgeClass: "bg-sky-50 text-sky-700 border-sky-200 font-semibold",
+        };
+      }
+      if (retDiff.isPast) {
+        const absRetDays = Math.abs(retDiff.days);
+        return {
+          days: retDiff.days,
+          isPast: true,
+          isToday: false,
+          isTomorrow: false,
+          label: absRetDays === 1 ? "Returned yesterday ↩" : `Returned ${absRetDays}d ago ↩`,
+          badgeClass: "bg-slate-100 text-slate-600 border-slate-200",
+        };
+      }
+    }
+  }
+
+  if (!dateString || base.days === 999) return base;
 
   if (isFlight) {
     return base;

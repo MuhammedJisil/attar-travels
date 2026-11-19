@@ -188,7 +188,7 @@ export default function BookingModal({
             mergedCustom[f.name] = booking.expiryDate.substring(0, 10);
           } else if (low.includes("submission") && booking.submissionDate) {
             mergedCustom[f.name] = booking.submissionDate.substring(0, 10);
-          } else if ((low.includes("return") || low.includes("check-out")) && booking.returnDate) {
+          } else if ((low.includes("return") || low.includes("check-out") || low.includes("end date")) && booking.returnDate) {
             mergedCustom[f.name] = booking.returnDate.substring(0, 10);
           } else if ((low.includes("date") || low.includes("travel") || low.includes("journey")) && booking.travelDate) {
             mergedCustom[f.name] = booking.travelDate.substring(0, 10);
@@ -302,10 +302,11 @@ export default function BookingModal({
       let resolvedSector = sector.trim();
       let resolvedFlightNo = flightNo.trim();
       let resolvedPnr = pnr.trim() ? pnr.trim().toUpperCase() : "";
-      let resolvedTravelDate = travelDate;
+      let resolvedTravelDate = travelDate ? travelDate.trim() : "";
+      let resolvedReturnDate = returnDate ? returnDate.trim() : "";
       let resolvedPassportNo = passportNo.trim();
-      let resolvedSubmissionDate = submissionDate;
-      let resolvedExpiryDate = expiryDate;
+      let resolvedSubmissionDate = submissionDate ? submissionDate.trim() : "";
+      let resolvedExpiryDate = expiryDate ? expiryDate.trim() : "";
       let resolvedPortal = portal.trim();
 
       // Extract Departure and Arrival Times from custom fields
@@ -313,10 +314,9 @@ export default function BookingModal({
       let arrTime = "";
       let genericTime = "";
 
-      // Automatically map any filled custom fields to core fields:
+      // Automatically map custom fields to core fields:
       for (const [key, rawVal] of Object.entries(customFieldValues)) {
         const val = String(rawVal).trim();
-        if (!val) continue;
         const low = key.toLowerCase();
         if (low.includes("passport number") || low.includes("passport no")) {
           resolvedPassportNo = val;
@@ -324,16 +324,18 @@ export default function BookingModal({
           resolvedSubmissionDate = val;
         } else if (low.includes("expiry date") || low.includes("validity date")) {
           resolvedExpiryDate = val;
+        } else if (low.includes("return") || low.includes("check-out") || low.includes("end date")) {
+          resolvedReturnDate = val;
         } else if (low.includes("dep") && (low.includes("time") || low.includes("flight") || low.includes("departure"))) {
-          depTime = formatFlightTrainTime(val);
+          depTime = val ? formatFlightTrainTime(val) : "";
         } else if ((low.includes("arr") || low.includes("arriv")) && (low.includes("time") || low.includes("flight") || low.includes("arrival") || low.includes("arrivel"))) {
-          arrTime = formatFlightTrainTime(val);
+          arrTime = val ? formatFlightTrainTime(val) : "";
         } else if (low.includes("time") || low.includes("reporting")) {
-          genericTime = formatFlightTrainTime(val);
-        } else if (low.includes("date") && !low.includes("expiry") && !low.includes("submission") && !low.includes("return")) {
+          genericTime = val ? formatFlightTrainTime(val) : "";
+        } else if (low.includes("date") && !low.includes("expiry") && !low.includes("submission") && !low.includes("return") && !low.includes("issue")) {
           resolvedTravelDate = val;
         } else if (low.includes("pnr") || low.includes("tracking") || low.includes("consignment") || low.includes("awb") || low.includes("waybill") || low.includes("arn") || low.includes("reference") || low.includes("file number") || low.includes("confirmation")) {
-          resolvedPnr = val.toUpperCase();
+          resolvedPnr = val ? val.toUpperCase() : "";
         } else if (low.includes("flight no") || low.includes("flight number") || low.includes("train no") || low.includes("train number") || low.includes("bus no") || low.includes("awb no") || low.includes("package code") || low.includes("ticket no") || low.includes("voucher") || (low.includes("flight") && (low.includes("number") || low.includes("no")))) {
           resolvedFlightNo = val;
         } else if (low.includes("sector") || low.includes("route") || low.includes("destination") || low.includes("delivery") || low.includes("city") || low.includes("hotel") || low.includes("package") || low.includes("country")) {
@@ -350,10 +352,15 @@ export default function BookingModal({
         resolvedFlightTime = depTime;
       } else if (arrTime) {
         resolvedFlightTime = arrTime;
-      } else if (flightTime.trim()) {
+      } else if (flightTime && flightTime.trim()) {
         resolvedFlightTime = formatFlightTrainTime(flightTime);
       } else if (genericTime) {
         resolvedFlightTime = genericTime;
+      }
+
+      // If all time indicators are empty, ensure it resolves to empty string
+      if (!depTime && !arrTime && !genericTime && (!flightTime || !flightTime.trim())) {
+        resolvedFlightTime = "";
       }
 
       // Automatically capture or propagate Agent / Staff Name from custom fields / dropdown only
@@ -374,7 +381,8 @@ export default function BookingModal({
         delete customFieldValues["Agent / Staff Name"];
       }
 
-      if (!resolvedTravelDate) {
+      // Default travel date only on fresh creation; if editing, respect explicit clearing
+      if (!resolvedTravelDate && !booking) {
         resolvedTravelDate = issueDate || new Date().toISOString().substring(0, 10);
       }
 
@@ -383,7 +391,7 @@ export default function BookingModal({
         serviceTypeId: selectedServiceId,
         issueDate: issueDate || null,
         travelDate: resolvedTravelDate || null,
-        returnDate: returnDate || null,
+        returnDate: resolvedReturnDate || null,
         sector: resolvedSector || null,
         flightNo: resolvedFlightNo || null,
         pnr: resolvedPnr || null,
@@ -671,7 +679,11 @@ export default function BookingModal({
                                   onChange={(e) => {
                                     const t24 = e.target.value;
                                     setCustomFieldValues((prev) => ({ ...prev, [fld.name]: t24 }));
-                                    if (!flightTime) setFlightTime(t24);
+                                    if (!t24) {
+                                      setFlightTime("");
+                                    } else {
+                                      setFlightTime(t24);
+                                    }
                                   }}
                                   className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono font-bold text-xs cursor-pointer focus:ring-2 focus:ring-sky-500"
                                 />
@@ -685,7 +697,7 @@ export default function BookingModal({
                                       type="button"
                                       onClick={() => {
                                         setCustomFieldValues((prev) => ({ ...prev, [fld.name]: t }));
-                                        if (!flightTime) setFlightTime(t);
+                                        setFlightTime(t);
                                       }}
                                       className={`px-1.5 py-0.5 rounded border transition font-mono ${
                                         val === t
@@ -726,7 +738,18 @@ export default function BookingModal({
                                         d.setDate(d.getDate() + p.days);
                                         const dateStr = d.toISOString().substring(0, 10);
                                         setCustomFieldValues((prev) => ({ ...prev, [fld.name]: dateStr }));
-                                        if (!travelDate) setTravelDate(dateStr);
+                                        const low = fld.name.toLowerCase();
+                                        if (low.includes("return") || low.includes("check-out") || low.includes("end date")) {
+                                          setReturnDate(dateStr);
+                                        } else if (low.includes("expiry")) {
+                                          setExpiryDate(dateStr);
+                                        } else if (low.includes("submission") || low.includes("applied")) {
+                                          setSubmissionDate(dateStr);
+                                        } else if (low.includes("issue") || low.includes("booking date")) {
+                                          setIssueDate(dateStr);
+                                        } else {
+                                          setTravelDate(dateStr);
+                                        }
                                       }}
                                       className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-700 hover:bg-sky-100 dark:hover:bg-sky-900/40 text-slate-600 dark:text-slate-300 font-medium"
                                     >
@@ -747,6 +770,10 @@ export default function BookingModal({
                                     setExpiryDate(dateVal);
                                   } else if (low.includes("submission") || low.includes("applied")) {
                                     setSubmissionDate(dateVal);
+                                  } else if (low.includes("return") || low.includes("check-out") || low.includes("end date")) {
+                                    setReturnDate(dateVal);
+                                  } else if (low.includes("issue") || low.includes("booking date")) {
+                                    setIssueDate(dateVal);
                                   } else {
                                     setTravelDate(dateVal);
                                   }

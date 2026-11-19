@@ -25,6 +25,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Loader2,
+  Calendar,
+  X,
 } from "lucide-react";
 
 interface BookingListProps {
@@ -90,16 +92,16 @@ function toSingleTitle(text: string): string {
   const low = t.toLowerCase();
 
   if (low.includes("destination")) return "DESTINATION";
-  if (low.includes("tracking") || low.includes("consignment") || low.includes("waybill") || low.includes("awb")) return "TRACKING NO";
-  if (low.includes("dispatch date") || low.includes("booking date")) return "BOOKING DATE";
-  if (low.includes("travel date") || low.includes("departure date")) return "TRAVEL DATE";
+  if (low.includes("travel date") || low.includes("departure date") || low.includes("travel")) return "TRAVEL DATE";
   if (low.includes("journey date")) return "JOURNEY DATE";
   if (low.includes("appointment date")) return "APPOINTMENT DATE";
+  if (low.includes("dispatch date") || low.includes("booking date")) return "BOOKING DATE";
+  if (low.includes("flight no") || low.includes("flight number")) return "FLIGHT NO";
+  if (low.includes("airline pnr") || low.includes("pnr")) return "PNR";
+  if (low.includes("tracking") || low.includes("consignment") || low.includes("waybill") || low.includes("awb")) return "TRACKING NO";
+  if (low.includes("irctc")) return "IRCTC PNR";
   if (low.includes("courier") || low.includes("carrier")) return "COURIER COMPANY";
   if (low.includes("sector")) return "SECTOR";
-  if (low.includes("flight no") || low.includes("flight number")) return "FLIGHT NO";
-  if (low.includes("irctc")) return "IRCTC PNR";
-  if (low.includes("airline pnr") || low.includes("pnr")) return "PNR";
   if (low.includes("portal")) return "PORTAL";
   if (low.includes("supplier") || low.includes("provider")) return "SUPPLIER";
   if (low.includes("party name") || low.includes("customer")) return "PARTY NAME";
@@ -128,6 +130,40 @@ export default function BookingList({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedService, setSelectedService] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedAgent, setSelectedAgent] = useState<string>("all");
+
+  // Reorder services: All Services, Flight Ticket, Courier Service, Passport Service, Visa Service, then others
+  const orderedServiceTypes = useMemo(() => {
+    const getRank = (name: string) => {
+      const low = name.toLowerCase();
+      if (low.includes("flight")) return 1;
+      if (low.includes("courier") || low.includes("coriur")) return 2;
+      if (low.includes("passport")) return 3;
+      if (low.includes("visa")) return 4;
+      return 10;
+    };
+    return [...serviceTypes].sort((a, b) => {
+      const rA = getRank(a.name);
+      const rB = getRank(b.name);
+      if (rA !== rB) return rA - rB;
+      return a.name.localeCompare(b.name);
+    });
+  }, [serviceTypes]);
+
+  // Extract unique agents with booking counts
+  const agentsList = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const b of bookings) {
+      const ag = getAgentName(b);
+      if (ag) {
+        map[ag] = (map[ag] || 0) + 1;
+      }
+    }
+    return Object.entries(map)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [bookings]);
 
   // PDF Export Modal State
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
@@ -152,12 +188,34 @@ export default function BookingList({
     }
   };
 
-  // Memoized filter calculation for instant response with date searching support
+  // Memoized filter calculation for instant response
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
       if (selectedService !== "all" && b.serviceTypeId !== selectedService) return false;
       if (selectedStatus !== "all" && b.status !== selectedStatus) return false;
 
+      // Agent filter
+      if (selectedAgent !== "all") {
+        const ag = getAgentName(b);
+        if (!ag || ag.toLowerCase() !== selectedAgent.toLowerCase()) return false;
+      }
+
+      // Dedicated calendar date filter (matches travel date, return date, booking date, or custom dates)
+      if (selectedDate) {
+        const customVals = extractCustomFieldValues(b.notes);
+        const matchesDate =
+          (b.travelDate && b.travelDate.substring(0, 10) === selectedDate) ||
+          (b.returnDate && b.returnDate.substring(0, 10) === selectedDate) ||
+          (b.issueDate && b.issueDate.substring(0, 10) === selectedDate) ||
+          (b.submissionDate && b.submissionDate.substring(0, 10) === selectedDate) ||
+          (b.expiryDate && b.expiryDate.substring(0, 10) === selectedDate) ||
+          Object.values(customVals).some(
+            (v) => typeof v === "string" && v.substring(0, 10) === selectedDate
+          );
+        if (!matchesDate) return false;
+      }
+
+      // Text search without date matching interference
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
         const party = b.customer?.name?.toLowerCase() || "";
@@ -169,12 +227,6 @@ export default function BookingList({
         const bookingNo = b.bookingNo.toLowerCase();
         const ccjBookingNo = formatBookingNo(b.bookingNo).toLowerCase();
         const agent = getAgentName(b)?.toLowerCase() || "";
-
-        // Filter date by ticket issue date or customer creation date (NOT travel date)
-        const issueDate = b.issueDate ? String(b.issueDate).toLowerCase() : "";
-        const formattedIssueDate = b.issueDate ? formatDate(String(b.issueDate)).toLowerCase() : "";
-        const createdAtDate = b.createdAt ? formatDate(String(b.createdAt)).toLowerCase() : "";
-
         const flightTime = b.flightTime?.toLowerCase() || "";
         const passportNo = b.passportNo?.toLowerCase() || "";
         const notes = b.notes?.toLowerCase() || "";
@@ -189,9 +241,6 @@ export default function BookingList({
           bookingNo.includes(q) ||
           ccjBookingNo.includes(q) ||
           agent.includes(q) ||
-          issueDate.includes(q) ||
-          formattedIssueDate.includes(q) ||
-          createdAtDate.includes(q) ||
           flightTime.includes(q) ||
           passportNo.includes(q) ||
           notes.includes(q)
@@ -200,7 +249,7 @@ export default function BookingList({
 
       return true;
     });
-  }, [bookings, selectedService, selectedStatus, searchTerm]);
+  }, [bookings, selectedService, selectedStatus, selectedAgent, selectedDate, searchTerm]);
 
   // Pagination calculations
   const totalItems = filteredBookings.length;
@@ -226,7 +275,7 @@ export default function BookingList({
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
-            placeholder="Search party name, mobile, PNR, flight, sector, portal, date (e.g. 14 Nov)..."
+            placeholder="Search party name, mobile, PNR, flight, sector, portal, agent..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -238,7 +287,34 @@ export default function BookingList({
 
         {/* Filter Controls & Export */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Service Dropdown */}
+          {/* Calendar Date Filter */}
+          <div className="relative flex items-center">
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => {
+                setSelectedDate(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-sky-500"
+              title="Filter by Specific Date"
+            />
+            {selectedDate && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDate("");
+                  setCurrentPage(1);
+                }}
+                className="ml-1 p-1 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                title="Clear date filter"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Service Dropdown (Strictly Ordered: Flight -> Courier -> Passport -> Visa -> Others) */}
           <select
             value={selectedService}
             onChange={(e) => {
@@ -248,9 +324,26 @@ export default function BookingList({
             className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200"
           >
             <option value="all">All Services</option>
-            {serviceTypes.map((st) => (
+            {orderedServiceTypes.map((st) => (
               <option key={st.id} value={st.id}>
                 {st.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Agent Filter Dropdown */}
+          <select
+            value={selectedAgent}
+            onChange={(e) => {
+              setSelectedAgent(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200"
+          >
+            <option value="all">All Agents ({bookings.length})</option>
+            {agentsList.map(({ name, count }) => (
+              <option key={name} value={name}>
+                👤 {name} ({count})
               </option>
             ))}
           </select>
@@ -279,6 +372,10 @@ export default function BookingList({
               const label =
                 selectedService !== "all"
                   ? `Service: ${serviceTypes.find((s) => s.id === selectedService)?.name || selectedService}`
+                  : selectedAgent !== "all"
+                  ? `Agent: ${selectedAgent}`
+                  : selectedDate
+                  ? `Date: ${selectedDate}`
                   : selectedStatus !== "all"
                   ? `Status: ${selectedStatus}`
                   : "All Active Tickets";
@@ -305,12 +402,14 @@ export default function BookingList({
             <span className="hidden sm:inline">CSV</span>
           </button>
 
-          {(searchTerm || selectedService !== "all" || selectedStatus !== "all") && (
+          {(searchTerm || selectedService !== "all" || selectedStatus !== "all" || selectedAgent !== "all" || selectedDate) && (
             <button
               onClick={() => {
                 setSearchTerm("");
                 setSelectedService("all");
                 setSelectedStatus("all");
+                setSelectedAgent("all");
+                setSelectedDate("");
                 setCurrentPage(1);
               }}
               className="text-xs text-sky-600 dark:text-sky-400 hover:text-sky-800 font-semibold px-1"
@@ -332,7 +431,7 @@ export default function BookingList({
           </div>
         ) : (
           paginatedBookings.map((b) => {
-            const diff = getServiceTimeline(b.travelDate, b.serviceType?.name);
+            const diff = getServiceTimeline(b.travelDate, b.serviceType?.name, b.returnDate);
             const isDelay = b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
             const isFlight = isFlightOrTravelService(b.serviceType);
             const custom = extractCustomFieldValues(b.notes);
@@ -357,10 +456,15 @@ export default function BookingList({
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                     <span className={`font-semibold ${diff.days <= 1 ? "text-rose-600 dark:text-rose-400 font-bold" : "text-sky-700 dark:text-sky-400"}`}>
                       {diff.label}
                     </span>
+                    {b.returnDate && (
+                      <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
+                        ↩ Ret: {formatDate(b.returnDate)}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -449,8 +553,8 @@ export default function BookingList({
 
         const col1Header = filteredConfig ? (isFilteredFlight ? "Days Left" : "Timeline") : "Days Left";
         const col4Header = routeField?.name || filteredConfig?.routeLabel || (selectedService === "all" ? "Sector / Route" : "Details");
-        const col5Header = pnrField?.name || filteredConfig?.pnrLabel || (selectedService === "all" ? "PNR / Tracking" : "Ref No");
-        const col6Header = dateField?.name || (filteredConfig ? (isFilteredFlight ? "Travel Date & Time" : filteredConfig.dateLabel) : "Travel / Booking Date");
+        const col5Header = pnrField?.name || filteredConfig?.pnrLabel || (selectedService === "all" ? "PNR" : "Ref No");
+        const col6Header = dateField?.name || (filteredConfig ? (isFilteredFlight ? "Travel Date & Time" : filteredConfig.dateLabel) : "Travel Date");
         const col7Header = portalField?.name || filteredConfig?.portalLabel || "Portal / Supplier";
 
         return (
@@ -492,7 +596,7 @@ export default function BookingList({
                     </tr>
                   ) : (
                     paginatedBookings.map((b) => {
-                      const diff = getServiceTimeline(b.travelDate, b.serviceType?.name);
+                      const diff = getServiceTimeline(b.travelDate, b.serviceType?.name, b.returnDate);
                       const isDelay =
                         b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
                       const portalDisplay = getDisplayPortal(b);
@@ -730,8 +834,8 @@ export default function BookingList({
                                     </div>
                                   ) : null;
                                 })()}
-                                {serviceConfig.hasReturnDate && b.returnDate && (
-                                  <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                                {b.returnDate && (
+                                  <div className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 flex items-center gap-1">
                                     <span>↩</span>
                                     <span>Ret: {formatDate(b.returnDate)}</span>
                                   </div>

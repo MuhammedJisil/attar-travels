@@ -40,13 +40,16 @@ export default function DueAlertsWidget({
   bookings.forEach((b) => {
     const isTravel = isFlightOrTravelService(b.serviceType);
     const diff = getDaysDifference(b.travelDate);
+    const retDiff = b.returnDate ? getDaysDifference(b.returnDate) : null;
+    // Active difference: if travel date has passed and return date exists, count return countdown
+    const activeDiff = (diff.isPast && retDiff && retDiff.days !== 999) ? retDiff : diff;
 
-    // Only count actual travel/flight services for departure alerts
-    if (isTravel && b.travelDate) {
-      if (diff.isToday) todayCount++;
-      if (diff.isTomorrow) tomorrowCount++;
-      if (diff.days >= 0 && diff.days <= 3) next3DaysCount++;
-      if (diff.days >= 0 && diff.days <= 7) next7DaysCount++;
+    // Only count actual travel/flight services for departure & return alerts
+    if (isTravel && (b.travelDate || b.returnDate)) {
+      if (activeDiff.isToday) todayCount++;
+      if (activeDiff.isTomorrow) tomorrowCount++;
+      if (activeDiff.days >= 0 && activeDiff.days <= 3) next3DaysCount++;
+      if (activeDiff.days >= 0 && activeDiff.days <= 7) next7DaysCount++;
 
       if (b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed") {
         delayedCount++;
