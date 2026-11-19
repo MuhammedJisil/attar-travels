@@ -32,6 +32,7 @@ import {
   getCleanNotes,
   serializeCustomFieldValues,
   resolveBookingDates,
+  isFlightOrTravelService,
 } from "@/lib/service-config";
 import { formatBookingNo } from "@/lib/date-utils";
 import PhoneInput from "./PhoneInput";
@@ -190,10 +191,16 @@ export default function BookingModal({
             mergedCustom[f.name] = booking.expiryDate.substring(0, 10);
           } else if (low.includes("submission") && booking.submissionDate) {
             mergedCustom[f.name] = booking.submissionDate.substring(0, 10);
-          } else if ((low.includes("return") || low.includes("check-out") || low.includes("end date")) && booking.returnDate) {
-            mergedCustom[f.name] = booking.returnDate.substring(0, 10);
-          } else if ((low.includes("date") || low.includes("travel") || low.includes("journey")) && booking.travelDate) {
-            mergedCustom[f.name] = booking.travelDate.substring(0, 10);
+          } else if (low.includes("return") || low.includes("check-out") || low.includes("end date")) {
+            if (effReturn) {
+              mergedCustom[f.name] = effReturn.substring(0, 10);
+            } else {
+              delete mergedCustom[f.name];
+            }
+          } else if (low.includes("date") || low.includes("travel") || low.includes("journey")) {
+            if (effTravel) {
+              mergedCustom[f.name] = effTravel.substring(0, 10);
+            }
           } else if ((low.includes("route") || low.includes("sector") || low.includes("destination") || low.includes("hotel") || low.includes("station")) && booking.sector) {
             mergedCustom[f.name] = booking.sector;
           } else if ((low.includes("portal") || low.includes("supplier") || low.includes("booked")) && booking.portal) {
@@ -383,9 +390,18 @@ export default function BookingModal({
         delete customFieldValues["Agent / Staff Name"];
       }
 
-      // Default travel date only on fresh creation; if editing, respect explicit clearing
-      if (!resolvedTravelDate && !booking) {
-        resolvedTravelDate = issueDate || new Date().toISOString().substring(0, 10);
+      // Set travel & return date appropriately per service type
+      const currentService = serviceTypes.find((s) => s.id === selectedServiceId);
+      const isCurrentFlight = isFlightOrTravelService(currentService);
+
+      if (!isCurrentFlight) {
+        resolvedTravelDate = issueDate || "";
+        resolvedReturnDate = "";
+      } else {
+        // Flight service: default travel date only on fresh creation; if editing, respect explicit clearing
+        if (!resolvedTravelDate && !booking) {
+          resolvedTravelDate = issueDate || new Date().toISOString().substring(0, 10);
+        }
       }
 
       const payload = {

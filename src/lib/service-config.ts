@@ -736,15 +736,46 @@ export function serializeCustomFieldValues(
 export function resolveBookingDates(b?: {
   travelDate?: Date | string | null;
   returnDate?: Date | string | null;
+  issueDate?: Date | string | null;
+  submissionDate?: Date | string | null;
+  expiryDate?: Date | string | null;
   notes?: string | null;
+  serviceType?: { name?: string | null; code?: string | null } | null;
 } | null): {
   travelDate: string | null;
   returnDate: string | null;
 } {
   if (!b) return { travelDate: null, returnDate: null };
 
+  const isFlight = isFlightOrTravelService(b.serviceType as any);
   const custom = extractCustomFieldValues(b.notes);
+  const hasCustomNotes = Boolean(b.notes && b.notes.includes(CUSTOM_MARKER));
 
+  // If NON-TRAVEL service (Courier, Attestation, Certificate, Document, etc.):
+  if (!isFlight) {
+    // 1. Check custom fields for any date (dispatch date, issue date, booking date, etc.)
+    const customCourierDate = Object.entries(custom).find(([k]) =>
+      /date/i.test(k) && !/expiry|birth/i.test(k)
+    )?.[1];
+
+    let effectiveDate: string | null = null;
+    if (customCourierDate && customCourierDate.trim()) {
+      effectiveDate = customCourierDate.trim();
+    } else if (b.issueDate) {
+      effectiveDate = typeof b.issueDate === "string" ? b.issueDate : (b.issueDate instanceof Date ? b.issueDate.toISOString() : String(b.issueDate));
+    } else if (b.submissionDate) {
+      effectiveDate = typeof b.submissionDate === "string" ? b.submissionDate : (b.submissionDate instanceof Date ? b.submissionDate.toISOString() : String(b.submissionDate));
+    } else if (b.travelDate) {
+      effectiveDate = typeof b.travelDate === "string" ? b.travelDate : (b.travelDate instanceof Date ? b.travelDate.toISOString() : String(b.travelDate));
+    }
+
+    return {
+      travelDate: effectiveDate,
+      returnDate: null, // Courier & non-travel services NEVER have return dates!
+    };
+  }
+
+  // FLIGHT / TRAVEL SERVICE:
   // Search custom fields for departure / travel date
   const customTravel = Object.entries(custom).find(([k]) =>
     /^(travel|departure|journey)\s*(\/\s*departure\s*)?date/i.test(k) && !/return/i.test(k)
@@ -760,18 +791,27 @@ export function resolveBookingDates(b?: {
     travelDate = customTravel.trim();
   } else if (b.travelDate) {
     travelDate = typeof b.travelDate === "string" ? b.travelDate : (b.travelDate instanceof Date ? b.travelDate.toISOString() : String(b.travelDate));
+  } else if (b.issueDate) {
+    travelDate = typeof b.issueDate === "string" ? b.issueDate : (b.issueDate instanceof Date ? b.issueDate.toISOString() : String(b.issueDate));
   }
 
+  // Return date logic:
+  // ONLY show return date if user explicitly entered a return date in custom fields,
+  // or (for legacy records without custom fields) if b.returnDate is distinct from travelDate.
   let returnDate: string | null = null;
   if (customReturn && customReturn.trim()) {
     returnDate = customReturn.trim();
-  } else if (b.returnDate) {
-    returnDate = typeof b.returnDate === "string" ? b.returnDate : (b.returnDate instanceof Date ? b.returnDate.toISOString() : String(b.returnDate));
+  } else if (!hasCustomNotes && b.returnDate) {
+    const rawRet = typeof b.returnDate === "string" ? b.returnDate : (b.returnDate instanceof Date ? b.returnDate.toISOString() : String(b.returnDate));
+    const rawTravel = travelDate || (b.travelDate ? (typeof b.travelDate === "string" ? b.travelDate : (b.travelDate instanceof Date ? b.travelDate.toISOString() : String(b.travelDate))) : null);
+    if (!rawTravel || rawRet.substring(0, 10) !== rawTravel.substring(0, 10)) {
+      returnDate = rawRet;
+    }
   }
 
-  // If travelDate and returnDate are identical (e.g. from previous form overwrite bug), and custom has the actual travel date
-  if (travelDate && returnDate && travelDate.substring(0, 10) === returnDate.substring(0, 10) && customTravel) {
-    travelDate = customTravel.trim();
+  // If travelDate and returnDate are identical, it is a one-way flight, NOT a round trip!
+  if (travelDate && returnDate && travelDate.substring(0, 10) === returnDate.substring(0, 10)) {
+    returnDate = null;
   }
 
   return { travelDate, returnDate };

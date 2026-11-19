@@ -17,7 +17,13 @@ export function getDaysDifference(dateString?: string | null): {
     };
   }
 
-  const target = new Date(dateString);
+  let target: Date;
+  if (typeof dateString === "string" && /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/.test(dateString.trim())) {
+    const parts = dateString.trim().split(/[\/\-]/);
+    target = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+  } else {
+    target = new Date(dateString);
+  }
   const now = new Date();
 
   // Reset to midnight for clean day difference
@@ -212,7 +218,14 @@ export function getServiceTimeline(
 export function formatDate(dateString?: string | null): string {
   if (!dateString) return "—";
   try {
-    const d = new Date(dateString);
+    let d: Date;
+    if (typeof dateString === "string" && /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/.test(dateString.trim())) {
+      const parts = dateString.trim().split(/[\/\-]/);
+      d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+    } else {
+      d = new Date(dateString);
+    }
+    if (isNaN(d.getTime())) return String(dateString);
     return d.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
@@ -226,7 +239,14 @@ export function formatDate(dateString?: string | null): string {
 export function formatDateTime(dateString?: string | null): string {
   if (!dateString) return "—";
   try {
-    const d = new Date(dateString);
+    let d: Date;
+    if (typeof dateString === "string" && /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/.test(dateString.trim())) {
+      const parts = dateString.trim().split(/[\/\-]/);
+      d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+    } else {
+      d = new Date(dateString);
+    }
+    if (isNaN(d.getTime())) return String(dateString);
     return d.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
