@@ -27,7 +27,6 @@ import {
   formatFlightTrainTime,
   formatTime12h,
   formatTime24h,
-  TRAIN_FLIGHT_TIME_PRESETS,
   extractCustomFieldValues,
   getCleanNotes,
   serializeCustomFieldValues,
@@ -705,28 +704,6 @@ export default function BookingModal({
                                   }}
                                   className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono font-bold text-xs cursor-pointer focus:ring-2 focus:ring-sky-500"
                                 />
-
-                                {/* 24-hour Train & Flight Time Presets (e.g. 22:00) */}
-                                <div className="flex flex-wrap items-center gap-1 text-[10px]">
-                                  <span className="text-slate-400 dark:text-slate-500 text-[10px] mr-0.5">24h Presets:</span>
-                                  {TRAIN_FLIGHT_TIME_PRESETS.map((t) => (
-                                    <button
-                                      key={t}
-                                      type="button"
-                                      onClick={() => {
-                                        setCustomFieldValues((prev) => ({ ...prev, [fld.name]: t }));
-                                        setFlightTime(t);
-                                      }}
-                                      className={`px-1.5 py-0.5 rounded border transition font-mono ${
-                                        val === t
-                                          ? "bg-sky-600 text-white border-sky-600 font-bold"
-                                          : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-sky-50 dark:hover:bg-slate-700"
-                                      }`}
-                                    >
-                                      {t}
-                                    </button>
-                                  ))}
-                                </div>
                               </div>
                             </div>
                           );
@@ -1075,24 +1052,6 @@ export default function BookingModal({
                               }}
                               className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono font-bold text-xs focus:ring-2 focus:ring-sky-500 cursor-pointer"
                             />
-
-                            {/* 24-hour Presets */}
-                            <div className="flex flex-wrap items-center gap-1 text-[10px]">
-                              {TRAIN_FLIGHT_TIME_PRESETS.map((t) => (
-                                <button
-                                  key={t}
-                                  type="button"
-                                  onClick={() => setFlightTime(t)}
-                                  className={`px-1.5 py-1 rounded border transition font-mono ${
-                                    flightTime === t
-                                      ? "bg-sky-600 text-white border-sky-600 font-bold"
-                                      : "bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-sky-50 dark:hover:bg-slate-800"
-                                  }`}
-                                >
-                                  {t}
-                                </button>
-                              ))}
-                            </div>
                           </div>
                         </div>
                       )}
