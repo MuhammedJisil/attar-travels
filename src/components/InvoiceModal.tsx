@@ -12,6 +12,7 @@ import {
   isTrainService,
   isBusService,
   extractCustomFieldValues,
+  resolveBookingDates,
   DEFAULT_INVOICE_TERMS,
 } from "@/lib/service-config";
 import {
@@ -84,6 +85,7 @@ function buildDefaultInvoiceState(booking: Booking, settings: AgencySettings): I
   const isTrain = isTrainService(booking.serviceType);
   const isBus = isBusService(booking.serviceType);
   const isFlight = isFlightService(booking.serviceType);
+  const { travelDate: effectiveTravelDate, returnDate: effectiveReturnDate } = resolveBookingDates(booking);
 
   if (isTrain) {
     sectionTitle = "Train Ticket & Journey Itinerary";
@@ -101,7 +103,7 @@ function buildDefaultInvoiceState(booking: Booking, settings: AgencySettings): I
     fields.push({
       id: "f_date",
       label: "Journey Date",
-      value: booking.travelDate ? formatDate(booking.travelDate) : (booking.issueDate ? formatDate(booking.issueDate) : "—"),
+      value: effectiveTravelDate ? formatDate(effectiveTravelDate) : (booking.issueDate ? formatDate(booking.issueDate) : "—"),
     });
     fields.push({
       id: "f_time",
@@ -131,7 +133,7 @@ function buildDefaultInvoiceState(booking: Booking, settings: AgencySettings): I
     fields.push({
       id: "f_date",
       label: "Boarding Date",
-      value: booking.travelDate ? formatDate(booking.travelDate) : (booking.issueDate ? formatDate(booking.issueDate) : "—"),
+      value: effectiveTravelDate ? formatDate(effectiveTravelDate) : (booking.issueDate ? formatDate(booking.issueDate) : "—"),
     });
     fields.push({
       id: "f_time",
@@ -161,12 +163,14 @@ function buildDefaultInvoiceState(booking: Booking, settings: AgencySettings): I
     fields.push({
       id: "f_date_time",
       label: "Travel Date & Time",
-      value: `${booking.travelDate ? formatDate(booking.travelDate) : "N/A"}${booking.flightTime ? ` (${booking.flightTime})` : ""}`,
+      value: `${effectiveTravelDate ? formatDate(effectiveTravelDate) : "N/A"}${booking.flightTime ? ` (${booking.flightTime})` : ""}`,
     });
     fields.push({
       id: "f_return_date",
       label: "Return Date",
-      value: booking.returnDate ? formatDate(booking.returnDate) : "One-Way",
+      value: (effectiveReturnDate && (!effectiveTravelDate || effectiveReturnDate.substring(0, 10) !== effectiveTravelDate.substring(0, 10)))
+        ? formatDate(effectiveReturnDate)
+        : "One-Way",
     });
     if (booking.passportNo) {
       fields.push({
@@ -179,11 +183,11 @@ function buildDefaultInvoiceState(booking: Booking, settings: AgencySettings): I
     // Non-travel service (Courier, Visa, Passport, Certificate, etc.)
     sectionTitle = serviceConfig.title || `${booking.serviceType?.name || "Service"} Details`;
     refTag = displayTrackingOrRef ? `Tracking / Ref: ${displayTrackingOrRef}` : "";
-    if (booking.issueDate || booking.travelDate) {
+    if (booking.issueDate || effectiveTravelDate) {
       fields.push({
         id: "f_date",
         label: serviceConfig.dateLabel || "Booking / Issue Date",
-        value: formatDate(booking.issueDate || booking.travelDate!),
+        value: formatDate(booking.issueDate || effectiveTravelDate!),
       });
     }
     for (const fld of serviceConfig.customFields || []) {

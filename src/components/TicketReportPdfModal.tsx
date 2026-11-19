@@ -3,6 +3,7 @@
 import React from "react";
 import { Booking, AgencySettings } from "@/lib/types";
 import { formatDate, formatBookingNo, formatFlightTimeDisplay } from "@/lib/date-utils";
+import { resolveBookingDates } from "@/lib/service-config";
 import Logo from "./Logo";
 import {
   X,
@@ -275,7 +276,9 @@ export default function TicketReportPdfModal({
                     </td>
                   </tr>
                 ) : (
-                  bookings.map((b, idx) => (
+                  bookings.map((b, idx) => {
+                    const { travelDate: effTravel, returnDate: effReturn } = resolveBookingDates(b);
+                    return (
                     <tr key={b.id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
                       <td className="py-1.5 px-2 text-center font-mono text-slate-400 text-[10px]">{idx + 1}</td>
                       <td className="py-1.5 px-2.5 font-mono font-bold text-slate-900 whitespace-nowrap">{formatBookingNo(b.bookingNo)}</td>
@@ -291,13 +294,13 @@ export default function TicketReportPdfModal({
                       </td>
                       <td className="py-1.5 px-2.5 whitespace-nowrap">
                         <div className="font-bold text-slate-800">
-                          {b.travelDate ? formatDate(b.travelDate) : "N/A"}
+                          {effTravel ? formatDate(effTravel) : "N/A"}
                         </div>
                         {b.flightTime && (
                           <div className="text-[10px] font-semibold text-sky-700 font-mono">{formatFlightTimeDisplay(b.flightTime)}</div>
                         )}
-                        {b.returnDate && (
-                          <div className="text-[10px] text-slate-500">↩ Ret: {formatDate(b.returnDate)}</div>
+                        {effReturn && (
+                          <div className="text-[10px] text-slate-500">↩ Ret: {formatDate(effReturn)}</div>
                         )}
                       </td>
                       <td className="py-1.5 px-2.5 font-mono font-bold text-slate-900 whitespace-nowrap">
@@ -329,7 +332,8 @@ export default function TicketReportPdfModal({
                         </span>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
               {bookings.length > 0 && (

@@ -860,8 +860,19 @@ export function formatCustomWhatsAppMessage(
   const isSectorSameAsService = booking.sector && booking.serviceType?.name && booking.sector.toLowerCase().trim() === booking.serviceType.name.toLowerCase().trim();
   const routeVal = (!isSectorSameAsService && booking.sector) ? booking.sector : (customRoute || (!isSectorSameAsService ? booking.sector : null) || "—");
 
-  const dateVal = booking.travelDate
-    ? new Date(booking.travelDate).toLocaleDateString("en-US", {
+  const { travelDate: effTravelDate, returnDate: effReturnDate } = resolveBookingDates(booking);
+
+  const dateVal = effTravelDate
+    ? new Date(effTravelDate).toLocaleDateString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : "—";
+
+  const returnDateVal = effReturnDate
+    ? new Date(effReturnDate).toLocaleDateString("en-US", {
         weekday: "short",
         year: "numeric",
         month: "short",
@@ -895,6 +906,8 @@ export function formatCustomWhatsAppMessage(
     .replace(/{pnr}/gi, pnrVal)
     .replace(/{tracking_no}/gi, pnrVal)
     .replace(/{date}/gi, dateVal)
+    .replace(/{travel_date}/gi, dateVal)
+    .replace(/{return_date}/gi, returnDateVal)
     .replace(/{time}/gi, timeVal)
     .replace(/{portal}/gi, portalVal)
     .replace(/{supplier}/gi, portalVal)
