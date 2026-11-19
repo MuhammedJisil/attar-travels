@@ -759,14 +759,14 @@ export function resolveBookingDates(b?: {
   if (customTravel && customTravel.trim()) {
     travelDate = customTravel.trim();
   } else if (b.travelDate) {
-    travelDate = typeof b.travelDate === "string" ? b.travelDate : b.travelDate.toISOString();
+    travelDate = typeof b.travelDate === "string" ? b.travelDate : (b.travelDate instanceof Date ? b.travelDate.toISOString() : String(b.travelDate));
   }
 
   let returnDate: string | null = null;
   if (customReturn && customReturn.trim()) {
     returnDate = customReturn.trim();
   } else if (b.returnDate) {
-    returnDate = typeof b.returnDate === "string" ? b.returnDate : b.returnDate.toISOString();
+    returnDate = typeof b.returnDate === "string" ? b.returnDate : (b.returnDate instanceof Date ? b.returnDate.toISOString() : String(b.returnDate));
   }
 
   // If travelDate and returnDate are identical (e.g. from previous form overwrite bug), and custom has the actual travel date

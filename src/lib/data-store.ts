@@ -607,33 +607,6 @@ export async function deleteCustomer(id: string): Promise<boolean> {
   return true;
 }
 
-// Helper to auto-heal records where travelDate was mistakenly overwritten with returnDate
-function autoHealBooking(b: Booking): Booking {
-  const { travelDate: trueTravel, returnDate: trueReturn } = resolveBookingDates(b);
-  const curTravel = b.travelDate ? b.travelDate.substring(0, 10) : null;
-  const curReturn = b.returnDate ? b.returnDate.substring(0, 10) : null;
-  const targetTravel = trueTravel ? trueTravel.substring(0, 10) : null;
-  const targetReturn = trueReturn ? trueReturn.substring(0, 10) : null;
-
-  if ((targetTravel && targetTravel !== curTravel) || (targetReturn && targetReturn !== curReturn)) {
-    if (hasDatabase()) {
-      prisma.booking.update({
-        where: { id: b.id },
-        data: {
-          travelDate: targetTravel ? new Date(targetTravel) : undefined,
-          returnDate: targetReturn ? new Date(targetReturn) : undefined,
-        },
-      }).catch(() => {});
-    }
-    return {
-      ...b,
-      travelDate: targetTravel ? new Date(targetTravel).toISOString() : b.travelDate,
-      returnDate: targetReturn ? new Date(targetReturn).toISOString() : b.returnDate,
-    };
-  }
-  return b;
-}
-
 // ---------------- BOOKINGS / TICKETS ----------------
 export async function getBookings(): Promise<Booking[]> {
   if (hasDatabase()) {
@@ -645,7 +618,7 @@ export async function getBookings(): Promise<Booking[]> {
         },
         orderBy: { travelDate: "asc" },
       });
-      return (records as unknown as Booking[]).map(autoHealBooking);
+      return records as unknown as Booking[];
     } catch (e: unknown) {
       console.error("Prisma error in getBookings:", e);
       const isMissingTable = (e as { code?: string })?.code === "P2021";
@@ -659,7 +632,7 @@ export async function getBookings(): Promise<Booking[]> {
             },
             orderBy: { travelDate: "asc" },
           });
-          return (records as unknown as Booking[]).map(autoHealBooking);
+          return records as unknown as Booking[];
         } catch {
           // ignore
         }
@@ -667,7 +640,7 @@ export async function getBookings(): Promise<Booking[]> {
     }
   }
 
-  return memoryBookings.map((b) => autoHealBooking({
+  return memoryBookings.map((b) => ({
     ...b,
     customer: memoryCustomers.find((c) => c.id === b.customerId),
     serviceType: memoryServiceTypes.find((s) => s.id === b.serviceTypeId),
