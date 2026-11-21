@@ -1,6 +1,6 @@
 import { Booking, AgencySettings } from "./types";
 import { formatBookingNo, formatFlightTimeDisplay } from "./date-utils";
-import { getServiceFieldConfig, formatCustomWhatsAppMessage, isFlightOrTravelService } from "./service-config";
+import { getServiceFieldConfig, formatCustomWhatsAppMessage, isFlightOrTravelService, resolveFlightTimes } from "./service-config";
 
 export function formatPhoneNumber(phone: string): string {
   // Strip non-digits
@@ -33,6 +33,8 @@ export function createFlightReminderMessage(
       })
     : "Upcoming date";
 
+  const flightTimes = resolveFlightTimes(booking.flightTime, booking.notes);
+
   return `✈️ *FLIGHT TRAVEL REMINDER*
 ━━━━━━━━━━━━━━━━━━
 Dear *${customerName}*,
@@ -43,8 +45,8 @@ Greetings from *${agencyName}*! Here are the details for your upcoming travel:
 🛫 *Flight:* ${booking.flightNo || "N/A"}
 📍 *Sector:* ${booking.sector || "N/A"}
 📅 *Travel Date:* ${travelDateStr}
-⏰ *Flight Time:* ${booking.flightTime ? formatFlightTimeDisplay(booking.flightTime) : "As per ticket"}
-⏳ *Airport Reporting:* Please arrive at the airport at least 3 hours prior to departure for international flights, and 2 hours for domestic flights. Don't forget your original Passport/ID and Visa.
+⏰ *Flight Time:* ${flightTimes.displayTime}
+⏳ *Airport Reporting:* ${flightTimes.reportingTime}
 🎫 *PNR:* ${booking.pnr || "N/A"}
 👥 *Passengers:* ${booking.passengerNames || `${booking.passengerCount} Pax`}
 📌 *Status:* ${booking.status}

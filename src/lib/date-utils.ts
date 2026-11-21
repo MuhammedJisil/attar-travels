@@ -262,9 +262,11 @@ export function formatDateTime(dateString?: string | null): string {
 /**
  * Universal helper to format booking numbers, always displaying ATT- (Attar Travels)
  */
-export function formatBookingNo(bookingNo?: string | null): string {
+export function formatBookingNo(bookingNo?: string | number | null): string {
   if (!bookingNo) return "";
-  const cleaned = String(bookingNo).trim();
+  let cleaned = String(bookingNo).trim();
+  // Strip duplicate prefixes e.g. "ATT-2026-2026-341" -> "ATT-2026-341"
+  cleaned = cleaned.replace(/^(?:ATT|CCJ|TRV)[-_]?(?:2026[-_]?)+/i, "ATT-2026-");
   if (/^\d+$/.test(cleaned)) {
     return `ATT-2026-${cleaned.padStart(3, "0")}`;
   }
@@ -273,6 +275,32 @@ export function formatBookingNo(bookingNo?: string | null): string {
     .replace(/^CCJ-/i, "ATT-")
     .replace(/^TRV/i, "ATT")
     .replace(/^CCJ/i, "ATT");
+}
+
+/**
+ * Calculate airport reporting time (strictly 3 hours prior to departure)
+ * e.g. "20:20" -> "17:20", "02:15" -> "23:15", "00:45" -> "21:45"
+ */
+export function calculateReportingTime(timeStr?: string | null, hoursBefore: number = 3): string {
+  if (!timeStr) return "";
+  const cleaned = timeStr.replace(/hrs|am|pm/gi, "").trim();
+  const noDate = cleaned.replace(/^\d{4}-\d{2}-\d{2}\s*[-–—]?\s*/, "").trim();
+  const dep = noDate.split(/\s*[-–—]\s*/)[0]?.trim() || noDate;
+  const match = dep.match(/(\d{1,2}):(\d{2})/);
+  if (!match) return "";
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  if (isNaN(hours) || isNaN(minutes)) return "";
+  if (hours > 23) {
+    hours = parseInt(String(hours).slice(-2), 10);
+  }
+
+  let repHours = (hours - hoursBefore) % 24;
+  if (repHours < 0) repHours += 24;
+
+  const hStr = repHours.toString().padStart(2, "0");
+  const mStr = minutes.toString().padStart(2, "0");
+  return `${hStr}:${mStr}`;
 }
 
 /**

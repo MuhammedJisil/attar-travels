@@ -1,4 +1,5 @@
 import { ServiceType } from "./types";
+import { formatBookingNo, calculateReportingTime, formatFlightTimeDisplay } from "./date-utils";
 
 export type ServiceTemplateType =
   | "flight"
@@ -123,7 +124,7 @@ Greetings from *{agency_name}*! Here are the details for your upcoming travel:
 📍 *Sector:* {route}
 📅 *Travel Date:* {date}
 ⏰ *Flight Time:* {time}
-⏳ *Airport Reporting:* Please arrive at the airport at least 3 hours prior to departure for international flights, and 2 hours for domestic flights. Don't forget your original Passport/ID and Visa.
+⏳ *Airport Reporting:* {reporting_time}
 🎫 *PNR:* {pnr}
 👥 *Passengers:* {passengers}
 📌 *Status:* {status}
@@ -818,6 +819,72 @@ export function resolveBookingDates(b?: {
 }
 
 /**
+ * Helper to reliably resolve flight departure, arrival, and 3-hour reporting times
+ */
+export function resolveFlightTimes(
+  flightTime?: string | null,
+  customNotes?: string | null
+): {
+  depTime: string;
+  arrTime: string;
+  displayTime: string;
+  reportingTime: string;
+} {
+  const custom = extractCustomFieldValues(customNotes);
+
+  const depCustom = Object.entries(custom).find(([k]) =>
+    /dep|departure/i.test(k) && /time/i.test(k)
+  )?.[1];
+  const arrCustom = Object.entries(custom).find(([k]) =>
+    /arr|arrival|arrivel/i.test(k) && /time/i.test(k)
+  )?.[1];
+
+  const rawFlightTime = (flightTime || "").replace(/^\d{4}-\d{2}-\d{2}\s*[-–—]?\s*/, "").trim();
+  const timeParts = rawFlightTime ? rawFlightTime.split(/\s*[-–—]\s*/).map((s) => s.trim()).filter((p) => !/^\d{4}$/.test(p)) : [];
+
+  let dep = depCustom?.trim() || "";
+  let arr = arrCustom?.trim() || "";
+
+  if (!dep && timeParts.length > 0) {
+    dep = timeParts[0];
+  }
+  if (!arr && timeParts.length > 1) {
+    arr = timeParts[1];
+  }
+
+  // Helper to extract HH:mm cleanly, stripping any spurious year digits like 2026:50
+  const cleanTime = (t: string) => {
+    if (!t) return "";
+    const m = t.match(/(\d{1,2}):(\d{2})/);
+    return m ? `${m[1].padStart(2, "0")}:${m[2]}` : t.replace(/hrs/i, "").trim();
+  };
+
+  const cleanDep = cleanTime(dep);
+  const cleanArr = cleanTime(arr);
+
+  let displayTime = "—";
+  if (cleanDep && cleanArr) {
+    displayTime = `${cleanDep} hrs (Arrival: ${cleanArr} hrs)`;
+  } else if (cleanDep) {
+    displayTime = `${cleanDep} hrs`;
+  } else if (cleanArr) {
+    displayTime = `Arrival: ${cleanArr} hrs`;
+  } else if (rawFlightTime) {
+    displayTime = formatFlightTimeDisplay(rawFlightTime);
+  }
+
+  const reporting = calculateReportingTime(cleanDep || rawFlightTime, 3);
+  const reportingStr = reporting ? `${reporting} hrs (Please arrive 3 hours prior to departure)` : "Please arrive 3 hours prior to departure";
+
+  return {
+    depTime: cleanDep,
+    arrTime: cleanArr,
+    displayTime,
+    reportingTime: reportingStr,
+  };
+}
+
+/**
  * Format customized WhatsApp message template using booking data and agency settings
  */
 export function formatCustomWhatsAppMessage(
@@ -847,7 +914,7 @@ export function formatCustomWhatsAppMessage(
   const customerName = booking.customer?.name || "Valued Customer";
   const agencyName = agency?.agencyName || "Travel Desk";
   const agencyPhone = agency?.phone || "";
-  const bookingNo = booking.bookingNo ? `ATT-2026-${String(booking.bookingNo).replace(/^(CCJ|TRV|ATT)-/i, "").padStart(3, "0")}` : "N/A";
+  const bookingNo = formatBookingNo(booking.bookingNo) || "N/A";
   const serviceName = booking.serviceType?.name || "Service";
   const custom = extractCustomFieldValues(booking.notes);
 
@@ -880,7 +947,8 @@ export function formatCustomWhatsAppMessage(
       })
     : "—";
 
-  const timeVal = booking.flightTime ? formatFlightTrainTime(booking.flightTime) : "—";
+  const flightTimes = resolveFlightTimes(booking.flightTime, booking.notes);
+  const timeVal = flightTimes.displayTime;
   const portalVal = booking.portal || "—";
   const statusVal = booking.status || "Confirmed";
   const paxVal = booking.passengerNames || `${booking.passengerCount || 1} Pax`;
@@ -909,6 +977,16 @@ export function formatCustomWhatsAppMessage(
     .replace(/{travel_date}/gi, dateVal)
     .replace(/{return_date}/gi, returnDateVal)
     .replace(/{time}/gi, timeVal)
+    .replace(/{flight_time}/gi, timeVal)
+    .replace(/{departure_time}/gi, flightTimes.depTime ? `${flightTimes.depTime} hrs` : timeVal)
+    .replace(/{arrival_time}/gi, flightTimes.arrTime ? `${flightTimes.arrTime} hrs` : "—")
+    .replace(/{reporting_time}/gi, flightTimes.reportingTime)
+    .replace(/{airport_reporting}/gi, flightTimes.reportingTime)
+    .replace(/{reporting}/gi, flightTimes.reportingTime)
+    .replace(
+      /Please arrive at the airport at least 3 hours prior to departure for international flights, and 2 hours for domestic flights\. Don't forget your original Passport\/ID and Visa\./gi,
+      flightTimes.reportingTime
+    )
     .replace(/{portal}/gi, portalVal)
     .replace(/{supplier}/gi, portalVal)
     .replace(/{status}/gi, statusVal)
