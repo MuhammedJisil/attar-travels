@@ -440,7 +440,7 @@ export default function BookingList({
         ) : (
           paginatedBookings.map((b) => {
             const { travelDate: effectiveTravelDate, returnDate: effectiveReturnDate } = resolveBookingDates(b);
-            const diff = getServiceTimeline(effectiveTravelDate, b.serviceType?.name, effectiveReturnDate);
+            const diff = getServiceTimeline(effectiveTravelDate, b.serviceType?.name, effectiveReturnDate, b.status);
             const isDelay = b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
             const isFlight = isFlightOrTravelService(b.serviceType);
             const custom = extractCustomFieldValues(b.notes);
@@ -466,13 +466,21 @@ export default function BookingList({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    <span className={`font-semibold ${diff.days <= 1 ? "text-rose-600 dark:text-rose-400 font-bold" : "text-sky-700 dark:text-sky-400"}`}>
-                      {diff.label}
-                    </span>
-                    {effectiveReturnDate && (
-                      <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
-                        ↩ Ret: {formatDate(effectiveReturnDate)}
+                    {diff.isCancelled ? (
+                      <span className="font-semibold text-rose-600 dark:text-rose-400">
+                        Cancelled
                       </span>
+                    ) : (
+                      <>
+                        <span className={`font-semibold ${diff.days <= 1 ? "text-rose-600 dark:text-rose-400 font-bold" : "text-sky-700 dark:text-sky-400"}`}>
+                          {diff.label}
+                        </span>
+                        {effectiveReturnDate && (
+                          <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
+                            ↩ Ret: {formatDate(effectiveReturnDate)}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -606,7 +614,7 @@ export default function BookingList({
                   ) : (
                     paginatedBookings.map((b) => {
                       const { travelDate: effectiveTravelDate, returnDate: effectiveReturnDate } = resolveBookingDates(b);
-                      const diff = getServiceTimeline(effectiveTravelDate, b.serviceType?.name, effectiveReturnDate);
+                      const diff = getServiceTimeline(effectiveTravelDate, b.serviceType?.name, effectiveReturnDate, b.status);
                       const isDelay =
                         b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
                       const portalDisplay = getDisplayPortal(b);
@@ -662,12 +670,16 @@ export default function BookingList({
                         >
                           {/* 1. Days Left / Timeline Alert Badge */}
                           <td className="py-3 px-4 whitespace-nowrap">
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${diff.badgeClass}`}
-                            >
-                              <Clock size={12} />
-                              {diff.label}
-                            </span>
+                            {diff.isCancelled ? (
+                              <span className="text-slate-400 dark:text-slate-600 font-mono text-xs pl-2">—</span>
+                            ) : (
+                              <span
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${diff.badgeClass}`}
+                              >
+                                <Clock size={12} />
+                                {diff.label}
+                              </span>
+                            )}
                           </td>
 
                           {/* 2. Customer / Party Name */}

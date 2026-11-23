@@ -34,7 +34,7 @@ export async function GET() {
     ]);
 
     const backupData = {
-      version: "2.1",
+      version: "2.2",
       app: "Attar Travels Management Desk",
       exportedAt: new Date().toISOString(),
       metadata: {

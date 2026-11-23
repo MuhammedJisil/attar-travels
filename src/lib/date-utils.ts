@@ -109,16 +109,31 @@ export function getDaysDifference(dateString?: string | null): {
 export function getServiceTimeline(
   dateString?: string | null,
   serviceName?: string | null,
-  returnDateString?: string | null
+  returnDateString?: string | null,
+  status?: string | null
 ): {
   days: number;
   isPast: boolean;
   isToday: boolean;
   isTomorrow: boolean;
+  isCancelled: boolean;
   label: string;
   badgeClass: string;
 } {
-  const base = getDaysDifference(dateString);
+  const isCancelled = Boolean(status && /cancel/i.test(status));
+  if (isCancelled) {
+    return {
+      days: 999,
+      isPast: false,
+      isToday: false,
+      isTomorrow: false,
+      isCancelled: true,
+      label: "—",
+      badgeClass: "bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700",
+    };
+  }
+
+  const base = { ...getDaysDifference(dateString), isCancelled: false };
   const n = (serviceName || "").toLowerCase();
   const isFlight =
     (n.includes("flight") || n.includes("airline") || n.includes("ticket") || n.includes("train") || n.includes("bus")) &&
@@ -138,6 +153,7 @@ export function getServiceTimeline(
           isPast: false,
           isToday: true,
           isTomorrow: false,
+          isCancelled: false,
           label: "Return Today ↩",
           badgeClass: "bg-rose-50 text-rose-700 border-rose-300 font-bold animate-pulse",
         };
@@ -148,6 +164,7 @@ export function getServiceTimeline(
           isPast: false,
           isToday: false,
           isTomorrow: true,
+          isCancelled: false,
           label: "Return Tomorrow (1d) ↩",
           badgeClass: "bg-amber-50 text-amber-700 border-amber-300 font-semibold",
         };
@@ -158,6 +175,7 @@ export function getServiceTimeline(
           isPast: false,
           isToday: false,
           isTomorrow: false,
+          isCancelled: false,
           label: `Return in ${retDiff.days}d ↩`,
           badgeClass: "bg-sky-50 text-sky-700 border-sky-200 font-semibold",
         };
@@ -169,6 +187,7 @@ export function getServiceTimeline(
           isPast: true,
           isToday: false,
           isTomorrow: false,
+          isCancelled: false,
           label: absRetDays === 1 ? "Returned yesterday ↩" : `Returned ${absRetDays}d ago ↩`,
           badgeClass: "bg-slate-100 text-slate-600 border-slate-200",
         };

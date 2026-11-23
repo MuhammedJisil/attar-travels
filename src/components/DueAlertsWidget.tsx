@@ -38,6 +38,11 @@ export default function DueAlertsWidget({
   let visaAlertCount = 0;
 
   bookings.forEach((b) => {
+    // If booking is cancelled, do not trigger any departure, timeline, or follow-up alert
+    if (b.status && /cancel/i.test(b.status)) {
+      return;
+    }
+
     const isTravel = isFlightOrTravelService(b.serviceType);
     const { travelDate: effectiveTravelDate, returnDate: effectiveReturnDate } = resolveBookingDates(b);
     const diff = getDaysDifference(effectiveTravelDate);

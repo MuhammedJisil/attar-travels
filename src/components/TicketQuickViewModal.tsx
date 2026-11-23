@@ -42,8 +42,9 @@ export default function TicketQuickViewModal({
   if (!isOpen || !booking) return null;
 
   const { travelDate: effectiveTravelDate, returnDate: effectiveReturnDate } = resolveBookingDates(booking);
-  const diff = getServiceTimeline(effectiveTravelDate, booking.serviceType?.name, effectiveReturnDate);
+  const diff = getServiceTimeline(effectiveTravelDate, booking.serviceType?.name, effectiveReturnDate, booking.status);
   const isDelay = booking.status === "Flight Delayed" || booking.status === "Rescheduled / Postponed";
+  const isCancelled = Boolean(booking.status && /cancel/i.test(booking.status));
 
   return (
     <div className="no-print print:hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
@@ -70,19 +71,23 @@ export default function TicketQuickViewModal({
         {/* Content */}
         <div className="p-5 overflow-y-auto space-y-4 text-xs sm:text-sm">
           {/* Days Left and Status Banner */}
-          <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">Days Left:</span>
-              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${diff.badgeClass}`}>
-                <Clock size={12} />
-                {diff.label}
-              </span>
-            </div>
+          <div className={`flex flex-wrap items-center ${diff.isCancelled ? "justify-end" : "justify-between"} gap-2 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700`}>
+            {!diff.isCancelled && (
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">Days Left:</span>
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${diff.badgeClass}`}>
+                  <Clock size={12} />
+                  {diff.label}
+                </span>
+              </div>
+            )}
 
             <div className="flex items-center gap-1">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">Status:</span>
               <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                isDelay
+                isCancelled
+                  ? "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
+                  : isDelay
                   ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700"
                   : booking.status === "Confirmed"
                   ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
