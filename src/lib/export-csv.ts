@@ -1,5 +1,6 @@
 import { Booking } from "./types";
-import { getDaysDifference, formatDate } from "./date-utils";
+import { formatDate, getServiceTimeline } from "./date-utils";
+import { resolveBookingDates } from "./service-config";
 
 export function exportBookingsToCSV(bookings: Booking[], filename = "travel_desk_bookings.csv") {
   const headers = [
@@ -29,7 +30,8 @@ export function exportBookingsToCSV(bookings: Booking[], filename = "travel_desk
   ];
 
   const rows = bookings.map((b) => {
-    const diff = getDaysDifference(b.travelDate);
+    const { travelDate: effTravel, returnDate: effReturn } = resolveBookingDates(b);
+    const diff = getServiceTimeline(effTravel, b.serviceType?.name, effReturn, b.status);
     const escape = (val: unknown) => {
       if (val === null || val === undefined) return '""';
       const str = String(val).replace(/"/g, '""');
@@ -45,9 +47,9 @@ export function exportBookingsToCSV(bookings: Booking[], filename = "travel_desk
       escape(b.flightNo || ""),
       escape(b.pnr || ""),
       escape(b.flightTime || ""),
-      escape(b.travelDate ? formatDate(b.travelDate) : ""),
-      escape(diff.label),
-      escape(b.returnDate ? formatDate(b.returnDate) : ""),
+      escape(effTravel ? formatDate(effTravel) : (b.issueDate ? formatDate(b.issueDate) : "")),
+      escape(diff.isCancelled ? "Cancelled" : diff.label),
+      escape(effReturn ? formatDate(effReturn) : ""),
       escape(b.issueDate ? formatDate(b.issueDate) : ""),
       escape(b.portal || ""),
       escape(b.passengerCount || 1),

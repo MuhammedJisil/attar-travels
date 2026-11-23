@@ -1,6 +1,6 @@
 import { Booking, AgencySettings } from "./types";
 import { formatBookingNo, formatFlightTimeDisplay } from "./date-utils";
-import { getServiceFieldConfig, formatCustomWhatsAppMessage, isFlightOrTravelService, resolveFlightTimes } from "./service-config";
+import { getServiceFieldConfig, formatCustomWhatsAppMessage, isFlightOrTravelService, resolveFlightTimes, resolveBookingDates } from "./service-config";
 
 export function formatPhoneNumber(phone: string): string {
   // Strip non-digits
@@ -24,8 +24,10 @@ export function createFlightReminderMessage(
 ): string {
   const customerName = booking.customer?.name || "Valued Customer";
   const agencyName = agency?.agencyName || "Travel Desk";
-  const travelDateStr = booking.travelDate
-    ? new Date(booking.travelDate).toLocaleDateString("en-US", {
+  const { travelDate: effTravelDate } = resolveBookingDates(booking);
+  const activeTravel = effTravelDate || booking.travelDate;
+  const travelDateStr = activeTravel
+    ? new Date(activeTravel).toLocaleDateString("en-US", {
         weekday: "short",
         year: "numeric",
         month: "short",
@@ -79,8 +81,10 @@ export function createServiceReminderMessage(
 
   const customerName = booking.customer?.name || "Valued Customer";
   const agencyName = agency?.agencyName || "Travel Desk";
-  const dateStr = booking.travelDate
-    ? new Date(booking.travelDate).toLocaleDateString("en-US", {
+  const { travelDate: effTravelDate } = resolveBookingDates(booking);
+  const activeTravel = effTravelDate || booking.travelDate;
+  const dateStr = activeTravel
+    ? new Date(activeTravel).toLocaleDateString("en-US", {
         weekday: "short",
         year: "numeric",
         month: "short",

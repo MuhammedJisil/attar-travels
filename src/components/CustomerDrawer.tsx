@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { Customer, Booking, AgencySettings } from "@/lib/types";
-import { getDaysDifference, formatDate, formatBookingNo, formatFlightTimeDisplay } from "@/lib/date-utils";
+import { formatDate, formatBookingNo, formatFlightTimeDisplay, getServiceTimeline } from "@/lib/date-utils";
+import { resolveBookingDates, extractCustomFieldValues } from "@/lib/service-config";
 import {
   X,
   User,
@@ -180,9 +181,13 @@ export default function CustomerDrawer({
           ) : (
             <div className="space-y-3">
               {bookings.map((booking) => {
-                const diff = getDaysDifference(booking.travelDate);
+                const { travelDate: effectiveTravelDate, returnDate: effectiveReturnDate } = resolveBookingDates(booking);
+                const diff = getServiceTimeline(effectiveTravelDate, booking.serviceType?.name, effectiveReturnDate, booking.status);
                 const isDelayed =
                   booking.status === "Flight Delayed" || booking.status === "Rescheduled / Postponed";
+                const isCancelled = Boolean(booking.status && /cancel/i.test(booking.status));
+                const custom = extractCustomFieldValues(booking.notes);
+                const agent = Object.entries(custom).find(([k]) => /agent/i.test(k))?.[1];
 
                 return (
                   <div
@@ -196,6 +201,11 @@ export default function CustomerDrawer({
                           {booking.serviceType?.name || "Service"}
                         </span>
                         <span className="text-xs font-mono text-slate-400">{formatBookingNo(booking.bookingNo)}</span>
+                        {agent && (
+                          <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-semibold text-[11px] border border-indigo-100">
+                            👤 {agent}
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -205,12 +215,18 @@ export default function CustomerDrawer({
                             {booking.status}
                           </span>
                         )}
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${diff.badgeClass}`}
-                        >
-                          <Clock size={12} />
-                          {diff.label}
-                        </span>
+                        {isCancelled ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700 border border-rose-200">
+                            Cancelled
+                          </span>
+                        ) : (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${diff.badgeClass}`}
+                          >
+                            <Clock size={12} />
+                            {diff.label}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -230,10 +246,15 @@ export default function CustomerDrawer({
 
                       <div>
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">Travel Date</span>
-                        <span className="font-bold text-slate-900">
-                          {booking.travelDate ? formatDate(booking.travelDate) : "—"}{" "}
+                        <span className="font-bold text-slate-900 block">
+                          {effectiveTravelDate ? formatDate(effectiveTravelDate) : "—"}{" "}
                           {booking.flightTime && <span className="text-slate-500 font-normal">({formatFlightTimeDisplay(booking.flightTime)})</span>}
                         </span>
+                        {effectiveReturnDate && (
+                          <span className="inline-block text-indigo-600 font-semibold text-[11px] mt-0.5">
+                            ↩ Ret: {formatDate(effectiveReturnDate)}
+                          </span>
+                        )}
                       </div>
 
                       <div>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBookings, createBooking } from "@/lib/data-store";
+import { resolveBookingDates } from "@/lib/service-config";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -58,8 +59,9 @@ export async function GET(request: Request) {
 
     if (daysLeft && daysLeft !== "all") {
       bookings = bookings.filter((b) => {
-        if (!b.travelDate) return false;
-        const travel = new Date(b.travelDate);
+        const { travelDate: effTravel } = resolveBookingDates(b);
+        if (!effTravel) return false;
+        const travel = new Date(effTravel);
         travel.setHours(0, 0, 0, 0);
         const diffDays = Math.round((travel.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
