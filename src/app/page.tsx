@@ -204,31 +204,44 @@ export default function HomePage() {
     }
   };
 
-  // Urgent alerts count for header badge (Today departures/returns + delays)
+  // Urgent alerts count for header badge (Today departures/appointments/returns + delays)
   const urgentCount = bookings.filter((b) => {
+    if (b.status && /cancel/i.test(b.status)) return false;
     const isTravel = isFlightOrTravelService(b.serviceType);
-    if (!isTravel) return false;
+    const isPassport =
+      b.serviceType?.code === "PASSPORT" ||
+      (b.serviceType?.name || "").toLowerCase().includes("passport");
+    const isTravelOrPassport = isTravel || isPassport;
+    if (!isTravelOrPassport) return false;
+
     const { travelDate: effTravel, returnDate: effReturn } = resolveBookingDates(b);
     const diff = getDaysDifference(effTravel);
     const retDiff = effReturn ? getDaysDifference(effReturn) : null;
     const activeDiff = (diff.isPast && retDiff && retDiff.days !== 999) ? retDiff : diff;
-    const isDelay = b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed";
+    const isDelay = isTravel && (b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed");
     return activeDiff.isToday || isDelay;
   }).length;
 
   // Filter bookings based on activeFilter
   const filteredBookings = bookings.filter((b) => {
     if (activeFilter === "all") return true;
+    if (b.status && /cancel/i.test(b.status)) return false;
+
     const isTravel = isFlightOrTravelService(b.serviceType);
+    const isPassport =
+      b.serviceType?.code === "PASSPORT" ||
+      (b.serviceType?.name || "").toLowerCase().includes("passport");
+    const isTravelOrPassport = isTravel || isPassport;
+
     const { travelDate: effTravel, returnDate: effReturn } = resolveBookingDates(b);
     const diff = getDaysDifference(effTravel);
     const retDiff = effReturn ? getDaysDifference(effReturn) : null;
     const activeDiff = (diff.isPast && retDiff && retDiff.days !== 999) ? retDiff : diff;
 
-    if (activeFilter === "today") return isTravel && (effTravel || effReturn) && activeDiff.isToday;
-    if (activeFilter === "tomorrow") return isTravel && (effTravel || effReturn) && activeDiff.isTomorrow;
-    if (activeFilter === "3days") return isTravel && (effTravel || effReturn) && activeDiff.days >= 0 && activeDiff.days <= 3;
-    if (activeFilter === "7days") return isTravel && (effTravel || effReturn) && activeDiff.days >= 0 && activeDiff.days <= 7;
+    if (activeFilter === "today") return isTravelOrPassport && (effTravel || effReturn) && activeDiff.isToday;
+    if (activeFilter === "tomorrow") return isTravelOrPassport && (effTravel || effReturn) && activeDiff.isTomorrow;
+    if (activeFilter === "3days") return isTravelOrPassport && (effTravel || effReturn) && activeDiff.days >= 0 && activeDiff.days <= 3;
+    if (activeFilter === "7days") return isTravelOrPassport && (effTravel || effReturn) && activeDiff.days >= 0 && activeDiff.days <= 7;
     if (activeFilter === "delayed") {
       return isTravel && (b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed");
     }
@@ -236,15 +249,17 @@ export default function HomePage() {
       return b.balanceAmount > 0;
     }
     if (activeFilter === "passports") {
-      const isPassport =
-        b.serviceType?.code === "PASSPORT" ||
-        (b.serviceType?.name || "").toLowerCase().includes("passport");
-
       if (!isPassport) return false;
+      if (b.status === "Completed") return false;
+
+      const apptDiff = effTravel ? getDaysDifference(effTravel) : null;
       const expDiff = b.expiryDate ? getDaysDifference(b.expiryDate) : null;
       const isExpiringSoon = expDiff ? expDiff.days <= 180 : false;
-      const isSubmissionPending = Boolean(b.submissionDate && b.status !== "Completed");
-      return isExpiringSoon || isSubmissionPending || Boolean(b.expiryDate) || Boolean(b.submissionDate);
+      const isUpcomingAppt = apptDiff ? (apptDiff.days >= 0 || apptDiff.isToday) : false;
+      const isSubmissionPending = Boolean(b.submissionDate);
+      const isActive = b.status !== "Completed";
+
+      return isUpcomingAppt || isExpiringSoon || isSubmissionPending || isActive;
     }
     if (activeFilter === "visas") {
       const isVisa =
@@ -433,19 +448,19 @@ export default function HomePage() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
                   {activeFilter === "today"
-                    ? "🚨 Flights Departing Today"
+                    ? "🚨 Today's Departures & Passport Appointments"
                     : activeFilter === "tomorrow"
-                    ? "⏰ Flights Departing Tomorrow"
+                    ? "⏰ Tomorrow's Departures & Passport Appointments"
                     : activeFilter === "3days"
-                    ? "✈️ Flights in the Next 3 Days"
+                    ? "📅 Next 3 Days Departures & Passport Appointments"
                     : activeFilter === "7days"
-                    ? "📅 Flights This Week"
+                    ? "📅 Upcoming This Week (Flights & Passport Appts)"
                     : activeFilter === "delayed"
                     ? "⚠️ Delayed & Rescheduled Flights"
                     : activeFilter === "pending_balance"
                     ? "💳 Bookings with Pending Dues"
                     : activeFilter === "passports"
-                    ? "🛂 Passport Alerts (Expiry < 6 Mos & Submissions)"
+                    ? "🛂 Passport Alerts (Appointments & Expiry)"
                     : activeFilter === "visas"
                     ? "🌐 Visa Processing & Expiry Alerts"
                     : "All Travel Tickets & Bookings"}

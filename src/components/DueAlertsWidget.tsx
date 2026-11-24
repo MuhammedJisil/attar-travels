@@ -44,20 +44,25 @@ export default function DueAlertsWidget({
     }
 
     const isTravel = isFlightOrTravelService(b.serviceType);
+    const isPassport =
+      b.serviceType?.code === "PASSPORT" ||
+      (b.serviceType?.name || "").toLowerCase().includes("passport");
+    const isTravelOrPassport = isTravel || isPassport;
+
     const { travelDate: effectiveTravelDate, returnDate: effectiveReturnDate } = resolveBookingDates(b);
     const diff = getDaysDifference(effectiveTravelDate);
     const retDiff = effectiveReturnDate ? getDaysDifference(effectiveReturnDate) : null;
     // Active difference: if travel date has passed and return date exists, count return countdown
     const activeDiff = (diff.isPast && retDiff && retDiff.days !== 999) ? retDiff : diff;
 
-    // Only count actual travel/flight services for departure & return alerts
-    if (isTravel && (effectiveTravelDate || effectiveReturnDate)) {
+    // Count flights AND passport appointments for departure/appointment & return alerts
+    if (isTravelOrPassport && (effectiveTravelDate || effectiveReturnDate)) {
       if (activeDiff.isToday) todayCount++;
       if (activeDiff.isTomorrow) tomorrowCount++;
       if (activeDiff.days >= 0 && activeDiff.days <= 3) next3DaysCount++;
       if (activeDiff.days >= 0 && activeDiff.days <= 7) next7DaysCount++;
 
-      if (b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed") {
+      if (isTravel && (b.status === "Flight Delayed" || b.status === "Rescheduled / Postponed")) {
         delayedCount++;
       }
     }
@@ -66,16 +71,18 @@ export default function DueAlertsWidget({
       paymentPendingCount++;
     }
 
-    // Passport Alerts calculation (ONLY for actual Passport service):
-    const isPassport =
-      b.serviceType?.code === "PASSPORT" ||
-      (b.serviceType?.name || "").toLowerCase().includes("passport");
-
+    // Passport Alerts calculation (Appointments, Submissions, Expiry, or Active processing):
     if (isPassport) {
+      if (b.status === "Completed") return;
+
+      const apptDiff = effectiveTravelDate ? getDaysDifference(effectiveTravelDate) : null;
       const expDiff = b.expiryDate ? getDaysDifference(b.expiryDate) : null;
       const isExpiringSoon = expDiff ? expDiff.days <= 180 : false;
-      const isSubmissionPending = Boolean(b.submissionDate && b.status !== "Completed");
-      if (isExpiringSoon || isSubmissionPending) {
+      const isUpcomingAppt = apptDiff ? (apptDiff.days >= 0 || apptDiff.isToday) : false;
+      const isSubmissionPending = Boolean(b.submissionDate);
+      const isActive = b.status !== "Completed";
+
+      if (isUpcomingAppt || isExpiringSoon || isSubmissionPending || isActive) {
         passportAlertCount++;
       }
     }
@@ -117,7 +124,7 @@ export default function DueAlertsWidget({
             <Plane size={16} className="text-rose-500" />
           </div>
           <div className="text-2xl font-black text-rose-700 dark:text-rose-300 mt-1">{todayCount}</div>
-          <div className="text-[11px] text-rose-600 dark:text-rose-400 font-medium truncate">Departing Today</div>
+          <div className="text-[11px] text-rose-600 dark:text-rose-400 font-medium truncate">Departing / Due Today</div>
         </button>
 
         {/* Tomorrow Card */}
@@ -192,7 +199,7 @@ export default function DueAlertsWidget({
             <FileText size={16} className="text-indigo-500" />
           </div>
           <div className="text-2xl font-black text-indigo-800 dark:text-indigo-300 mt-1">{passportAlertCount}</div>
-          <div className="text-[11px] text-indigo-700 dark:text-indigo-400 font-medium truncate">Expiry & Renewal</div>
+          <div className="text-[11px] text-indigo-700 dark:text-indigo-400 font-medium truncate">Appts & Renewal</div>
         </button>
 
         {/* Visa Alerts Card */}
