@@ -42,6 +42,7 @@ export const COUNTRY_CODES: CountryCode[] = [
   { name: "Netherlands", code: "NL", dialCode: "+31", flag: "🇳🇱" },
   { name: "Switzerland", code: "CH", dialCode: "+41", flag: "🇨🇭" },
   { name: "Ireland", code: "IE", dialCode: "+353", flag: "🇮🇪" },
+  { name: "Slovenia", code: "SI", dialCode: "+386", flag: "🇸🇮" },
   { name: "Turkey", code: "TR", dialCode: "+90", flag: "🇹🇷" },
   { name: "Egypt", code: "EG", dialCode: "+20", flag: "🇪🇬" },
   { name: "South Africa", code: "ZA", dialCode: "+27", flag: "🇿🇦" },
