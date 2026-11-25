@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Customer, Booking, AgencySettings } from "@/lib/types";
 import { formatDate, formatBookingNo, formatFlightTimeDisplay, getServiceTimeline } from "@/lib/date-utils";
-import { resolveBookingDates, extractCustomFieldValues } from "@/lib/service-config";
+import { resolveBookingDates, extractCustomFieldValues, isFlightOrTravelService } from "@/lib/service-config";
 import {
   X,
   User,
@@ -243,6 +243,8 @@ export default function CustomerDrawer({
                           {booking.flightNo || "—"} {booking.pnr ? `(PNR: ${booking.pnr})` : ""}
                         </span>
                         {(() => {
+                          const isFlight = isFlightOrTravelService(booking.serviceType);
+                          if (!isFlight) return null;
                           const otherSvc = Object.entries(custom).find(([k]) => /other\s*service|addon|oktb/i.test(k))?.[1];
                           return otherSvc && otherSvc !== "—" ? (
                             <span className="inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200">
