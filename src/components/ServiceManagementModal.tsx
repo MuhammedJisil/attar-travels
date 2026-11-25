@@ -761,7 +761,7 @@ export default function ServiceManagementModal({
                           <input
                             type="checkbox"
                             checked={!!field.required}
-                            onChange={(e) => handleUpdateCustomField(field.id, { required: e.target.checked })}
+                            onChange={(e) => handleUpdateCustomField(field.id, { required: e.target.checked, showInTable: e.target.checked })}
                             className="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"
                           />
                           <span>Mandatory Field (Used as Dashboard Column)</span>

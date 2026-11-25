@@ -239,9 +239,17 @@ export default function CustomerDrawer({
 
                       <div>
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">Flight / PNR</span>
-                        <span className="font-semibold text-slate-800">
+                        <span className="font-semibold text-slate-800 block">
                           {booking.flightNo || "—"} {booking.pnr ? `(PNR: ${booking.pnr})` : ""}
                         </span>
+                        {(() => {
+                          const otherSvc = Object.entries(custom).find(([k]) => /other\s*service|addon|oktb/i.test(k))?.[1];
+                          return otherSvc && otherSvc !== "—" ? (
+                            <span className="inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200">
+                              🏷️ {otherSvc}
+                            </span>
+                          ) : null;
+                        })()}
                       </div>
 
                       <div>

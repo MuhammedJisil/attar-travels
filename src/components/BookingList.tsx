@@ -86,6 +86,46 @@ export function getAgentName(b: Booking): string | null {
   return null;
 }
 
+export function getOtherServices(b: Booking): string[] {
+  const custom = extractCustomFieldValues(b.notes);
+  const results: string[] = [];
+
+  // 1. Direct match for other services / extra service / addon / oktb / suvida
+  for (const [k, v] of Object.entries(custom)) {
+    const lk = k.toLowerCase().trim();
+    if (
+      (lk.includes("other service") ||
+        lk.includes("extra service") ||
+        lk.includes("addon") ||
+        lk.includes("oktb") ||
+        lk.includes("suvida")) &&
+      v &&
+      String(v).trim() !== "" &&
+      String(v).trim() !== "—"
+    ) {
+      const val = String(v).trim();
+      if (!results.includes(val)) results.push(val);
+    }
+  }
+
+  // 2. Any field configured in service config as required / mandatory on flight that is not standard
+  const config = getServiceFieldConfig(b.serviceType);
+  for (const f of config.customFields || []) {
+    if (f.required || f.showInTable) {
+      const fn = f.name.toLowerCase();
+      if (!/route|sector|from|to|destination|flight|pnr|date|time|portal|supplier|agent|passenger/i.test(fn)) {
+        const val = custom[f.name];
+        if (val && String(val).trim() !== "" && String(val).trim() !== "—") {
+          const strVal = String(val).trim();
+          if (!results.includes(strVal)) results.push(strVal);
+        }
+      }
+    }
+  }
+
+  return results;
+}
+
 function toSingleTitle(text: string): string {
   if (!text) return "";
   const t = text.trim();
@@ -837,6 +877,16 @@ export default function BookingList({
                                 ) : (
                                   <span className="text-slate-400 dark:text-slate-500">—</span>
                                 )}
+
+                                {/* Other Services / Addon field under PNR */}
+                                {getOtherServices(b).map((svc, idx) => (
+                                  <div key={idx} className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 mt-0.5 flex items-center gap-1">
+                                    <span className="text-[10px]">🏷️</span>
+                                    <span className="truncate max-w-[130px]" title={`Other Service: ${svc}`}>
+                                      {svc}
+                                    </span>
+                                  </div>
+                                ))}
                               </td>
 
                               {/* 6. Date / Timing / Mandatory Field 3 */}
